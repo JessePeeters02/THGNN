@@ -4,6 +4,7 @@ import multiprocessing as mp
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import os
 
 feature_cols = ['high','low','close','open','to','vol']
 
@@ -40,7 +41,9 @@ def stock_cor_matrix(ref_dict, codes, n, processes=1):
         data[i, :] = calculate_pccs(ref_dict[codes[i]], ref_dict, n)
     return pd.DataFrame(data=data, index=codes, columns=codes)
 
-path1 = "/home/THGNN-main/data/csi300.pkl"
+# origineel: path1 = "\THGNN\data\csi300.pkl"
+base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+path1 = os.path.join(base_path, "..", "data", "csi300.pkl")  # Relatieve verwijzing naar csi300.pkl
 df1 = pickle.load(open(path1, 'rb'), encoding='utf-8')
 #prev_date_num Indicates the number of days in which stock correlation is calculated
 prev_date_num = 20
@@ -76,4 +79,15 @@ for i in range(len(dt)):
         result.iloc[i,i]=1
     t2 = time.time()
     print('time cost', t2 - t1, 's')
-    result.to_csv("/home/THGNN-main/data/relation/"+str(end_data)+".csv")
+    
+    # origineel: result.to_csv("/home/THGNN-main/data/relation/"+str(end_data)+".csv")
+    #gewijzigd:
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    relation_dir = os.path.join(base_path, "..", "data", "relation")  # Relatieve pad naar de juiste folder
+
+    # Maak de directory aan als deze niet bestaat
+    os.makedirs(relation_dir, exist_ok=True)
+
+    # Sla het bestand correct op
+    result.to_csv(os.path.join(relation_dir, f"{end_data}.csv"))
+

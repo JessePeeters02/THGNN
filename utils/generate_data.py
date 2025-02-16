@@ -9,9 +9,13 @@ from torch.autograd import Variable
 
 feature_cols = ['open','high','low','close','to','vol']
 
-path1 = "/home/THGNN-main/data/csi300.pkl"
+# origineel: path1 = "\THGNN\data\csi300.pkl"
+base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+data_path = os.path.join(base_path, "..", "data")
+relation_path = os.path.join(data_path, "relation")
+path1 = os.path.join(data_path, "csi300.pkl")  # Relatieve verwijzing naar csi300.pkl
 df1 = pickle.load(open(path1, 'rb'), encoding='utf-8')
-relation = os.listdir('/home/THGNN-main/data/relation/')
+relation = os.listdir(relation_path)
 relation = sorted(relation)
 date_unique=df1['dt'].unique()
 stock_trade_data=date_unique.tolist()
@@ -21,7 +25,9 @@ df1['dt']=df1['dt'].astype('datetime64')
 
 def fun(relation_dt, start_dt_month, end_dt_month,df1):
     prev_date_num = 20
-    adj_all = pd.read_csv('/home/THGNN-main/data/relation/'+relation_dt+'.csv', index_col=0)
+    relation_file = os.path.join(relation_path, f"{relation_dt}.csv")
+    adj_all = pd.read_csv(relation_file, index_col=0)
+    #origineel: adj_all = pd.read_csv('/home/THGNN-main/data/relation/'+relation_dt+'.csv', index_col=0)
     adj_stock_set = list(adj_all.index)
     pos_g = nx.Graph(adj_all > 0.1)
     pos_adj = nx.adjacency_matrix(pos_g).toarray()
