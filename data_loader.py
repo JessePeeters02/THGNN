@@ -71,12 +71,7 @@ class AllGraphDataSampler(data.Dataset):
         
         if gname_list is None:
             self.gnames_all.sort()
-            print("error")
-        
-        # Testen met een kleinere lijst als de lengte te groot is
-        if len(self.gnames_all) > 5:  
-            self.gnames_all = self.gnames_all[:5]
-            print(f"Testen met de eerste 5 grafen: {self.gnames_all}")
+
         
         if mode == "train":
             self.gnames_all = self.gnames_all[self.data_start:self.data_middle]
