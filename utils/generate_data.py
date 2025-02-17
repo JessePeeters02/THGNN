@@ -74,6 +74,9 @@ def fun(relation_dt, start_dt_month, end_dt_month,df1):
         #origineel:
 #        with open('/home/THGNN-main/data/data_train_predict/'+end_data+'.pkl', 'wb') as f:
 #            pickle.dump(result, f)
+        
+        print(f"Data wordt opgeslagen in: {os.path.abspath(os.path.join(data_path, 'data_train_predict'))}")
+
         with open(os.path.join(data_path, "data_train_predict", f"{end_data}.pkl"), 'wb') as f:
             pickle.dump(result, f)
         df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
