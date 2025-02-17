@@ -81,7 +81,7 @@ class AllGraphDataSampler(data.Dataset):
             self.gnames_all = self.gnames_all[self.data_start:self.data_middle]
         elif mode == "val":
             self.gnames_all = self.gnames_all[self.data_middle:self.data_end]
-        
+        print(f"Gnames all after split: {self.gnames_all}")  # Controleer na splitsen
         self.data_all = self.load_state()
 
 
