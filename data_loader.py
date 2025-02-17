@@ -71,6 +71,7 @@ class AllGraphDataSampler(data.Dataset):
         
         if gname_list is None:
             self.gnames_all.sort()
+            print("error")
         
         # Testen met een kleinere lijst als de lengte te groot is
         if len(self.gnames_all) > 5:  
