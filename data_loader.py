@@ -33,4 +33,13 @@ class AllGraphDataSampler(data.Dataset):
         return data_all
 
     def __getitem__(self, idx):
+        print("Laden van dataset...")
+        for bestand in os.listdir(data_path):
+            print("Bestand gevonden:", bestand)
+            with open(os.path.join(data_path, bestand), "rb") as f:
+                try:
+                    data = pickle.load(f)
+                    print(f"Bestand {bestand} geladen met type: {type(data)}")
+                except Exception as e:
+                    print(f"Fout bij laden van {bestand}: {e}")
         return self.data_all[idx]

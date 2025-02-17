@@ -93,6 +93,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     #                                  data_middle=data_middle, data_end=data_end)
     dataset = AllGraphDataSampler(base_dir=data_path, data_start=data_start,
                               data_middle=data_middle, data_end=data_end)
+    print(f"Aantal samples in dataset: {len(dataset)}")
     val_dataset = AllGraphDataSampler(base_dir=data_path, mode="val", data_start=data_start,
                                   data_middle=data_middle, data_end=data_end)
     dataset_loader = DataLoader(dataset, batch_size=args.batch_size, pin_memory=True, collate_fn=lambda x: x)
@@ -112,7 +113,6 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         print("Absolute pad trainingsmap:", os.path.abspath(data_path))
         print("Bestaat de map?", os.path.exists(data_path))
         print("Dataset geladen, eerste 3 elementen:", dataset_loader[:3] if len(dataset_loader) > 3 else dataset_loader)
-        print("Aantal batches in dataset_loader:", len(dataset_loader))
 
         # Probeer het eerste sample te laden
         try:
