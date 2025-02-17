@@ -2,9 +2,20 @@ import os
 import sys
 from torch.utils import data
 import pickle
-
+base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+data_path = os.path.join(base_path, "..", "data", "data_train_predict")
+os.makedirs(data_path, exist_ok=True)
 class AllGraphDataSampler(data.Dataset):
     def __init__(self, base_dir, gname_list=None, data_start=None, data_middle=None, data_end=None, mode="train"):
+        print("Laden van dataset...")
+        for bestand in os.listdir(data_path):
+            print("Bestand gevonden:", bestand)
+            with open(os.path.join(data_path, bestand), "rb") as f:
+                try:
+                    data = pickle.load(f)
+                    print(f"Bestand {bestand} geladen met type: {type(data)}")
+                except Exception as e:
+                    print(f"Fout bij laden van {bestand}: {e}")
         self.data_dir = os.path.join(base_dir)
         self.mode = mode
         self.data_start = data_start
@@ -33,13 +44,7 @@ class AllGraphDataSampler(data.Dataset):
         return data_all
 
     def __getitem__(self, idx):
-        print("Laden van dataset...")
-        for bestand in os.listdir(data_path):
-            print("Bestand gevonden:", bestand)
-            with open(os.path.join(data_path, bestand), "rb") as f:
-                try:
-                    data = pickle.load(f)
-                    print(f"Bestand {bestand} geladen met type: {type(data)}")
-                except Exception as e:
-                    print(f"Fout bij laden van {bestand}: {e}")
+        print(f"Sample ophalen op index {index}")
+        sample = self.data[index]  # Hier kan de fout zitten
+        print(f"Sample geladen: {sample}")
         return self.data_all[idx]
