@@ -111,6 +111,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         print(f"Aantal samples in dataset_loader: {len(dataset_loader)}")
         print("Absolute pad trainingsmap:", os.path.abspath(data_path))
         print("Bestaat de map?", os.path.exists(data_path))
+        print("Dataset geladen, eerste 3 elementen:", dataset_loader[:3] if len(dataset_loader) > 3 else dataset_loader)
+
         train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
                                  optimizer=optimizer, scheduler=default_scheduler, loss_fcn=mse_loss)
         if epoch % args.epochs_eval == 0:
