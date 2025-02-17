@@ -91,6 +91,10 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     #                              data_middle=data_middle, data_end=data_end)
     #val_dataset = AllGraphDataSampler(base_dir="/home/THGNN-main/data/data_train_predict/", mode="val", data_start=data_start,
     #                                  data_middle=data_middle, data_end=data_end)
+    dataset = AllGraphDataSampler(base_dir=data_path, data_start=data_start,
+                              data_middle=data_middle, data_end=data_end)
+    val_dataset = AllGraphDataSampler(base_dir=data_path, mode="val", data_start=data_start,
+                                  data_middle=data_middle, data_end=data_end)
     dataset_loader = DataLoader(dataset, batch_size=args.batch_size, pin_memory=True, collate_fn=lambda x: x)
     val_dataset_loader = DataLoader(val_dataset, batch_size=1, pin_memory=True)
     model = eval(args.model_name)(hidden_dim=args.hidden_dim, num_heads=args.num_heads,
