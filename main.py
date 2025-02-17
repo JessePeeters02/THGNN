@@ -112,6 +112,16 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         print("Absolute pad trainingsmap:", os.path.abspath(data_path))
         print("Bestaat de map?", os.path.exists(data_path))
         print("Dataset geladen, eerste 3 elementen:", dataset_loader[:3] if len(dataset_loader) > 3 else dataset_loader)
+        print("Aantal batches in dataset_loader:", len(dataset_loader))
+
+        # Probeer het eerste sample te laden
+        try:
+            first_batch = next(iter(dataset_loader))
+            print("Eerste batch succesvol geladen:", first_batch)
+        except StopIteration:
+            print("Dataset is leeg, geen batches beschikbaar.")
+        except Exception as e:
+            print("Fout bij ophalen eerste batch:", e)
 
         train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
                                  optimizer=optimizer, scheduler=default_scheduler, loss_fcn=mse_loss)
