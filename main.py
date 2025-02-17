@@ -15,6 +15,10 @@ warnings.filterwarnings("ignore")
 t_float = torch.float64
 torch.multiprocessing.set_sharing_strategy('file_system')
 
+base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+data_path = os.path.join(base_path, "..", "data", "data_train_predict")
+os.makedirs(data_path, exist_ok=True)
+
 class Args:
     def __init__(self, gpu=0, subtask="regression"):
         # device
@@ -83,10 +87,10 @@ class Args:
 def fun_train_predict(data_start, data_middle, data_end, pre_data):
     args = Args()
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
-    dataset = AllGraphDataSampler(base_dir="/home/THGNN-main/data/data_train_predict/", data_start=data_start,
-                                  data_middle=data_middle, data_end=data_end)
-    val_dataset = AllGraphDataSampler(base_dir="/home/THGNN-main/data/data_train_predict/", mode="val", data_start=data_start,
-                                      data_middle=data_middle, data_end=data_end)
+    #dataset = AllGraphDataSampler(base_dir="/home/THGNN-main/data/data_train_predict/", data_start=data_start,
+    #                              data_middle=data_middle, data_end=data_end)
+    #val_dataset = AllGraphDataSampler(base_dir="/home/THGNN-main/data/data_train_predict/", mode="val", data_start=data_start,
+    #                                  data_middle=data_middle, data_end=data_end)
     dataset_loader = DataLoader(dataset, batch_size=args.batch_size, pin_memory=True, collate_fn=lambda x: x)
     val_dataset_loader = DataLoader(val_dataset, batch_size=1, pin_memory=True)
     model = eval(args.model_name)(hidden_dim=args.hidden_dim, num_heads=args.num_heads,
