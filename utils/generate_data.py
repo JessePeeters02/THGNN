@@ -77,7 +77,8 @@ def fun(relation_dt, start_dt_month, end_dt_month,df1):
         with open(os.path.join(data_path, "data_train_predict", f"{end_data}.pkl"), 'wb') as f:
             pickle.dump(result, f)
         df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
-        df.to_csv('/home/THGNN-main/data/daily_stock/'+end_data+'.csv', header=True, index=False, encoding='utf_8_sig')
+#        df.to_csv('/home/THGNN-main/data/daily_stock/'+end_data+'.csv', header=True, index=False, encoding='utf_8_sig')
+        df.to_csv(os.path.join(data_path, "daily_stock", f"{end_data}.csv"), header=True, index=False, encoding='utf_8_sig')
         
 #The first parameter and third parameters indicate the last trading day of each month, and the second parameter indicates the first trading day of each month.
 # for i in ['2020','2021','2022']:
