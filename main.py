@@ -51,7 +51,7 @@ class Args:
         self.loss_fcn = mse_loss
         # save model settings
         #self.save_path = os.path.join(os.path.abspath('.'), "/home/THGNN-main/data/model_saved/")
-        self.save_path = os.path.join(os.path.abspath('.'), "THGNN", "data", "model_saved")
+        self.save_path = os.path.join(base_path, "data", "model_saved")
         self.load_path = self.save_path
         self.save_name = self.model_name + "_hidden_" + str(self.hidden_dim) + "_head_" + str(self.num_heads) + \
                          "_outfeat_" + str(self.out_features) + "_batchsize_" + str(self.batch_size) + "_adjth_" + \
@@ -124,7 +124,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     # predict
     checkpoint = torch.load(os.path.join(args.load_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
     model.load_state_dict(checkpoint['model'])
-    data_code = os.listdir('/home/THGNN-main/data/daily_stock')
+    data_code = os.path.join(base_path, "data", "daily_stock")
     data_code = sorted(data_code)
     data_code_last = data_code[data_middle:data_end]
     df_score=pd.DataFrame()
