@@ -109,7 +109,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         print("Bestanden in de trainingsmap:", os.listdir("THGNN/data/data_train_predict"))
         print("Bestanden in trainingsmap voordat ze worden ingeladen:", os.listdir(data_path))
         print(f"Aantal samples in dataset_loader: {len(dataset_loader)}")
-
+        print("Absolute pad trainingsmap:", os.path.abspath(data_path))
+        print("Bestaat de map?", os.path.exists(data_path))
         train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
                                  optimizer=optimizer, scheduler=default_scheduler, loss_fcn=mse_loss)
         if epoch % args.epochs_eval == 0:
