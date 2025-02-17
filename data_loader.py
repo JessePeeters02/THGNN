@@ -26,6 +26,11 @@ class AllGraphDataSampler(data.Dataset):
         if gname_list is None:
             self.gnames_all = os.listdir(self.data_dir)
             self.gnames_all.sort()
+
+        print(f"Gnames_all range: {len(self.gnames_all)}")
+        print(f"Train data range: {self.data_start} - {self.data_middle}")
+        print(f"Val data range: {self.data_middle} - {self.data_end}")
+
         if mode == "train":
             self.gnames_all = self.gnames_all[self.data_start:self.data_middle]
         elif mode == "val":
