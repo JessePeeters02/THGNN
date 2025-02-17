@@ -71,7 +71,6 @@ class AllGraphDataSampler(data.Dataset):
         
         if gname_list is None:
             self.gnames_all.sort()
-
         
         if mode == "train":
             self.gnames_all = self.gnames_all[self.data_start:self.data_middle]
