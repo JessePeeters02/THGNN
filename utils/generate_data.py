@@ -71,7 +71,10 @@ def fun(relation_dt, start_dt_month, end_dt_month,df1):
         labels = torch.tensor(labels, dtype=torch.float32)
         result = {'pos_adj': Variable(pos_adj), 'neg_adj': Variable(neg_adj),  'features': Variable(features),
                   'labels': Variable(labels), 'mask': mask}
-        with open('/home/THGNN-main/data/data_train_predict/'+end_data+'.pkl', 'wb') as f:
+        #origineel:
+#        with open('/home/THGNN-main/data/data_train_predict/'+end_data+'.pkl', 'wb') as f:
+#            pickle.dump(result, f)
+        with open(os.path.join(data_path, "data_train_predict", f"{end_data}.pkl"), 'wb') as f:
             pickle.dump(result, f)
         df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
         df.to_csv('/home/THGNN-main/data/daily_stock/'+end_data+'.csv', header=True, index=False, encoding='utf_8_sig')
