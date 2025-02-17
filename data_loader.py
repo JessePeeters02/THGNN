@@ -10,26 +10,13 @@ os.makedirs(data_path, exist_ok=True)
 class AllGraphDataSampler(data.Dataset):
 
     def __init__(self, base_dir, gname_list=None, data_start=None, data_middle=None, data_end=None, mode="train"):
-        print("Laden van dataset...")
         self.data_dir = os.path.join(base_dir)
         self.mode = mode
         self.data_start = data_start
         self.data_middle = data_middle
         self.data_end = data_end
         
-        # Controle of er bestanden zijn in de map
         self.gnames_all = os.listdir(self.data_dir)
-        print("Bestanden in de data map:", self.gnames_all)
-        if len(self.gnames_all) == 0:
-            print("Waarschuwing: Geen bestanden in de data map.")
-        
-        # Controle van de indices
-        if self.data_start >= len(self.gnames_all):
-            print(f"Fout: data_start ({self.data_start}) is groter dan het aantal grafen ({len(self.gnames_all)}).")
-        if self.data_middle > len(self.gnames_all):
-            print(f"Fout: data_middle ({self.data_middle}) is groter dan het aantal grafen ({len(self.gnames_all)}).")
-        if self.data_end > len(self.gnames_all):
-            print(f"Fout: data_end ({self.data_end}) is groter dan het aantal grafen ({len(self.gnames_all)}).")
         
         if gname_list is None:
             self.gnames_all.sort()
@@ -38,9 +25,7 @@ class AllGraphDataSampler(data.Dataset):
             self.gnames_all = self.gnames_all[self.data_start:self.data_middle]
         elif mode == "val":
             self.gnames_all = self.gnames_all[self.data_middle:self.data_end]
-        print(f"Gnames all after split: {self.gnames_all}")  # Controleer na splitsen
         self.data_all = self.load_state()
-
 
     def __len__(self):
         return len(self.data_all)
