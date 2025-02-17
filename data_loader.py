@@ -30,6 +30,13 @@ class AllGraphDataSampler(data.Dataset):
         print(f"Gnames_all range: {len(self.gnames_all)}")
         print(f"Train data range: {self.data_start} - {self.data_middle}")
         print(f"Val data range: {self.data_middle} - {self.data_end}")
+        if self.data_start >= len(self.gnames_all):
+            print(f"Fout: data_start ({self.data_start}) is groter dan het aantal grafen ({len(self.gnames_all)}).")
+        if self.data_middle > len(self.gnames_all):
+            print(f"Fout: data_middle ({self.data_middle}) is groter dan het aantal grafen ({len(self.gnames_all)}).")
+        if self.data_end > len(self.gnames_all):
+            print(f"Fout: data_end ({self.data_end}) is groter dan het aantal grafen ({len(self.gnames_all)}).")
+
 
         if mode == "train":
             self.gnames_all = self.gnames_all[self.data_start:self.data_middle]
