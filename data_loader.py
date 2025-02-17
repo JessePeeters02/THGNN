@@ -33,13 +33,27 @@ class AllGraphDataSampler(data.Dataset):
     def __len__(self):
         return len(self.data_all)
 
+    # def load_state(self):
+    #     data_all = []
+    #     length = len(self.gnames_all)
+    #     for i in range(length):
+    #         sys.stdout.flush()
+    #         sys.stdout.write('{} data loading: {:.2f}%{}'.format(self.mode, i*100/length, '\r'))
+    #         data_all.append(pickle.load(open(os.path.join(self.data_dir, self.gnames_all[i]), "rb")))
+    #     print('{} data loaded!'.format(self.mode))
+    #     return data_all
+
     def load_state(self):
         data_all = []
         length = len(self.gnames_all)
         for i in range(length):
             sys.stdout.flush()
             sys.stdout.write('{} data loading: {:.2f}%{}'.format(self.mode, i*100/length, '\r'))
-            data_all.append(pickle.load(open(os.path.join(self.data_dir, self.gnames_all[i]), "rb")))
+            try:
+                data = pickle.load(open(os.path.join(self.data_dir, self.gnames_all[i]), "rb"))
+                data_all.append(data)
+            except Exception as e:
+                print(f"Fout bij laden van {self.gnames_all[i]}: {e}")
         print('{} data loaded!'.format(self.mode))
         return data_all
 
