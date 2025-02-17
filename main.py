@@ -124,8 +124,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     # predict
     checkpoint = torch.load(os.path.join(args.load_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
     model.load_state_dict(checkpoint['model'])
-    data_code = os.path.join(base_path, "data", "daily_stock")
-    data_code = sorted(data_code)
+    data_files = os.path.join(base_path, "data", "daily_stock")
+    data_code = sorted(os.listdir(data_files))
     data_code_last = data_code[data_middle:data_end]
     df_score=pd.DataFrame()
     for i in tqdm(range(len(val_dataset))):
