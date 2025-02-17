@@ -42,6 +42,6 @@ class AllGraphDataSampler(data.Dataset):
 
     def __getitem__(self, idx):
         print(f"Sample ophalen op index {idx}")
-        sample = self.data[idx]  # Hier kan de fout zitten
+        sample = self.data_all[idx]  # Hier kan de fout zitten
         print(f"Sample geladen: {sample}")
         return self.data_all[idx]
