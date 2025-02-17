@@ -58,8 +58,6 @@ def eval_epoch(args, model, dataset_eval, loss_fcn):
     return loss, logits
 
 def train_epoch(epoch, args, model, dataset_train, optimizer, scheduler, loss_fcn):
-    print(f"Aantal samples ontvangen door train_epoch: {len(dataset_train)}")
-
     model.train()
     loss_return = 0
     for batch_data in dataset_train:
@@ -73,8 +71,6 @@ def train_epoch(epoch, args, model, dataset_train, optimizer, scheduler, loss_fc
             scheduler.step()
             if batch_idx == 0:
                 loss_return += loss.data
-    print(f"Aantal samples in dataset_train: {len(dataset_train)}")
-
     return loss_return/len(dataset_train)
 
 
