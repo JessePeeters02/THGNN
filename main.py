@@ -16,7 +16,7 @@ t_float = torch.float64
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
-data_path = os.path.join(base_path, "..", "data", "data_train_predict")
+data_path = os.path.join(base_path, "data", "data_train_predict")
 os.makedirs(data_path, exist_ok=True)
 
 class Args:

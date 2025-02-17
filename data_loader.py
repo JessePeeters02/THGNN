@@ -8,6 +8,8 @@ data_path = os.path.join(base_path, "..", "data", "data_train_predict")
 os.makedirs(data_path, exist_ok=True)
 
 class AllGraphDataSampler(data.Dataset):
+    print(f"Pad naar de datasetmap: {data_path}")
+
     # def __init__(self, base_dir, gname_list=None, data_start=None, data_middle=None, data_end=None, mode="train"):
     #     print("Laden van dataset...")
     #     for bestand in os.listdir(data_path):
