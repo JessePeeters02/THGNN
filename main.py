@@ -126,6 +126,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     model.load_state_dict(checkpoint['model'])
     data_code = os.path.join(base_path, "data", "daily_stock")
     data_code = sorted(data_code)
+    print("data_code: ", len(data_code))
     data_code_last = data_code[data_middle:data_end]
     df_score=pd.DataFrame()
     for i in tqdm(range(len(val_dataset))):
