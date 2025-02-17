@@ -85,6 +85,8 @@ class Args:
 
 
 def fun_train_predict(data_start, data_middle, data_end, pre_data):
+    print(f"Pad naar de datasetmap: {data_path}")
+    print(f"Pad naar de basesetmap: {base_path}")
     args = Args()
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     #dataset = AllGraphDataSampler(base_dir="/home/THGNN-main/data/data_train_predict/", data_start=data_start,
