@@ -71,6 +71,8 @@ def train_epoch(epoch, args, model, dataset_train, optimizer, scheduler, loss_fc
             scheduler.step()
             if batch_idx == 0:
                 loss_return += loss.data
+    print(f"Aantal samples in dataset_train: {len(dataset_train)}")
+
     return loss_return/len(dataset_train)
 
 
