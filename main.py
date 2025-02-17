@@ -126,11 +126,14 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     model.load_state_dict(checkpoint['model'])
     data_code = os.path.join(base_path, "data", "daily_stock")
     data_code = sorted(data_code)
-    print("data_code: ", len(data_code))
     data_code_last = data_code[data_middle:data_end]
     df_score=pd.DataFrame()
     for i in tqdm(range(len(val_dataset))):
-        print(f"Current file: {data_code_last[i]}")
+        file_path = os.path.join(base_path, "data", "daily_stock", data_code_last[i])
+        if os.path.exists(file_path):
+            df = pd.read_csv(file_path, dtype=object)
+        else:
+            print(f"File {file_path} not found!")
         df = pd.read_csv(os.path.join(base_path, "data", "daily_stock", data_code_last[i]), dtype=object)
         tmp_data = val_dataset[i]
         pos_adj, neg_adj, features, labels, mask = extract_data(tmp_data, args.device)
