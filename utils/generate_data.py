@@ -87,8 +87,3 @@ def fun(relation_dt, start_dt_month, end_dt_month,df1):
 #         fun(stock_m[-1], stock_m[0], stock_m[-1], df1)
 fun('2022-11-30','2022-11-01','2022-11-30',df1)
 fun('2022-12-30','2022-12-01','2022-12-30',df1)
-
-import os
-data_path = "THGNN/data/data_train_predict"
-print("Gegevens gegenereerd en opgeslagen in:", os.path.abspath(data_path))
-print("Bestanden in de map:", os.listdir(data_path))
