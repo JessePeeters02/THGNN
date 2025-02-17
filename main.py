@@ -129,7 +129,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     data_code_last = data_code[data_middle:data_end]
     df_score=pd.DataFrame()
     for i in tqdm(range(len(val_dataset))):
-        df = pd.read_csv('/home/THGNN-main/data/daily_stock/' + data_code_last[i], dtype=object)
+        df = pd.read_csv(os.path.join(base_path, "data", "daily_stock", data_code_last[i]), dtype=object)
         tmp_data = val_dataset[i]
         pos_adj, neg_adj, features, labels, mask = extract_data(tmp_data, args.device)
         model.train()
@@ -144,7 +144,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         df_score=pd.concat([df_score,df])
 
         #df.to_csv('prediction/' + data_code_last[i], encoding='utf-8-sig', index=False)
-    df_score.to_csv('/home/THGNN-main/data/prediction/pred.csv')
+    df_score.to_csv(os.path.join(base_path, "data", "prediction", "pred.csv"))
     print(df_score)
     
 if __name__ == "__main__":
