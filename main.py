@@ -50,7 +50,8 @@ class Args:
         self.batch_size = 1
         self.loss_fcn = mse_loss
         # save model settings
-        self.save_path = os.path.join(os.path.abspath('.'), "/home/THGNN-main/data/model_saved/")
+        #self.save_path = os.path.join(os.path.abspath('.'), "/home/THGNN-main/data/model_saved/")
+        self.save_path = os.path.join(os.path.abspath('.'), "THGNN", "data", "model_saved")
         self.load_path = self.save_path
         self.save_name = self.model_name + "_hidden_" + str(self.hidden_dim) + "_head_" + str(self.num_heads) + \
                          "_outfeat_" + str(self.out_features) + "_batchsize_" + str(self.batch_size) + "_adjth_" + \
