@@ -60,6 +60,7 @@ def load_stock_data(stock_data_path):
         stock_df = pd.read_csv(os.path.join(stock_data_path, stock_file))
         stock_df['Date'] = pd.to_datetime(stock_df['Date'])
         stock_data[stock_name] = stock_df
+        print(stock_data)
     return stock_data
 
 # Laad de stock data
