@@ -103,10 +103,15 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data):
         df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
         df.to_csv(os.path.join(data_path, "daily_stock", f"{end_data.date()}.csv"), header=True, index=False, encoding='utf_8_sig')
 
-        
+
 # Voorbeeld van hoe je de functie kunt aanroepen
-fun('2022-11-30', '2022-11-01', '2022-11-30', stock_data)
-fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
+# fun('2022-11-30', '2022-11-01', '2022-11-30', stock_data)
+# fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
+
+for i in range(20, len(stock_trade_data)):
+    end_data = stock_trade_data[i]
+    start_data = stock_trade_data[i - 20]
+    fun(end_data, start_data, end_data, stock_data)
 
 
 
