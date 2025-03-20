@@ -11,10 +11,14 @@ from torch.autograd import Variable
 feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 
 # Basis pad naar de data-map
-base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
-data_path = os.path.join(base_path, "..", "data")
+base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
+# print(base_path)
+data_path = os.path.join(base_path, "data")
+# print(data_path)
 relation_path = os.path.join(data_path, "relation")
-stock_data_path = os.path.join(base_path, "portfolio_construction", "data", "NASDAQ_data")  # Map waar de CSV-bestanden staan
+# print(relation_path)
+stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "NASDAQ_data")  # Map waar de CSV-bestanden staan
+# print(stock_data_path)
 
 # Functie om de CSV-bestanden in te lezen en om te zetten naar een DataFrame
 def load_stock_data(stock_data_path):
