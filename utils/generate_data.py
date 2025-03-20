@@ -34,6 +34,14 @@ def load_stock_data(stock_data_path):
 # Laad de stock data
 stock_data = load_stock_data(stock_data_path)
 
+# Bepaal de unieke datums uit de data
+all_dates = []
+for stock_name, df in stock_data.items():
+    all_dates.extend(df['Date'].tolist())
+date_unique = sorted(list(set(all_dates)))  # Unieke datums
+stock_trade_data = date_unique
+stock_trade_data.sort()
+
 # Functie om de relatiegrafieken te verwerken
 def fun(relation_dt, start_dt_month, end_dt_month, stock_data):
     prev_date_num = 20
