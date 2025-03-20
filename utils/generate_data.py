@@ -7,7 +7,8 @@ import networkx as nx
 import pandas as pd
 from torch.autograd import Variable
 
-feature_cols = ['open','high','low','close','to','vol']
+# feature_cols = ['open','high','low','close','to','vol']
+feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 
 # origineel: path1 = "\THGNN\data\csi300.pkl"
 base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
