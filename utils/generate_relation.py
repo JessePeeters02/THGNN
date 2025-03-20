@@ -73,8 +73,8 @@ for stock_name, df in stock_data.items():
 date_unique = sorted(list(set(all_dates)))  # Unieke datums
 stock_trade_data = date_unique
 stock_trade_data.sort()
-print(stock_trade_data)
-print(len(stock_trade_data))
+# print(stock_trade_data)
+# print(len(stock_trade_data))
 
 #prev_date_num geeft aan over hoeveel dagen de correlatie wordt berekend
 prev_date_num = 20
@@ -83,7 +83,7 @@ prev_date_num = 20
 for i in range(prev_date_num, len(stock_trade_data)):
     end_data = stock_trade_data[i]
     start_data = stock_trade_data[i - prev_date_num]
-    
+    print(start_data, end_data)
     test_tmp = {}
     for stock_name, df in stock_data.items():
         df2 = df.loc[df['Date'] <= end_data]
