@@ -65,38 +65,40 @@ def load_stock_data(stock_data_path):
 # Laad de stock data
 stock_data = load_stock_data(stock_data_path)
 
-#prev_date_num Indicates the number of days in which stock correlation is calculated
-prev_date_num = 20
-date_unique = pd.date_range(start='2022-11-01', end='2022-12-30', freq='B')  # Werkdagen tussen de gegeven datums
-stock_trade_data = date_unique.tolist()
+# Bepaal de unieke datums uit de data
+all_dates = []
+for stock_name, df in stock_data.items():
+    all_dates.extend(df['Date'].tolist())
+date_unique = sorted(list(set(all_dates)))  # Unieke datums
+stock_trade_data = date_unique
 stock_trade_data.sort()
-stock_num = len(stock_data)
 
-#dt is the last trading day of each month
-dt = ['2022-11-30', '2022-12-30']
+#prev_date_num geeft aan over hoeveel dagen de correlatie wordt berekend
+prev_date_num = 20
 
-for i in range(len(dt)):
-    df2 = stock_data.copy()
-    end_data = dt[i]
-    start_data = stock_trade_data[stock_trade_data.index(end_data)-(prev_date_num - 1)]
-    code = sorted(list(stock_data.keys()))
+# Genereer correlatiematrices voor elke maand
+for i in range(prev_date_num, len(stock_trade_data)):
+    end_data = stock_trade_data[i]
+    start_data = stock_trade_data[i - prev_date_num]
+    
     test_tmp = {}
-    for j in tqdm(range(len(code))):
-        df3 = df2[code[j]].loc[df2[code[j]]['Date'] <= end_data]
-        df3 = df3.loc[df3['Date'] >= start_data]
-        y = df3[feature_cols].values
+    for stock_name, df in stock_data.items():
+        df2 = df.loc[df['Date'] <= end_data]
+        df2 = df2.loc[df2['Date'] >= start_data]
+        y = df2[feature_cols].values
         if y.T.shape[1] == prev_date_num:
-            test_tmp[code[j]] = y.T
+            test_tmp[stock_name] = y.T
+    
     t1 = time.time()
     result = stock_cor_matrix(test_tmp, list(test_tmp.keys()), prev_date_num, processes=1)
     result = result.fillna(0)
-    for i in range(0, stock_num):
+    for i in range(0, len(result)):
         result.iloc[i, i] = 1
     t2 = time.time()
     print('time cost', t2 - t1, 's')
     
     # Sla het bestand correct op
-    result.to_csv(os.path.join(relation_path, f"{end_data}.csv"))
+    result.to_csv(os.path.join(relation_path, f"{end_data.date()}.csv"))
 
 
 
