@@ -14,7 +14,7 @@ feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
 data_path = os.path.join(base_path, "..", "data")
 relation_path = os.path.join(data_path, "relation")
-stock_data_path = os.path.join(data_path, "stocks")  # Map waar de CSV-bestanden staan
+stock_data_path = os.path.join(base_path, "portfolio_construction", "data", "NASDAQ_data")  # Map waar de CSV-bestanden staan
 
 # Functie om de CSV-bestanden in te lezen en om te zetten naar een DataFrame
 def load_stock_data(stock_data_path):
