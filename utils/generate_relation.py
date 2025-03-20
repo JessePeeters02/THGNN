@@ -78,7 +78,7 @@ stock_trade_data.sort()
 
 #prev_date_num geeft aan over hoeveel dagen de correlatie wordt berekend
 prev_date_num = 20
-print(stock_data.items())
+
 # Genereer correlatiematrices voor elke maand
 for i in range(prev_date_num, len(stock_trade_data)):
     t1 = time.time()
