@@ -60,7 +60,7 @@ def load_stock_data(stock_data_path):
         stock_df = pd.read_csv(os.path.join(stock_data_path, stock_file))
         stock_df['Date'] = pd.to_datetime(stock_df['Date'])
         stock_data[stock_name] = stock_df
-        print(stock_data)
+        # print(stock_data)
     return stock_data
 
 # Laad de stock data
@@ -73,6 +73,8 @@ for stock_name, df in stock_data.items():
 date_unique = sorted(list(set(all_dates)))  # Unieke datums
 stock_trade_data = date_unique
 stock_trade_data.sort()
+print(stock_trade_data)
+print(len(stock_trade_data))
 
 #prev_date_num geeft aan over hoeveel dagen de correlatie wordt berekend
 prev_date_num = 20
