@@ -153,8 +153,9 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     print(df_score)
     
 if __name__ == "__main__":
+    total_data_points = len(os.listdir(os.path.join(data_path, "data_train_predict")))
     data_start = 20
-    data_middle = 39
-    data_end = data_middle+4
-    pre_data = '2022-12-29'
+    data_middle = int(0.8 * total_data_points)
+    data_end = total_data_points
+    pre_data = '2025-03-07'
     fun_train_predict(data_start, data_middle, data_end, pre_data)
