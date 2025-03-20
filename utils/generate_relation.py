@@ -78,9 +78,10 @@ stock_trade_data.sort()
 
 #prev_date_num geeft aan over hoeveel dagen de correlatie wordt berekend
 prev_date_num = 20
-
+print(stock_data.items())
 # Genereer correlatiematrices voor elke maand
 for i in range(prev_date_num, len(stock_trade_data)):
+    t1 = time.time()
     end_data = stock_trade_data[i]
     start_data = stock_trade_data[i - prev_date_num]
     print(start_data, end_data)
@@ -91,8 +92,6 @@ for i in range(prev_date_num, len(stock_trade_data)):
         y = df2[feature_cols].values
         if y.T.shape[1] == prev_date_num:
             test_tmp[stock_name] = y.T
-    
-    t1 = time.time()
     result = stock_cor_matrix(test_tmp, list(test_tmp.keys()), prev_date_num, processes=1)
     result = result.fillna(0)
     for i in range(0, len(result)):
