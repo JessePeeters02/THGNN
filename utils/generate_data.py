@@ -97,12 +97,13 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data):
         result = {'pos_adj': Variable(pos_adj), 'neg_adj': Variable(neg_adj), 'features': Variable(features),
                   'labels': Variable(labels), 'mask': mask}
         
-        with open(os.path.join(data_path, "data_train_predict", f"{end_data}.pkl"), 'wb') as f:
+        with open(os.path.join(data_path, "data_train_predict", f"{end_data.date()}.pkl"), 'wb') as f:
             pickle.dump(result, f)
         
         df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
-        df.to_csv(os.path.join(data_path, "daily_stock", f"{end_data}.csv"), header=True, index=False, encoding='utf_8_sig')
+        df.to_csv(os.path.join(data_path, "daily_stock", f"{end_data.date()}.csv"), header=True, index=False, encoding='utf_8_sig')
 
+        
 # Voorbeeld van hoe je de functie kunt aanroepen
 fun('2022-11-30', '2022-11-01', '2022-11-30', stock_data)
 fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
