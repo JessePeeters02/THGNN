@@ -9,6 +9,7 @@ import os
 feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 
 def cal_pccs(x, y, n):
+    print(f"Values of y: {y}")
     if np.isnan(x).any() or np.isnan(y).any():
         print(f"NaN values detected in x or y: x={x}, y={y}")
         return np.nan
@@ -32,6 +33,7 @@ def calculate_pccs(xs, yss, n):
     result = []
     for name in yss:
         ys = yss[name]
+        print(f"Values of ys for {name}: {ys}")
         tmp_res = []
         for pos, x in enumerate(xs):
             y = ys[pos]
@@ -103,6 +105,7 @@ for i in range(prev_date_num, len(stock_trade_data)):
         df2 = df2.loc[df2['Date'] >= start_data]
         # print(f"Data for {stock_name} from {start_data} to {end_data}: {len(df2)} rows")  # Debug statement
         y = df2[feature_cols].values
+        print(f"Values of y for {stock_name}: {y}")
         # print(f"Shape of y.T: {y.T.shape}")  # Debug statement
         if y.T.shape[1] == prev_date_num:
             test_tmp[stock_name] = y.T
