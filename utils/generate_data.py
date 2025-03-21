@@ -110,7 +110,7 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data):
 
 for i in range(20, len(stock_trade_data)):
     end_data = stock_trade_data[i].strftime('%Y-%m-%d')
-    start_data = stock_trade_data[i - 20].strftime('%Y-%m-%d')
+    start_data = stock_trade_data[i - 20+1].strftime('%Y-%m-%d')
     fun(end_data, start_data, end_data, stock_data)
 
 
