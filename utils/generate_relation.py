@@ -9,12 +9,23 @@ import os
 feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 
 def cal_pccs(x, y, n):
+    if np.isnan(x).any() or np.isnan(y).any():
+        print(f"NaN values detected in x or y: x={x}, y={y}")
+        return np.nan
     sum_xy = np.sum(np.sum(x*y))
     sum_x = np.sum(np.sum(x))
     sum_y = np.sum(np.sum(y))
     sum_x2 = np.sum(np.sum(x*x))
     sum_y2 = np.sum(np.sum(y*y))
-    pcc = (n*sum_xy-sum_x*sum_y)/np.sqrt((n*sum_x2-sum_x*sum_x)*(n*sum_y2-sum_y*sum_y))
+    var_x = n * sum_x2 - sum_x * sum_x
+    var_y = n * sum_y2 - sum_y * sum_y
+    if var_x == 0 or var_y == 0:
+        print(f"Zero variance detected: var_x={var_x}, var_y={var_y}")
+        return np.nan
+    denominator = np.sqrt((n * sum_x2 - sum_x * sum_x) * (n * sum_y2 - sum_y * sum_y))
+    if denominator == 0:
+        return np.nan  # Vermijd deling door nul
+    pcc = (n*sum_xy-sum_x*sum_y)/denominator
     return pcc
 
 def calculate_pccs(xs, yss, n):
