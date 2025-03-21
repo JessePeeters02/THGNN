@@ -9,7 +9,7 @@ import os
 feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 
 def cal_pccs(x, y, n):
-    print(f"Values of y: {y}")
+    # print(f"Values of y: {y}")
     if np.isnan(x).any() or np.isnan(y).any():
         print(f"NaN values detected in x or y: x={x}, y={y}")
         return np.nan
