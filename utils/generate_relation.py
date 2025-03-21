@@ -65,7 +65,7 @@ stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_constructi
 # print(stock_data_path)
 
 # Functie om de CSV-bestanden in te lezen en om te zetten naar een DataFrame
-def load_stock_data(stock_data_path):
+def load_stock_data(stock_data_path, filter_non_trading):
     stock_files = [f for f in os.listdir(stock_data_path) if f.endswith('.csv')]
     stock_data = {}
     for stock_file in stock_files:
@@ -80,17 +80,11 @@ def load_stock_data(stock_data_path):
                 continue  # Sla dit aandeel over
 
         stock_data[stock_name] = stock_df
-
-        if filter_non_trading:
-            print(f"Aantal aandelen met niet-handelsdagen: {len(non_trading_stocks)}")
-            print("Aandelen met niet-handelsdagen:", non_trading_stocks)
-
-        stock_data[stock_name] = stock_df
         # print(stock_data)
     return stock_data
 
 # Laad de stock data
-stock_data = load_stock_data(stock_data_path)
+stock_data = load_stock_data(stock_data_path, filter_non_trading=True)
 
 # Bepaal de unieke datums uit de data
 all_dates = []
