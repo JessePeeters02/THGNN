@@ -87,7 +87,7 @@ for i in range(prev_date_num, len(stock_trade_data)):
     print(start_data, end_data)
     test_tmp = {}
     for stock_name, df in stock_data.items():
-        print(f"Unique dates for {stock_name}: {df['Date'].unique()}")  # Debug statement
+        # print(f"Unique dates for {stock_name}: {df['Date'].unique()}")  # Debug statement
         df2 = df.loc[df['Date'] <= end_data]
         df2 = df2.loc[df2['Date'] >= start_data]
         # print(f"Data for {stock_name} from {start_data} to {end_data}: {len(df2)} rows")  # Debug statement
@@ -95,10 +95,10 @@ for i in range(prev_date_num, len(stock_trade_data)):
         # print(f"Shape of y.T: {y.T.shape}")  # Debug statement
         if y.T.shape[1] == prev_date_num:
             test_tmp[stock_name] = y.T
-            print("geslaagd")
+            # print("geslaagd")
     result = stock_cor_matrix(test_tmp, list(test_tmp.keys()), prev_date_num, processes=1)
     result = result.fillna(0)
-    print(result)
+    # print(result)
     for i in range(0, len(result)):
         result.iloc[i, i] = 1
     t2 = time.time()
