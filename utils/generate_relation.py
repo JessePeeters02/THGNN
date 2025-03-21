@@ -83,16 +83,16 @@ prev_date_num = 20
 for i in range(prev_date_num, len(stock_trade_data)):
     t1 = time.time()
     end_data = stock_trade_data[i]
-    start_data = stock_trade_data[i - prev_date_num]
+    start_data = stock_trade_data[i - prev_date_num+1]
     print(start_data, end_data)
     test_tmp = {}
     for stock_name, df in stock_data.items():
         print(f"Unique dates for {stock_name}: {df['Date'].unique()}")  # Debug statement
         df2 = df.loc[df['Date'] <= end_data]
         df2 = df2.loc[df2['Date'] >= start_data]
-        print(f"Data for {stock_name} from {start_data} to {end_data}: {len(df2)} rows")  # Debug statement
+        # print(f"Data for {stock_name} from {start_data} to {end_data}: {len(df2)} rows")  # Debug statement
         y = df2[feature_cols].values
-        print(f"Shape of y.T: {y.T.shape}")  # Debug statement
+        # print(f"Shape of y.T: {y.T.shape}")  # Debug statement
         if y.T.shape[1] == prev_date_num:
             test_tmp[stock_name] = y.T
             print("geslaagd")
