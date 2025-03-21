@@ -25,6 +25,7 @@ def cal_pccs(x, y, n):
         return np.nan
     denominator = np.sqrt((n * sum_x2 - sum_x * sum_x) * (n * sum_y2 - sum_y * sum_y))
     if denominator == 0:
+        print(f"Division by zero detected: denominator={denominator}")
         return np.nan  # Vermijd deling door nul
     pcc = (n*sum_xy-sum_x*sum_y)/denominator
     return pcc
@@ -33,7 +34,7 @@ def calculate_pccs(xs, yss, n):
     result = []
     for name in yss:
         ys = yss[name]
-        print(f"Values of ys for {name}: {ys}")
+        # print(f"Values of ys for {name}: {ys}")
         tmp_res = []
         for pos, x in enumerate(xs):
             y = ys[pos]
@@ -118,7 +119,7 @@ for i in range(prev_date_num, len(stock_trade_data)):
         df2 = df2.loc[df2['Date'] >= start_data]
         # print(f"Data for {stock_name} from {start_data} to {end_data}: {len(df2)} rows")  # Debug statement
         y = df2[feature_cols].values
-        print(f"Values of y for {stock_name}: {y}")
+        # print(f"Values of y for {stock_name}: {y}")
         # print(f"Shape of y.T: {y.T.shape}")  # Debug statement
         if y.T.shape[1] == prev_date_num:
             test_tmp[stock_name] = y.T
