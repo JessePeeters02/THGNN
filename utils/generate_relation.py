@@ -68,6 +68,7 @@ stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_constructi
 def load_stock_data(stock_data_path, filter_non_trading):
     stock_files = [f for f in os.listdir(stock_data_path) if f.endswith('.csv')]
     stock_data = {}
+    non_trading_stocks = []
     for stock_file in stock_files:
         stock_name = stock_file.split('.')[0]
         stock_df = pd.read_csv(os.path.join(stock_data_path, stock_file))
@@ -81,6 +82,11 @@ def load_stock_data(stock_data_path, filter_non_trading):
 
         stock_data[stock_name] = stock_df
         # print(stock_data)
+
+    if filter_non_trading:
+        print(f"Aantal aandelen met niet-handelsdagen: {len(non_trading_stocks)}")
+        print(f"Aantal aandelen in de huidige dataset: {len(stock_data)}")
+    
     return stock_data
 
 # Laad de stock data
