@@ -89,9 +89,7 @@ for i in range(prev_date_num, len(stock_trade_data)):
     for stock_name, df in stock_data.items():
         df2 = df.loc[df['Date'] <= end_data]
         df2 = df2.loc[df2['Date'] >= start_data]
-        print(df2)
         y = df2[feature_cols].values
-        print(y)
         if y.T.shape[1] == prev_date_num:
             test_tmp[stock_name] = y.T
     result = stock_cor_matrix(test_tmp, list(test_tmp.keys()), prev_date_num, processes=1)
