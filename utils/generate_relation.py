@@ -94,6 +94,7 @@ for i in range(prev_date_num, len(stock_trade_data)):
         print(y)
         if y.T.shape[1] == prev_date_num:
             test_tmp[stock_name] = y.T
+            print(y, test_tmp)
     result = stock_cor_matrix(test_tmp, list(test_tmp.keys()), prev_date_num, processes=1)
     result = result.fillna(0)
     for i in range(0, len(result)):
