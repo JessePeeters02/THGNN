@@ -107,7 +107,7 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
             pickle.dump(result, f)
         
         df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
-        df.to_csv(os.path.join(data_path, "daily_stock", f"{end_data.date()}.csv"), header=True, index=False, encoding='utf_8_sig')
+        df.to_csv(os.path.join(data_path, "daily_stock", f"{end_data}.csv"), header=True, index=False, encoding='utf_8_sig')
 
 
 # Voorbeeld van hoe je de functie kunt aanroepen
