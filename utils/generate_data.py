@@ -49,17 +49,24 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data):
     adj_stock_set = list(adj_all.index)
     
     # Maak positieve en negatieve grafieken
-    pos_g = nx.Graph(adj_all > 0.1)
-    pos_adj = nx.adjacency_matrix(pos_g).toarray()
-    pos_adj = pos_adj - np.diag(np.diag(pos_adj))
-    pos_adj = torch.from_numpy(pos_adj).type(torch.float32)
+    # pos_g = nx.Graph(adj_all > 0.1)
+    # pos_adj = nx.adjacency_matrix(pos_g).toarray()
+    # pos_adj = pos_adj - np.diag(np.diag(pos_adj))
+    # pos_adj = torch.from_numpy(pos_adj).type(torch.float32)
     
-    neg_g = nx.Graph(adj_all < -0.1)
-    neg_adj = nx.adjacency_matrix(neg_g)
-    neg_adj.data = np.ones(neg_adj.data.shape)
-    neg_adj = neg_adj.toarray()
-    neg_adj = neg_adj - np.diag(np.diag(neg_adj))
-    neg_adj = torch.from_numpy(neg_adj).type(torch.float32)
+    # neg_g = nx.Graph(adj_all < -0.1)
+    # neg_adj = nx.adjacency_matrix(neg_g)
+    # neg_adj.data = np.ones(neg_adj.data.shape)
+    # neg_adj = neg_adj.toarray()
+    # neg_adj = neg_adj - np.diag(np.diag(neg_adj))
+    # neg_adj = torch.from_numpy(neg_adj).type(torch.float32)
+    
+    #efficienter geprogrammeerd
+    pos_adj = nx.adjacency_matrix(nx.Graph(adj_all > 0.1)).toarray()
+    pos_adj = torch.FloatTensor(pos_adj - np.diag(np.diag(pos_adj)))
+
+    neg_adj = nx.adjacency_matrix(nx.Graph(adj_all < -0.1)).toarray()
+    neg_adj = torch.FloatTensor(neg_adj - np.diag(np.diag(neg_adj)))
     
     print('neg_adj over')
     print(neg_adj.shape)
