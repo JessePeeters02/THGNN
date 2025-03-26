@@ -32,15 +32,14 @@ def load_stock_data(stock_data_path):
     return stock_data
 
 # Laad de stock data
+print("Loading stock data...")
 stock_data = load_stock_data(stock_data_path)
+print("Stock data loaded.")
 
 # Bepaal de unieke datums uit de data
-all_dates = []
-for stock_name, df in stock_data.items():
-    all_dates.extend(df['Date'].tolist())
-date_unique = sorted(list(set(all_dates)))  # Unieke datums
-stock_trade_data = date_unique
-stock_trade_data.sort()
+all_dates = sorted({date for df in stock_data.values() for date in df['Date'].tolist()})
+print("Unique dates determined.")
+print(all_dates)
 
 # Functie om de relatiegrafieken te verwerken
 def fun(relation_dt, start_dt_month, end_dt_month, stock_data):
