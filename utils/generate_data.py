@@ -116,8 +116,8 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
 # fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
 
 for i in range(prev_date_num, len(all_dates)):
-    end_data = all_dates[i]
-    start_data = all_dates[i-(prev_date_num-1)]
+    end_data = all_dates[i].strftime('%Y-%m-%d')
+    start_data = all_dates[i-(prev_date_num-1)].strftime('%Y-%m-%d')
     fun(end_data, start_data, end_data, stock_data, prev_date_num)
 
 
