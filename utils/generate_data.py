@@ -40,10 +40,11 @@ print("Stock data loaded.")
 # Bepaal de unieke datums uit de data
 all_dates = sorted({date for df in stock_data.values() for date in df['Date'].tolist()})
 print("Unique dates determined.")
-print(all_dates)
+# print(all_dates)
 
 # Functie om de relatiegrafieken te verwerken
 def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
+    print(relation_dt, start_dt_month, end_dt_month)
     relation_file = os.path.join(relation_path, f"{relation_dt}.csv")
     adj_all = pd.read_csv(relation_file, index_col=0)
     adj_stock_set = list(adj_all.index)
