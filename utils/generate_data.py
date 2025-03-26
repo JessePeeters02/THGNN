@@ -63,10 +63,10 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
     # neg_adj = torch.from_numpy(neg_adj).type(torch.float32)
 
     #efficienter geprogrammeerd
-    pos_adj = nx.adjacency_matrix(nx.Graph(adj_all > 0.1)).toarray()
+    pos_adj = nx.adjacency_matrix(nx.Graph(adj_all > 0.1)).toarray().astype(float)
     pos_adj = torch.FloatTensor(pos_adj - np.diag(np.diag(pos_adj)))
 
-    neg_adj = nx.adjacency_matrix(nx.Graph(adj_all < -0.1)).toarray()
+    neg_adj = nx.adjacency_matrix(nx.Graph(adj_all < -0.1)).toarray().astype(float)
     neg_adj = torch.FloatTensor(neg_adj - np.diag(np.diag(neg_adj)))
     
     print('neg_adj over')
