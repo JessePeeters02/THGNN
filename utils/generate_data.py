@@ -76,7 +76,7 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
     
     for i in tqdm(range(len(dts))):
         end_data = dts[i]
-        start_data = stock_trade_data[stock_trade_data.index(end_data)-(pdn - 1)]
+        start_data = all_dates[all_dates.index(end_data)-(pdn - 1)]
         
         feature_all = []
         mask = []
