@@ -47,7 +47,6 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
     print(relation_dt, start_dt_month, end_dt_month)
     relation_file = os.path.join(relation_path, f"{relation_dt}.csv")
     adj_all = pd.read_csv(relation_file, index_col=0)
-    adj_stock_set = list(adj_all.index)
     
     # Maak positieve en negatieve grafieken
     # pos_g = nx.Graph(adj_all > 0.1)
@@ -72,7 +71,7 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
     print('neg_adj over')
     print(neg_adj.shape)
     
-    dts = stock_trade_data[stock_trade_data.index(start_dt_month):stock_trade_data.index(end_dt_month)+1]
+    dts = all_dates[all_dates.index(start_dt_month):all_dates.index(end_dt_month)+1]
     print(dts)
     
     for i in tqdm(range(len(dts))):
