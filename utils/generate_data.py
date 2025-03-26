@@ -9,6 +9,7 @@ from torch.autograd import Variable
 
 # Definieer de kolommen die we willen gebruiken uit de CSV-bestanden
 feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+prev_date_num = 20
 
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
@@ -42,8 +43,7 @@ print("Unique dates determined.")
 print(all_dates)
 
 # Functie om de relatiegrafieken te verwerken
-def fun(relation_dt, start_dt_month, end_dt_month, stock_data):
-    prev_date_num = 20
+def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
     relation_file = os.path.join(relation_path, f"{relation_dt}.csv")
     adj_all = pd.read_csv(relation_file, index_col=0)
     adj_stock_set = list(adj_all.index)
@@ -76,7 +76,7 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data):
     
     for i in tqdm(range(len(dts))):
         end_data = dts[i]
-        start_data = stock_trade_data[stock_trade_data.index(end_data)-(prev_date_num - 1)]
+        start_data = stock_trade_data[stock_trade_data.index(end_data)-(pdn - 1)]
         
         feature_all = []
         mask = []
@@ -87,7 +87,7 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data):
             df2 = df.loc[df['Date'] <= end_data]
             df2 = df2.loc[df2['Date'] >= start_data]
             
-            if len(df2) == prev_date_num:
+            if len(df2) == pdn:
                 y = df2[feature_cols].values
                 feature_all.append(y)
                 mask.append(True)
@@ -114,10 +114,10 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data):
 # fun('2022-11-30', '2022-11-01', '2022-11-30', stock_data)
 # fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
 
-for i in range(20, len(all_dates)):
+for i in range(prev_date_num, len(all_dates)):
     end_data = all_dates[i]
-    start_data = all_dates[i-19]
-    fun(end_data, start_data, end_data, stock_data)
+    start_data = all_dates[i-(prev_date_num-1)]
+    fun(end_data, start_data, end_data, stock_data, prev_date_num)
 
 
 
