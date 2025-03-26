@@ -103,7 +103,7 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
         result = {'pos_adj': Variable(pos_adj), 'neg_adj': Variable(neg_adj), 'features': Variable(features),
                   'labels': Variable(labels), 'mask': mask}
         
-        with open(os.path.join(data_path, "data_train_predict", f"{end_data.date()}.pkl"), 'wb') as f:
+        with open(os.path.join(data_path, "data_train_predict", f"{end_data}.pkl"), 'wb') as f:
             pickle.dump(result, f)
         
         df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
