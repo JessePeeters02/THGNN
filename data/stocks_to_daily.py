@@ -12,7 +12,6 @@ daily_data_path = os.path.join(data_path, "NASDAQ_per_dag")
 stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "NASDAQ_data")  # Map waar de CSV-bestanden staan
 os.makedirs(daily_data_path, exist_ok=True)  # Zorg dat de output map bestaat
 
-
 def transform_to_daily_structure(stock_data_path, filter_non_trading):
     stock_files = [f for f in os.listdir(stock_data_path) if f.endswith('.csv')]
     stock_data = []
