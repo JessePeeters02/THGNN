@@ -4,7 +4,7 @@ import time
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from scipy.spatial.distance import pdist, squareform
+#from scipy.spatial.distance import pdist, squareform
 
 # Configuratie
 FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume']
