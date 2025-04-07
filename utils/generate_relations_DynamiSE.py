@@ -132,8 +132,13 @@ if __name__ == "__main__":
     model = EfficientDynamicSE(num_features=5, hidden_dim=64)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     
+    # Training loop met opslag van model en resultaten
+    training_results = []
+    best_loss = float('inf')
+
     # 4. Training loop
     for epoch in range(10):
+        epoch_losses = []
         for snapshot in snapshots:
             optimizer.zero_grad()
             
@@ -149,6 +154,7 @@ if __name__ == "__main__":
             loss = embeddings.pow(2).mean()  # Placeholder - replace with your loss
             loss.backward()
             optimizer.step()
+            epoch_losses.append(loss.item())
         
         print(f"Epoch {epoch}, Loss: {loss.item()}")
 
