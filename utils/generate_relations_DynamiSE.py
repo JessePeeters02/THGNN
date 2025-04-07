@@ -196,6 +196,53 @@ if __name__ == "__main__":
         
         print(f"Epoch {epoch}, Loss: {loss.item():.4f}")
 
+        # Bereken gemiddeld verlies voor deze epoch
+        avg_loss = np.mean(epoch_losses)
+        training_results.append(avg_loss)
+        print(f"Epoch {epoch}, Avg Loss: {avg_loss}")
+        
+
+        # Sla het beste model op
+        if avg_loss < best_loss:
+            best_loss = avg_loss
+            model_path = os.path.join(relation_path, "best_model.pth")
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': best_loss,
+            }, model_path)
+            print(f"Beste model opgeslagen in {model_path} met loss {best_loss}")
+
+    # Sla de trainingsresultaten op
+    results_df = pd.DataFrame({
+        'epoch': range(len(training_results)),
+        'loss': training_results
+    })
+    results_path = os.path.join(relation_path, "training_results.csv")
+    results_df.to_csv(results_path, index=False)
+    print(f"Trainingsresultaten opgeslagen in {results_path}")
+
+    # Laad het beste model voor evaluatie
+    checkpoint = torch.load(model_path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.eval()
+    
+    # Voorbeeld van hoe je embeddings kunt krijgen voor een snapshot
+    example_snapshot = snapshots[0]
+    with torch.no_grad():
+        example_embeddings = model(
+            example_snapshot['features'],
+            example_snapshot['pos_edges'],
+            example_snapshot['neg_edges'],
+            torch.tensor([0.0, 1.0])
+        )
+        print("\nVoorbeeld embeddings voor eerste snapshot:")
+        print(example_embeddings.shape)  # Toon de vorm van de output
+        print("Eerste 5 embeddings:")
+        print(example_embeddings[:5])  # Toon eerste 5 embeddings
+
+
 
 
 # import pandas as pd
