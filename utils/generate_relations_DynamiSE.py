@@ -1,3 +1,4 @@
+#j generate_relation.py herwerkt voor het gebruiken van DynamiSE
 import torch
 import torch.nn as nn
 from torch_geometric.nn import GCNConv

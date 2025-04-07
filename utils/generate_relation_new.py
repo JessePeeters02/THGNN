@@ -1,3 +1,4 @@
+#j generate_relation.py herwerkt zodat het efficienter werkt op de dagelijkse data
 import os
 import time
 import numpy as np
