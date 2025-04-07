@@ -156,7 +156,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
 if __name__ == "__main__":
     total_data_points = len(os.listdir(os.path.join(data_path, "data_train_predict")))
     data_start = 20
-    data_middle = int(0.8 * total_data_points)
+    data_middle = int(0.8 * (total_data_points-20)) + 20
     data_end = total_data_points
     pre_data = '2025-03-07'
     fun_train_predict(data_start, data_middle, data_end, pre_data)
