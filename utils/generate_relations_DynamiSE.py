@@ -131,6 +131,9 @@ def dynamiSE_loss(embeddings, pos_edges, neg_edges, alpha=1.0, beta=0.001):
         emb_src = embeddings[src]
         emb_dst = embeddings[dst]
 
+        emb_src = torch.nn.functional.normalize(emb_src, p=2, dim=1)
+        emb_dst = torch.nn.functional.normalize(emb_dst, p=2, dim=1)
+
         # Predicted edge weight: dot product
         w_hat = (emb_src * emb_dst).sum(dim=1)  # shape [E]
         w_true = torch.full_like(w_hat, sign, dtype=torch.float32)
