@@ -9,6 +9,22 @@ from tqdm import tqdm
 import os
 from sklearn.neighbors import NearestNeighbors
 
+base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+data_path = os.path.join(base_path, "data")
+daily_data_path = os.path.join(data_path, "NASDAQ_per_dag")
+relation_path = os.path.join(data_path, "relation_dynamiSE")
+os.makedirs(relation_path, exist_ok=True)
+
+def load_all_stocks(stock_data_path):
+    all_stock_data = []
+    for file in os.listdir(stock_data_path):
+        if file.endswith('.csv'):
+            df = pd.read_csv(os.path.join(stock_data_path, file))
+            df['Stock'] = file.replace('.csv', '')
+            df['Date'] = pd.to_datetime(df['Date'])
+            all_stock_data.append(df[['Date', 'Stock', 'Open', 'High', 'Low', 'Close', 'Volume']])
+    print('data ingeladen')
+    return pd.concat(all_stock_data, ignore_index=True)
 class EfficientDynamicSE(nn.Module):
     def __init__(self, num_features, hidden_dim):
         super(EfficientDynamicSE, self).__init__()
@@ -106,7 +122,8 @@ def prepare_dynamic_data(stock_data, window_size=20, k_neighbors=5):
 # Usage example
 if __name__ == "__main__":
     # 1. Load your stock data (assuming it's in a DataFrame)
-    stock_data = pd.read_csv('your_stock_data.csv')
+    stock_data = load_all_stocks(daily_data_path) 
+
     
     # 2. Prepare dynamic graph snapshots
     snapshots = prepare_dynamic_data(stock_data)
