@@ -1,4 +1,4 @@
-# tis nu 18:04
+# Leugen! het is 18:13 tegen dat ik hier gevonden heb hoe het moet
 from trainer.trainer import *
 from data_loader import *
 from model.Thgnn import *
