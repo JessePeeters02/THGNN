@@ -195,6 +195,7 @@ if __name__ == "__main__":
             )
             loss.backward()
             optimizer.step()
+            print('loss:', loss.item())
             epoch_losses.append(loss.item())
         
         print(f"Epoch {epoch}, Loss: {loss.item():.4f}")
