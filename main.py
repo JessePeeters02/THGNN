@@ -1,3 +1,4 @@
+# tis nu 18:04
 from trainer.trainer import *
 from data_loader import *
 from model.Thgnn import *
