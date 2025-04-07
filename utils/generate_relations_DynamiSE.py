@@ -18,7 +18,7 @@ os.makedirs(relation_path, exist_ok=True)
 
 def load_all_stocks(stock_data_path):
     all_stock_data = []
-    for file in os.listdir(stock_data_path):
+    for file in tqdm(os.listdir(stock_data_path)):
         if file.endswith('.csv'):
             df = pd.read_csv(os.path.join(stock_data_path, file))
             df['Stock'] = file.replace('.csv', '')
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     checkpoint = torch.load(model_path)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
-    
+
     # Voorbeeld van hoe je embeddings kunt krijgen voor een snapshot
     example_snapshot = snapshots[0]
     with torch.no_grad():
