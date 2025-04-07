@@ -1,3 +1,4 @@
+#Laatste commit: 
 #j generate_relation.py herwerkt voor het gebruiken van DynamiSE
 import torch
 import torch.nn as nn
@@ -119,6 +120,38 @@ def prepare_dynamic_data(stock_data, window_size=20, k_neighbors=5):
     
     return snapshots
 
+def dynamiSE_loss(embeddings, pos_edges, neg_edges, alpha=1.0, beta=0.001):
+    """
+    embeddings: Tensor [N, D]
+    pos_edges: Tensor [2, E_pos] (source, target)
+    neg_edges: Tensor [2, E_neg]
+    """
+    def edge_loss(edge_index, sign):
+        src, dst = edge_index
+        emb_src = embeddings[src]
+        emb_dst = embeddings[dst]
+
+        # Predicted edge weight: dot product
+        w_hat = (emb_src * emb_dst).sum(dim=1)  # shape [E]
+        w_true = torch.full_like(w_hat, sign, dtype=torch.float32)
+
+        # Term 1: squared error
+        recon_loss = (w_hat - w_true).pow(2)
+
+        # Term 2: sign consistency
+        log_term = torch.log1p((w_hat * w_true).clamp(min=1e-6))  # log(1 + x), safe clamp
+
+        return recon_loss - alpha * log_term
+
+    loss_pos = edge_loss(pos_edges, sign=+1).mean()
+    loss_neg = edge_loss(neg_edges, sign=-1).mean()
+
+    # Regularization on embeddings
+    l_reg = embeddings.norm(p=2).mean()
+
+    return loss_pos + loss_neg + beta * l_reg
+
+
 # Usage example
 if __name__ == "__main__":
     # 1. Load your stock data (assuming it's in a DataFrame)
@@ -144,13 +177,18 @@ if __name__ == "__main__":
                 snapshot['neg_edges'],
                 torch.tensor([0.0, 1.0])  # Time steps
             )
-            
-            # Custom loss function for your task
-            loss = embeddings.pow(2).mean()  # Placeholder - replace with your loss
+            #DyanmiSE loss function 
+            loss = dynamiSE_loss(
+            embeddings,
+            snapshot['pos_edges'],
+            snapshot['neg_edges'],
+            alpha=1.0,
+            beta=0.001
+            )
             loss.backward()
             optimizer.step()
         
-        print(f"Epoch {epoch}, Loss: {loss.item()}")
+        print(f"Epoch {epoch}, Loss: {loss.item():.4f}")
 
 
 
