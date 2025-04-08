@@ -28,7 +28,7 @@ def load_all_stocks(stock_data_path):
     print('data ingeladen')
     return pd.concat(all_stock_data, ignore_index=True)
 
-class EfficientDynamicSE(nn.Module):
+class EfficientDynamicSE(nn.Module): #wordt aangesproken op lijn 170
     def __init__(self, num_features, hidden_dim):
         super(EfficientDynamicSE, self).__init__()
         self.hidden_dim = hidden_dim
