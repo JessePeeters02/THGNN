@@ -28,9 +28,9 @@ def load_all_stocks(stock_data_path):
     print('data ingeladen')
     return pd.concat(all_stock_data, ignore_index=True)
 
-class EfficientDynamicSE(nn.Module): #wordt aangesproken op lijn 170
+class DynamiSE(nn.Module): #wordt aangesproken op lijn 170
     def __init__(self, num_features, hidden_dim):
-        super(EfficientDynamicSE, self).__init__()
+        super(DynamiSE, self).__init__()
         self.hidden_dim = hidden_dim
         
         # Feature transformation
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     snapshots = prepare_dynamic_data(stock_data)
     
     # 3. Initialize model
-    model = EfficientDynamicSE(num_features=5, hidden_dim=64)
+    model = DynamiSE(num_features=5, hidden_dim=64)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     
     # Training loop met opslag van model en resultaten
