@@ -24,6 +24,7 @@ def load_all_stocks(stock_data_path):
             df['Stock'] = file.replace('.csv', '')
             df['Date'] = pd.to_datetime(df['Date'])
             all_stock_data.append(df[['Date', 'Stock', 'Open', 'High', 'Low', 'Close', 'Volume']])
+    print(all_stock_data.head())
     print('data ingeladen')
     return pd.concat(all_stock_data, ignore_index=True)
 
