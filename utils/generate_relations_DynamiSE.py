@@ -26,6 +26,7 @@ def load_all_stocks(stock_data_path):
             all_stock_data.append(df[['Date', 'Stock', 'Open', 'High', 'Low', 'Close', 'Volume']])
     print('data ingeladen')
     return pd.concat(all_stock_data, ignore_index=True)
+
 class EfficientDynamicSE(nn.Module):
     def __init__(self, num_features, hidden_dim):
         super(EfficientDynamicSE, self).__init__()
