@@ -7,7 +7,6 @@ from torchdiffeq import odeint
 import numpy as np
 import pandas as pd
 import pickle
-import networkx as nx
 from tqdm import tqdm
 import os
 from sklearn.neighbors import NearestNeighbors
@@ -216,10 +215,9 @@ if __name__ == "__main__":
 
     # 3. Training loop
     for epoch in range(num_epochs):
-        print(f"Epoch {epoch+1} van de {num_epochs}")
         model.train()
         epoch_losses = []
-        for snapshot in tqdm(snapshots):
+        for snapshot in tqdm(snapshots, desc=f"Epoch {epoch+1} van de {num_epochs}"):
             optimizer.zero_grad()
             
             # Forward pass
