@@ -10,6 +10,8 @@ from tqdm import tqdm
 import os
 from sklearn.neighbors import NearestNeighbors
 
+print('hallo')
+
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data")
 daily_data_path = os.path.join(data_path, "NASDAQ_per_dag")
