@@ -238,9 +238,11 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
             epoch_losses.append(loss.item())
+            weights =  np.arrange(1, len(epoch_losses)+1)
+            weighted_avg_loss = np.average(epoch_losses, weights=weights)
 
         # Bereken gemiddeld verlies voor deze epoch
-        avg_loss = np.mean(epoch_losses)
+        avg_loss = weighted_avg_loss  # np.mean(epoch_losses)
         print(f"Epoch {epoch}, Avg Loss: {avg_loss}")
         
         # Sla het beste model op
