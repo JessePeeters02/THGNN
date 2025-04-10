@@ -172,8 +172,10 @@ def main1_generate():
     
     # test prints
     print(f"Aantal snapshots: {len(snapshots)}")
-    print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
-    print(f"Gemiddelde edges per snapshot: {np.mean([s['pos_edges'].shape[1] + s['neg_edges'].shape[1] for s in snapshots]):.0f}")
+    print(f"Gemiddelde nodes per snapshot:
+          {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
+    print(f"Gemiddelde edges per snapshot:
+          {np.mean([s['pos_edges'].shape[1] + s['neg_edges'].shape[1] for s in snapshots]):.0f}")
 
     # 2. Initialize model
     model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
@@ -254,7 +256,6 @@ def main1_load():
 
     for snapshot in tqdm(snapshots, desc="Generating outputs"):
         with torch.no_grad():
-            # embeddings = model(snapshot['features'], snapshot['pos_edges'], snapshot['neg_edges'], torch.tensor([0.0, 1.0]))
             # Adjacency matrices
             N = len(snapshot['tickers'])
             pos_adj = edges_to_adj_matrix(snapshot['pos_edges'], N)
@@ -294,8 +295,10 @@ def main2_generate():
     
     # test prints
     print(f"Aantal snapshots: {len(snapshots)}")
-    print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
-    print(f"Gemiddelde edges per snapshot: {np.mean([s['pos_edges'].shape[1] + s['neg_edges'].shape[1] for s in snapshots]):.0f}")
+    print(f"Gemiddelde nodes per snapshot:
+          {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
+    print(f"Gemiddelde edges per snapshot:
+          {np.mean([s['pos_edges'].shape[1] + s['neg_edges'].shape[1] for s in snapshots]):.0f}")
 
     # 2. Initialize model
     model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
@@ -370,7 +373,6 @@ def main2_load():
 
     for snapshot in tqdm(snapshots, desc="Generating outputs"):
         with torch.no_grad():
-            # embeddings = model(snapshot['features'], snapshot['pos_edges'], snapshot['neg_edges'], torch.tensor([0.0, 1.0]))  
             # Adjacency matrices
             N = len(snapshot['tickers'])
             pos_adj = edges_to_adj_matrix(snapshot['pos_edges'], N)
@@ -412,4 +414,4 @@ model_path = os.path.join(relation_path, "best_model.pth")
 os.makedirs(relation_path, exist_ok=True)
 
 main2_generate()
-main2_load()   
+main2_load()
