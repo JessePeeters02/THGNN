@@ -172,10 +172,8 @@ def main1_generate():
     
     # test prints
     print(f"Aantal snapshots: {len(snapshots)}")
-    print(f"Gemiddelde nodes per snapshot:
-          {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
-    print(f"Gemiddelde edges per snapshot:
-          {np.mean([s['pos_edges'].shape[1] + s['neg_edges'].shape[1] for s in snapshots]):.0f}")
+    print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
+    print(f"Gemiddelde edges per snapshot: {np.mean([s['pos_edges'].shape[1] + s['neg_edges'].shape[1] for s in snapshots]):.0f}")
 
     # 2. Initialize model
     model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
@@ -288,10 +286,8 @@ def main2_generate():
     
     # test prints
     print(f"Aantal snapshots: {len(snapshots)}")
-    print(f"Gemiddelde nodes per snapshot:
-          {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
-    print(f"Gemiddelde edges per snapshot:
-          {np.mean([s['pos_edges'].shape[1] + s['neg_edges'].shape[1] for s in snapshots]):.0f}")
+    print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
+    print(f"Gemiddelde edges per snapshot: {np.mean([s['pos_edges'].shape[1] + s['neg_edges'].shape[1] for s in snapshots]):.0f}")
 
     # 2. Initialize model
     model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
