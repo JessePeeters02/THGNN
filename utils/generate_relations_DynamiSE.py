@@ -368,10 +368,10 @@ def main2_load():
                 if len(window_data) == prev_date_num:
                     features.append(window_data[feature_cols].values)
                     labels.append(window_data.iloc[-1]['Close'])
-                    stock_info.append([stock_name, snapshot['date'].strftime('%Y-%m-%d')])
+                    stock_info.append([stock_name, snapshot['date']])
             
             # Opslag
-            date_str = snapshot['date'].strftime('%Y-%m-%d')
+            date_str = snapshot['date']
             os.makedirs(os.path.join(data_path, "data_train_predict_DSE2"), exist_ok=True)
             with open(os.path.join(data_path, "data_train_predict_DSE2", f"{date_str}.pkl"), 'wb') as f:
                 pickle.dump({
