@@ -153,23 +153,44 @@ def compute_delta_edges(
     else:
         return torch.empty((2, 0), dtype=torch.long)
 
-def build_initial_edges_via_correlation(feature_matrix, threshold=0.6):
-    print('feature matrix: ', feature_matrix.shape)
-    print(feature_matrix[:5]) 
-    corr = np.corrcoef(feature_matrix)
-    np.fill_diagonal(corr, 0)  # Geen zelf-loops
-    print(f"Correlation matrix shape: {corr.shape}")
-    print(f"Correlation matrix: {corr}")
+def build_initial_edges_via_correlation(window_data, threshold=0.6):
+    # Groepeer per stock en bereken correlaties per feature
+    grouped = window_data.groupby('Stock')[feature_cols]
+    
+    # Maak een 3D array van features (stocks x features x time)
+    stock_arrays = np.stack([group.values.T for name, group in grouped])
+    n_stocks = stock_arrays.shape[0]
+    print(f"aantal stocks: {n_stocks}")
+    # Initialiseer correlatiematrix
+    corr_matrix = np.zeros((n_stocks, n_stocks))
+    print(f"corr_matrix shape: {corr_matrix.shape}")
+    # Bereken correlaties tussen alle paren van stocks
+    for i in tqdm(range(n_stocks), desc="Calculating correlations"):
+        for j in range(i+1, n_stocks):
+            # Bereken correlatie voor elke feature apart
+            feature_correlations = []
+            for f in range(len(feature_cols)):
+                corr = np.corrcoef(stock_arrays[i,f,:], stock_arrays[j,f,:])[0,1]
+                feature_correlations.append(corr)
+            
+            # Gemiddelde correlatie over alle features
+            avg_corr = np.nanmean(feature_correlations)
+            corr_matrix[i,j] = avg_corr
+            corr_matrix[j,i] = avg_corr
+    
+    # Bouw edges op basis van drempelwaarde
     pos_edges = []
     neg_edges = []
-
-    N = corr.shape[0]
-    for i in tqdm(range(N), desc="Building initial edges via correlation"):
-        for j in range(i + 1, N):  # geen dubbele
-            if corr[i, j] > threshold:
+    
+    for i in range(n_stocks):
+        for j in range(i+1, n_stocks):
+            if corr_matrix[i,j] > threshold:
                 pos_edges.append((i, j))
-            elif corr[i, j] < -threshold:
+                pos_edges.append((j, i))  # Maak ongericht
+            elif corr_matrix[i,j] < -threshold:
                 neg_edges.append((i, j))
+                neg_edges.append((j, i))  # Maak ongericht
+    print(f"Pos edges: {len(pos_edges)/2}, Neg edges: {len(neg_edges)/2}")
 
     # Converteer naar torch Tensors
     pos_edges = torch.LongTensor(list(zip(*pos_edges))) if pos_edges else torch.empty((2, 0), dtype=torch.long)
@@ -202,7 +223,7 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes):
     neg_edges_set = set()
     triangle_count = 0
 
-    for j in tqdm(range(num_nodes), desc="traingles"):
+    for j in tqdm(range(num_nodes), desc="triangles"):
         neighbors = set(adj_pos[j]) | set(adj_neg[j])
         for i, k in itertools.combinations(neighbors, 2):
             if i == k:
@@ -257,12 +278,13 @@ def prepare_dynamic_data(stock_data, window_size=20):
         window_data = stock_data[stock_data['Date'].isin(window_dates)]
         
         # Normalize features per stock
-        feature_matrix = window_data.groupby('Stock')[feature_cols].mean().values
         print('1')
         # Find approximate neighbors
         if bool_eerste:
-            pos_pairs, neg_pairs = build_initial_edges_via_correlation(feature_matrix, threshold=0.6)
+            pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold=0.6)
             bool_eerste = False
+            feature_matrix = window_data.groupby('Stock')[feature_cols].mean().values
+            print(f"Feature matrix: {torch.FloatTensor(feature_matrix)}")
             # Voeg toe: sla initiële edges op als vorige edges voor volgende snapshot
             snapshots.append({
                 'date': dates[i],
