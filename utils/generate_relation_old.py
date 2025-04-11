@@ -51,7 +51,7 @@ def stock_cor_matrix(ref_dict, codes, n, processes=1):
         data = np.stack(output)
         return pd.DataFrame(data=data, index=codes, columns=codes)
     data = np.zeros([len(codes), len(codes)])
-    for i in tqdm(range(len(codes))):
+    for i in tqdm(range(len(codes)), desc="Calculating correlations"):
         data[i, :] = calculate_pccs(ref_dict[codes[i]], ref_dict, n)
     return pd.DataFrame(data=data, index=codes, columns=codes)
 
