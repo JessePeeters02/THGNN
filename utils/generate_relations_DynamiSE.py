@@ -352,7 +352,8 @@ def main2_load():
     model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth")))
     model.eval()
-
+    stock_data = stock_data.sort_values(['Stock', 'Date']) 
+    stock_groups = stock_data.groupby('Stock')
     for snapshot in tqdm(snapshots, desc="Generating outputs"):
         with torch.no_grad():
             # Adjacency matrices
@@ -363,7 +364,7 @@ def main2_load():
             # Features en labels
             features, labels, stock_info = [], [], []
             for stock_name in snapshot['tickers']:
-                window_data = stock_data[stock_data['Stock'] == stock_name]
+                window_data = stock_groups.get_group(stock_name)
                 window_data = window_data[window_data['Date'] <= snapshot['date']].tail(prev_date_num)
                 if len(window_data) == prev_date_num:
                     features.append(window_data[feature_cols].values)
@@ -389,11 +390,11 @@ def main2_load():
 
 
 # main1_generate() # heeft gewerkt
-main1_load()   
+# main1_load()   
 
 relation_path = os.path.join(data_path, "relation_dynamiSE2")
 model_path = os.path.join(relation_path, "best_model.pth")
 os.makedirs(relation_path, exist_ok=True)
 
-main2_generate()
+# main2_generate()
 main2_load()
