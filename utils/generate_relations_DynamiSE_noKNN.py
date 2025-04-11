@@ -155,12 +155,13 @@ def compute_delta_edges(
 def build_initial_edges_via_correlation(feature_matrix, threshold=0.6):
     print('feature matrix: ', feature_matrix.shape)
     print(feature_matrix[:5]) 
-    pd.DataFrame(feature_matrix).to_csv("feature_matrix.csv", index=False)
     corr = np.corrcoef(feature_matrix)
     np.fill_diagonal(corr, 0)  # Geen zelf-loops
     print(f"Correlation matrix shape: {corr.shape}")
     print(f"Correlation matrix: {corr}")
-    pd.DataFrame(corr).to_csv("correlation_matrix.csv", index=False)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    pd.DataFrame(feature_matrix).to_csv(os.path.join(script_dir, "feature_matrix.csv"), index=False)
+    pd.DataFrame(corr).to_csv(os.path.join(script_dir, "correlation_matrix.csv"), index=False)
     pos_edges = []
     neg_edges = []
 
