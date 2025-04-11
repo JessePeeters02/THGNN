@@ -159,6 +159,9 @@ def build_initial_edges_via_correlation(feature_matrix, threshold=0.6):
     np.fill_diagonal(corr, 0)  # Geen zelf-loops
     print(f"Correlation matrix shape: {corr.shape}")
     print(f"Correlation matrix: {corr}")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    pd.DataFrame(feature_matrix).to_csv(os.path.join(script_dir, "feature_matrix.csv"), index=False)
+    pd.DataFrame(corr).to_csv(os.path.join(script_dir, "correlation_matrix.csv"), index=False)
     pos_edges = []
     neg_edges = []
 
@@ -273,6 +276,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             continue
         else:
             prev_snapshot = snapshots[-1]
+            print('wat zit er in prev_snapshot:', prev_snapshot['pos_edges'].shape, prev_snapshot['neg_edges'].shape)
             pos_pairs, neg_pairs = build_edges_via_balance_theory(
                 prev_snapshot['pos_edges'], prev_snapshot['neg_edges'], len(unique_stocks)
             )
