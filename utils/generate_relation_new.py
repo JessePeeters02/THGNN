@@ -1,98 +1,112 @@
-#j generate_relation.py herwerkt zodat het efficienter werkt op de dagelijkse data
 import os
-import time
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-#from scipy.spatial.distance import pdist, squareform
+from scipy.stats import pearsonr
+from joblib import Parallel, delayed
+import warnings
 
-# Configuratie
-FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume']
-WINDOW_SIZE = 20  # Aantal dagen voor correlatieberekening
-MIN_TRADING_DAYS = 18  # Minimale dagen met data
+# Suppress warnings for cleaner output
+warnings.filterwarnings('ignore')
 
-# Pad configuratie
+# Configuration
+feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+window_size = 20  # Window size for correlation calculation
+n_jobs = -1  # Use all available cores (-1)
+
+# Path setup
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+print(base_path)
 data_path = os.path.join(base_path, "data")
-daily_data_path = os.path.join(data_path, "NASDAQ_per_dag")
+print(data_path)
 relation_path = os.path.join(data_path, "relation_test")
-os.makedirs(relation_path, exist_ok=True)
+print(relation_path)
+stock_data_path = os.path.join(data_path, "NASDAQ_per_dag")
+print(stock_data_path)
 
-def load_daily_data(date):
-    """Laad data voor een specifieke datum"""
-    date_str = date.strftime('%Y-%m-%d')
-    file_path = os.path.join(daily_data_path, f"{date_str}.csv")
-    return pd.read_csv(file_path)
+def load_all_stocks(stock_data_path):
+    all_stock_data = []
+    for file in tqdm(os.listdir(stock_data_path), desc="Loading data"):
+        if file.endswith('.csv'):
+            df = pd.read_csv(os.path.join(stock_data_path, file))
+            all_stock_data.append(df[['Date', 'Stock', 'Open', 'High', 'Low', 'Close', 'Volume']])
+    all_stock_data = pd.concat(all_stock_data, ignore_index=True)
+    print(all_stock_data.head()) # kleine test om te zien of data deftig is ingeladen
+    return all_stock_data
 
-def compute_correlations_for_window(end_date, dates_in_window):
-    """Bereken correlaties voor een tijdwindow"""
-    window_data = []
-    valid_stocks = None
+def calculate_correlation_matrix(combined_df, date_range):
+    """Berekent correlaties per feature en middelt deze"""
+    # print(f"\n=== Calculating correlations for date range: {date_range[0]} to {date_range[1]} ===")
+    # Filter eerst op datum
+    date_mask = (combined_df['Date'] >= date_range[0]) & (combined_df['Date'] <= date_range[1])
+    filtered = combined_df.loc[date_mask]
     
-    # Verzamel data voor het window
-    for date in dates_in_window:
-        try:
-            daily_df = load_daily_data(date)
-            if valid_stocks is None:
-                valid_stocks = set(daily_df['Stock'])
-            else:
-                valid_stocks.intersection_update(set(daily_df['Stock']))
-            window_data.append(daily_df)
-        except FileNotFoundError:
-            continue
+    # Groepeer per stock en filter op window_size
+    grouped = filtered.groupby('Stock')
+    # Get all unique stocks
+    unique_stocks = grouped.groups.keys()
+    # print(f"Found {len(unique_stocks)} unique stocks in date range")
     
-    if not window_data or len(valid_stocks) < 2:
-        return None
-    
-    # Bouw feature matrix
-    valid_stocks = sorted(valid_stocks)
-    features = {stock: [] for stock in valid_stocks}
-    
-    for daily_df in window_data:
-        daily_df = daily_df[daily_df['Stock'].isin(valid_stocks)]
-        for stock in valid_stocks:
-            stock_data = daily_df[daily_df['Stock'] == stock][FEATURE_COLS].values
-            if len(stock_data) > 0:
-                features[stock].append(stock_data[0])
-    
-    # Controleer volledige windows
-    features = {k: np.array(v) for k, v in features.items() if len(v) == WINDOW_SIZE}
-    if len(features) < 2:
-        return None
-    
-    # Bereken correlatiematrix (geoptimaliseerd)
-    stock_names = sorted(features.keys())
-    feature_matrix = np.array([features[name] for name in stock_names])
-    
-    # Vectorized correlatieberekening
-    flat_features = feature_matrix.reshape(len(stock_names), -1)
-    corr_matrix = np.corrcoef(flat_features)
-    
-    result_df = pd.DataFrame(corr_matrix, index=stock_names, columns=stock_names)
-    result_df = result_df.fillna(0)
-    np.fill_diagonal(result_df.values, 1)
-    
-    return result_df
+    # Directly create the 3D array without checking validity
+    stock_arrays = np.stack([
+        grouped.get_group(stock)[feature_cols].values.T 
+        for stock in unique_stocks
+    ])
+    n_stocks = len(unique_stocks)
+    # print(f"aantal unieke aandelen: {n_stocks}")
+    corr_matrix = np.eye(n_stocks)
+    # print("\nStarting correlation calculations...")
+    for i in tqdm(range(n_stocks), desc="Calculating correlations"):
+        for j in range(i+1, n_stocks):
+            # stock_i = list(unique_stocks)[i]
+            # stock_j = list(unique_stocks)[j]
+            # print(f"\nCalculating correlations between {stock_i} and {stock_j}")
+            # Bereken correlatie voor elke feature apart
+            feature_correlations = []
+            for f, feature in enumerate(feature_cols):
+                # x = stock_arrays[i,f,:]
+                # y = stock_arrays[j,f,:]
+                
+                # # Debug prints
+                # print(f"  Feature {feature}:")
+                # print(f"    {stock_i} values: {x}")
+                # print(f"    {stock_j} values: {y}")
+                corr = np.corrcoef(stock_arrays[i,f,:], stock_arrays[j,f,:])[0,1]
+                feature_correlations.append(corr)
+            
+            # Gemiddelde correlatie over alle features
+            avg_corr = np.nanmean(feature_correlations)
+            # print(f"  Average correlation: {avg_corr:.4f}")
+            corr_matrix[i,j] = avg_corr
+            corr_matrix[j,i] = avg_corr
+    # print("\n=== Correlation matrix calculation complete ===")
+    return pd.DataFrame(corr_matrix, index=unique_stocks, columns=unique_stocks)
 
-def generate_all_correlations():
-    """Genereer alle correlatiematrices"""
-    # Verzamel alle beschikbare datums
-    daily_files = [f for f in os.listdir(daily_data_path) if f.endswith('.csv')]
-    all_dates = sorted([pd.to_datetime(f.split('.')[0]) for f in daily_files])
+def main():
+    # Load and filter data
+    stock_data = load_all_stocks(stock_data_path)
+    # Get all unique dates
+    # print(type(stock_data))
+    # print(stock_data['Date'])
+    all_dates = stock_data['Date'].unique()
+    all_dates.sort()
+    # print(all_dates)
+    print(f"Total unique dates: {len(all_dates)}")
     
-    # Bereken correlaties voor elk window
-    for i in tqdm(range(WINDOW_SIZE, len(all_dates)), desc="Processing windows"):
+    # Process each time window
+    for i in tqdm(range(window_size, len(all_dates)), desc="Processing time windows"):
         end_date = all_dates[i]
-        start_date = all_dates[i - WINDOW_SIZE + 1]
-        dates_in_window = all_dates[i - WINDOW_SIZE + 1:i + 1]
+        start_date = all_dates[i - window_size + 1]
         
-        t1 = time.time()
-        result = compute_correlations_for_window(end_date, dates_in_window)
-        t2 = time.time()
+        corr_matrix = calculate_correlation_matrix(stock_data, (start_date, end_date))
         
-        if result is not None:
-            result.to_csv(os.path.join(relation_path, f"{end_date.strftime('%Y-%m-%d')}.csv"))
-            print(f"Processed {end_date.strftime('%Y-%m-%d')} in {t2-t1:.2f}s")
-
+        if corr_matrix is not None:
+            # Save results
+            print(end_date)
+            filename = os.path.join(relation_path, f"{end_date}.csv")
+            corr_matrix.to_csv(filename)
+        else:
+            print(f"No data available for date range {start_date} to {end_date}. Skipping...")
+            
 if __name__ == "__main__":
-    generate_all_correlations()
+    main()
