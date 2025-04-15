@@ -2,8 +2,6 @@ import os
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from scipy.stats import pearsonr
-from joblib import Parallel, delayed
 import warnings
 
 # Suppress warnings for cleaner output
@@ -56,7 +54,7 @@ def calculate_correlation_matrix(combined_df, date_range):
     # print(f"aantal unieke aandelen: {n_stocks}")
     corr_matrix = np.eye(n_stocks)
     # print("\nStarting correlation calculations...")
-    for i in tqdm(range(n_stocks), desc="Calculating correlations"):
+    for i in tqdm(range(n_stocks), desc=f"Calculating {date_range[1]}"):
         for j in range(i+1, n_stocks):
             # stock_i = list(unique_stocks)[i]
             # stock_j = list(unique_stocks)[j]
@@ -82,7 +80,7 @@ def calculate_correlation_matrix(combined_df, date_range):
     # print("\n=== Correlation matrix calculation complete ===")
     return pd.DataFrame(corr_matrix, index=unique_stocks, columns=unique_stocks)
 
-def main():
+def main(asc):
     # Load and filter data
     stock_data = load_all_stocks(stock_data_path)
     # Get all unique dates
@@ -93,20 +91,31 @@ def main():
     # print(all_dates)
     print(f"Total unique dates: {len(all_dates)}")
     
+    indices = range(window_size, len(all_dates))
+    if not ascending:
+        indices = reversed(indices)
+
     # Process each time window
-    for i in tqdm(range(window_size, len(all_dates)), desc="Processing time windows"):
+    for i in tqdm(indices, desc="Processing time windows"):
         end_date = all_dates[i]
+        filename = os.path.join(relation_path, f"{end_date}.csv")
+    
+        # Skip if already exists
+        if os.path.exists(filename):
+            continue
+
         start_date = all_dates[i - window_size + 1]
         
         corr_matrix = calculate_correlation_matrix(stock_data, (start_date, end_date))
         
         if corr_matrix is not None:
             # Save results
-            print(end_date)
             filename = os.path.join(relation_path, f"{end_date}.csv")
             corr_matrix.to_csv(filename)
         else:
             print(f"No data available for date range {start_date} to {end_date}. Skipping...")
             
 if __name__ == "__main__":
-    main()
+    ascending = True #voor Jesse
+    # ascending = False #voor Lawrence
+    main(ascending)

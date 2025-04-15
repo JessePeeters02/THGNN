@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 # Pad configuratie
 base_path = os.path.dirname(os.path.abspath(__file__))
 # print(base_path)
-data_path = os.path.join(base_path, "data")
+data_path = os.path.join(base_path, "originele_data")
 # print(data_path)
 daily_data_path = os.path.join(data_path, "NASDAQ_per_dag")
 # print(daily_data_path)
@@ -53,10 +53,27 @@ def check_pickles(nr, path, start):
             print(f"Aandeel {i}: {int(pos_counts[i])} positieve buren, {int(neg_counts[i])} negatieve buren")
 
         # Eventueel 1 feature sample inspecteren
-        print("\nEerste feature sample:")
-        print(data['features'][0])
+        print("\features:")
+        print(data['features'])
 
+def check_csi300():
+    """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat """
+    bestandspad = os.path.join(data_path)
+    file = os.path.join(bestandspad, "csi300.pkl")
+    with open(file, 'rb') as f:
+        data = pickle.load(f)
+    print(type(data))
+    df = data[data['code'] == '000001.SZ'].reset_index(drop=True)
+    df['labeltest'] = df['close'].shift(-1) / df['close'] - 1
+    print(df)
+    df = data[data['code'] == '000002.SZ'].reset_index(drop=True)
+    df['labeltest'] = df['close'].shift(-1) / df['close'] - 1
+    print(df)
+    # print("Keys in het bestand:", data.keys())
+
+        
 
 """ aanroepen van alle testfuncties"""
-check_pickles(1, "data_train_predict_DSE1", 0)
-check_pickles(1, "data_train_predict", 19)
+# check_pickles(1, "data_train_predict_DSE1", 0)
+# check_pickles(30, "data_train_predict", 20)
+check_csi300()

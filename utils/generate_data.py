@@ -10,6 +10,7 @@ from torch.autograd import Variable
 # Definieer de kolommen die we willen gebruiken uit de CSV-bestanden
 feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 prev_date_num = 20
+threshold = 0.6  # Drempelwaarde voor de correlatie
 
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
@@ -62,10 +63,10 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
     # neg_adj = torch.from_numpy(neg_adj).type(torch.float32)
 
     #efficienter geprogrammeerd
-    pos_adj = nx.adjacency_matrix(nx.Graph(adj_all > 0.6)).toarray().astype(float)
+    pos_adj = nx.adjacency_matrix(nx.Graph(adj_all > threshold)).toarray().astype(float)
     pos_adj = torch.FloatTensor(pos_adj - np.diag(np.diag(pos_adj)))
 
-    neg_adj = nx.adjacency_matrix(nx.Graph(adj_all < -0.6)).toarray().astype(float)
+    neg_adj = nx.adjacency_matrix(nx.Graph(adj_all < -threshold)).toarray().astype(float)
     neg_adj = torch.FloatTensor(neg_adj - np.diag(np.diag(neg_adj)))
     
     print('neg_adj over')

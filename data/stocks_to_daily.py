@@ -4,12 +4,13 @@ from tqdm import tqdm
 
 # Configuratie
 FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume']
+FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 
 # Pad configuratie
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data")
-daily_data_path = os.path.join(data_path, "NASDAQ_per_dag")
-stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "NASDAQ_data")  # Map waar de CSV-bestanden staan
+daily_data_path = os.path.join(data_path, "NASDAQ_per_dag_wTO")
+stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "NASDAQ_data_wTO")  # Map waar de CSV-bestanden staan
 os.makedirs(daily_data_path, exist_ok=True)  # Zorg dat de output map bestaat
 
 def transform_to_daily_structure(stock_data_path, filter_non_trading):
@@ -39,6 +40,7 @@ def transform_to_daily_structure(stock_data_path, filter_non_trading):
     combined_df = pd.concat(stock_data, ignore_index=True)
 
     if filter_non_trading:
+        print(f"Aantal aandelen totaal: {len(stock_files)}")
         print(f"Aantal aandelen met niet-handelsdagen: {len(non_trading_stocks)}")
         print(f"Aantal aandelen in de huidige dataset: {len(stock_data)}")
 
