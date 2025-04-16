@@ -9,7 +9,7 @@ from torch.autograd import Variable
 
 # Definieer de kolommen die we willen gebruiken uit de CSV-bestanden
 # feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
-feature_cols = ['Open', 'High', 'Low', 'Close', 'Turnover']
+feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 prev_date_num = 20
 threshold = 0.6  # Drempelwaarde voor de correlatie
 
@@ -20,7 +20,7 @@ data_path = os.path.join(base_path, "data", "testbatch1")
 print(data_path)
 relation_path = os.path.join(data_path, "relations")
 print(relation_path)
-stock_data_path = os.path.join(data_path, "stockdata")  # Map waar de CSV-bestanden staan
+stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
 print(stock_data_path)
 
 # Functie om de CSV-bestanden in te lezen en om te zetten naar een DataFrame
@@ -69,8 +69,7 @@ def fun(iend, enddt, stock_data, pdn):
     dts = all_dates[istart:iend+1]
     print("Processing dates:", len(dts), dts)
         
-    feature_all = []
-    mask = []
+    features = []
     labels = []
     day_last_code = []
         
@@ -78,32 +77,40 @@ def fun(iend, enddt, stock_data, pdn):
         df_window = df[(df['Date'] >= startdt) & (df['Date'] <= enddt)]
         print(f"df window shape: {df_window.shape}")
         print(f"df window: {df_window}")
+        day_last_code.append([stock_name, enddt])
         if len(df_window) == pdn:
-            
+            features.append(df_window[feature_cols].values)
+            labels.append(df_window.iloc[-1]['Close'])
         else:
             print(' huh, len df window pdn????')
             break
         
-    y = df2[feature_cols].values
-    feature_all.append(y)
-    mask.append(True)
-    label = df2.loc[df2['Date'] == enddt]['Close'].values  # Gebruik 'Close' als label
-    labels.append(label[0])
-    day_last_code.append([stock_name, enddt])
-    
-    feature_all = np.array(feature_all)
-    features = torch.from_numpy(feature_all).type(torch.float32)
-    mask = [True] * len(labels)
-    labels = torch.tensor(labels, dtype=torch.float32)
-        
-    result = {'pos_adj': Variable(pos_adj), 'neg_adj': Variable(neg_adj), 'features': Variable(features),
-              'labels': Variable(labels), 'mask': mask}
-        
+    output = {
+        'pos_adj': torch.FloatTensor(pos_adj),
+        'neg_adj': torch.FloatTensor(neg_adj),
+        'features': torch.FloatTensor(np.array(features)),
+        'labels': torch.FloatTensor(labels),
+        'mask': [True] * len(labels)  # Alle samples zijn geldig
+    }
+
     with open(os.path.join(data_path, "data_train_predict", f"{enddt}.pkl"), 'wb') as f:
-        pickle.dump(result, f)
-        
+        pickle.dump(output, f)
     df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
     df.to_csv(os.path.join(data_path, "daily_stock", f"{enddt}.csv"), header=True, index=False, encoding='utf_8_sig')
+    
+    #     feature_all = np.array(feature_all)
+    #     features = torch.from_numpy(feature_all).type(torch.float32)
+    #     mask = [True] * len(labels)
+    #     labels = torch.tensor(labels, dtype=torch.float32)
+        
+    # result = {'pos_adj': Variable(pos_adj), 'neg_adj': Variable(neg_adj), 'features': Variable(features),
+    #           'labels': Variable(labels), 'mask': mask}
+        
+    # with open(os.path.join(data_path, "data_train_predict", f"{enddt}.pkl"), 'wb') as f:
+    #     pickle.dump(result, f)
+        
+    # df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
+    # df.to_csv(os.path.join(data_path, "daily_stock", f"{enddt}.csv"), header=True, index=False, encoding='utf_8_sig')
 
 
 # Voorbeeld van hoe je de functie kunt aanroepen
