@@ -276,7 +276,12 @@ def prepare_dynamic_data(stock_data, window_size=20):
     already_done = set(fname.replace('.pkl', '') for fname in os.listdir(snapshot_path) if fname.endswith('.pkl'))
 
     for i in tqdm(range(window_size, len(dates)), desc="Preparing snapshots"):
-          
+        if dates[i] in already_done:
+            print(f"Snapshot {dates[i]} bestaat al, overslaan...")
+            with open(os.path.join(snapshot_path, f"{dates[i]}.pkl"), 'rb') as f:
+                snapshots.append(pickle.load(f))
+            continue
+
         window_dates = dates[i-window_size:i]
         window_data = stock_data[stock_data['Date'].isin(window_dates)]
         
@@ -302,25 +307,34 @@ def prepare_dynamic_data(stock_data, window_size=20):
             pos_pairs, neg_pairs = build_edges_via_balance_theory(
                 prev_snapshot['pos_edges'], prev_snapshot['neg_edges'], len(unique_stocks)
             )
-            if pos_pairs.size(1) == 0 and neg_pairs.size(1) == 0:
-                print(f"[Fallback] Geen edges gevonden op dag {dates[i]} — fallback naar correlatie.")
+            prev_edge_count = (
+                prev_snapshot['pos_edges'].shape[1] +
+                prev_snapshot['neg_edges'].shape[1]
+            ) 
+            new_edge_count = pos_pairs.shape[1] + neg_pairs.shape[1]
+            growth_ratio = new_edge_count / max(prev_edge_count, 1) 
+            if growth_ratio > 1.2:
+                print(f"[Te veel groei] snapshot {dates[i]} overslaan (ratio={growth_ratio:.2f})")
+                continue  # sla snapshot over, of gebruik fallback     
+            # Check: levert balance theory iets op?
+            new_edges_found = pos_pairs.size(1) + neg_pairs.size(1)
+
+            if new_edges_found == 0:
+                print(f"[Fallback] Geen nieuwe edges gevonden op dag {dates[i]} — fallback naar correlatie.")
                 pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold=0.6)
+            else:
+                print(f"Balance theory gevonden: {pos_pairs.size(1)} pos, {neg_pairs.size(1)} neg edges.")
         print('2')
         # Bereken ΔA_t voor de huidige snapshot (verandering in de graaf)
         prev_pos_edges = prev_snapshot['pos_edges'] if snapshots else []
         prev_neg_edges = prev_snapshot['neg_edges'] if snapshots else []
-        delta_pos = compute_delta_edges(pos_pairs, prev_pos_edges)
-        delta_neg = compute_delta_edges(neg_pairs, prev_neg_edges)
+        # delta_pos = compute_delta_edges(pos_pairs, prev_pos_edges)
+        # delta_neg = compute_delta_edges(neg_pairs, prev_neg_edges)
         print('3')
         # Zet de delta's om naar edge_index tensors
-        if len(delta_pos) > 0:
-            edge_index_pos = torch.cat([prev_pos_edges, delta_pos], dim=1)
-        else:
-            edge_index_pos = prev_pos_edges
-        if len(delta_neg) > 0:
-            edge_index_neg = torch.cat([prev_neg_edges, delta_neg], dim=1)
-        else:
-            edge_index_neg = prev_neg_edges
+        edge_index_pos = pos_pairs
+        edge_index_neg = neg_pairs
+
         
         # Voeg de snapshot toe met dynamische veranderingen in de graaf
         snapshots.append({
@@ -330,7 +344,17 @@ def prepare_dynamic_data(stock_data, window_size=20):
             'neg_edges': edge_index_neg,
             'tickers': unique_stocks
         })
-
+        # On-the-fly snapshot opslaan
+        with open(os.path.join(snapshot_path, f"{dates[i]}.pkl"), 'wb') as f:
+            pickle.dump(snapshots[-1], f)
+        # Append snapshot metadata naar CSV
+        log_path = os.path.join(data_path, "snapshot_log.csv")
+        write_header = not os.path.exists(log_path) or os.path.getsize(log_path) == 0
+        with open(log_path, "a") as log_f:
+            if write_header:
+                log_f.write("date,nodes,pos_edges,neg_edges\n")
+            line = f"{dates[i]},{len(unique_stocks)},{edge_index_pos.shape[1]},{edge_index_neg.shape[1]}\n"
+            log_f.write(line)
         print(f"Vorige pos_edges shape: {prev_pos_edges.shape if isinstance(prev_pos_edges, torch.Tensor) else 'Geen'}")
         print(f"Vorige neg_edges shape: {prev_neg_edges.shape if isinstance(prev_neg_edges, torch.Tensor) else 'Geen'}")
     
