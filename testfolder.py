@@ -63,10 +63,17 @@ def check_csi300():
     with open(file, 'rb') as f:
         data = pickle.load(f)
     print(type(data))
+    print(data['code'])
     df = data[data['code'] == '000001.SZ'].reset_index(drop=True)
     df['labeltest'] = df['close'].shift(-1) / df['close'] - 1
     print(df)
     df = data[data['code'] == '000002.SZ'].reset_index(drop=True)
+    df['labeltest'] = df['close'].shift(-1) / df['close'] - 1
+    print(df)
+    df = data[data['code'] == '000063.SZ'].reset_index(drop=True)
+    df['labeltest'] = df['close'].shift(-1) / df['close'] - 1
+    print(df)
+    df = data[data['code'] == '000069.SZ'].reset_index(drop=True)
     df['labeltest'] = df['close'].shift(-1) / df['close'] - 1
     print(df)
     # print("Keys in het bestand:", data.keys())

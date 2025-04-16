@@ -20,18 +20,19 @@ data_path = os.path.join(base_path, "data", "testbatch1")
 print(data_path)
 relation_path = os.path.join(data_path, "relations")
 print(relation_path)
-stock_data_path = os.path.join(data_path, "dailydata")  # Map waar de CSV-bestanden staan
+stock_data_path = os.path.join(data_path, "stockdata")  # Map waar de CSV-bestanden staan
 print(stock_data_path)
 
 # Functie om de CSV-bestanden in te lezen en om te zetten naar een DataFrame
 def load_stock_data(stock_data_path):
-    all_stock_data = []
-    for file in tqdm(os.listdir(stock_data_path), desc="Loading data"):
-        if file.endswith('.csv'):
-            df = pd.read_csv(os.path.join(stock_data_path, file))
-            all_stock_data.append(df[['Date', 'Stock'] + feature_cols])
-    all_stock_data = pd.concat(all_stock_data, ignore_index=True)
-    return all_stock_data
+    stock_files = [f for f in os.listdir(stock_data_path) if f.endswith('.csv')]
+    stock_data = {}
+    for stock_file in tqdm(stock_files, desc="Loading stock data"):
+        stock_name = stock_file.split('.')[0]
+        df = pd.read_csv(os.path.join(stock_data_path, stock_file))
+        df['Date'] = pd.to_datetime(df['Date'])
+        stock_data[stock_name] = df
+    return stock_data
 
 # Laad de stock data
 stock_data = load_stock_data(stock_data_path)
@@ -42,69 +43,76 @@ all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for 
 print(f"Unique dates determined: {len(all_dates)}")
 # print(all_dates)
 
-# Functie om de relatiegrafieken te verwerken
-def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
-    print(relation_dt, start_dt_month, end_dt_month)
-    relation_file = os.path.join(relation_path, f"{relation_dt}.csv")
+def prepare_adjacencymatrix(enddt):
+    relation_file = os.path.join(relation_path, f"{enddt}.csv")
     adj_all = pd.read_csv(relation_file, index_col=0)
 
-    #efficienter geprogrammeerd
     pos_adj = nx.adjacency_matrix(nx.Graph(adj_all > threshold)).toarray().astype(float)
     pos_adj = torch.FloatTensor(pos_adj - np.diag(np.diag(pos_adj)))
 
     neg_adj = nx.adjacency_matrix(nx.Graph(adj_all < -threshold)).toarray().astype(float)
     neg_adj = torch.FloatTensor(neg_adj - np.diag(np.diag(neg_adj)))
     
-    print('neg_adj over')
-    print(neg_adj.shape)
+    print('pos_adj shape: ', pos_adj.shape)
+    print('neg_adj shape: ', neg_adj.shape)
+
+    return pos_adj, neg_adj
+
+# Functie om de relatiegrafieken te verwerken
+def fun(iend, enddt, stock_data, pdn):
+    istart = iend - pdn + 1
+    startdt = all_dates[istart]
+    print(f"calculating window: {startdt} to {enddt}")
     
-    dts = all_dates[all_dates.index(start_dt_month):all_dates.index(end_dt_month)+1]
-    print("Processing dates:", dts)
-    
-    for i in tqdm(range(len(dts))):
-        end_data = dts[i]
-        start_data = all_dates[all_dates.index(end_data)-(pdn - 1)]
+    pos_adj, neg_adj = prepare_adjacencymatrix(enddt)
+
+    dts = all_dates[istart:iend+1]
+    print("Processing dates:", len(dts), dts)
         
-        feature_all = []
-        mask = []
-        labels = []
-        day_last_code = []
+    feature_all = []
+    mask = []
+    labels = []
+    day_last_code = []
         
-        for stock_name, df in stock_data.items():
-            df2 = df.loc[df['Date'] <= end_data]
-            df2 = df2.loc[df2['Date'] >= start_data]
+    for stock_name, df in stock_data.items():
+        df_window = df[(df['Date'] >= startdt) & (df['Date'] <= enddt)]
+        print(f"df window shape: {df_window.shape}")
+        print(f"df window: {df_window}")
+        if len(df_window) == pdn:
             
-            if len(df2) == pdn:
-                y = df2[feature_cols].values
-                feature_all.append(y)
-                mask.append(True)
-                label = df2.loc[df2['Date'] == end_data]['Close'].values  # Gebruik 'Close' als label
-                labels.append(label[0])
-                day_last_code.append([stock_name, end_data])
+        else:
+            print(' huh, len df window pdn????')
+            break
         
-        feature_all = np.array(feature_all)
-        features = torch.from_numpy(feature_all).type(torch.float32)
-        mask = [True] * len(labels)
-        labels = torch.tensor(labels, dtype=torch.float32)
+    y = df2[feature_cols].values
+    feature_all.append(y)
+    mask.append(True)
+    label = df2.loc[df2['Date'] == enddt]['Close'].values  # Gebruik 'Close' als label
+    labels.append(label[0])
+    day_last_code.append([stock_name, enddt])
+    
+    feature_all = np.array(feature_all)
+    features = torch.from_numpy(feature_all).type(torch.float32)
+    mask = [True] * len(labels)
+    labels = torch.tensor(labels, dtype=torch.float32)
         
-        result = {'pos_adj': Variable(pos_adj), 'neg_adj': Variable(neg_adj), 'features': Variable(features),
-                  'labels': Variable(labels), 'mask': mask}
+    result = {'pos_adj': Variable(pos_adj), 'neg_adj': Variable(neg_adj), 'features': Variable(features),
+              'labels': Variable(labels), 'mask': mask}
         
-        with open(os.path.join(data_path, "data_train_predict", f"{end_data}.pkl"), 'wb') as f:
-            pickle.dump(result, f)
+    with open(os.path.join(data_path, "data_train_predict", f"{enddt}.pkl"), 'wb') as f:
+        pickle.dump(result, f)
         
-        df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
-        df.to_csv(os.path.join(data_path, "daily_stock", f"{end_data}.csv"), header=True, index=False, encoding='utf_8_sig')
+    df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
+    df.to_csv(os.path.join(data_path, "daily_stock", f"{enddt}.csv"), header=True, index=False, encoding='utf_8_sig')
 
 
 # Voorbeeld van hoe je de functie kunt aanroepen
 # fun('2022-11-30', '2022-11-01', '2022-11-30', stock_data)
 # fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
 
-for i in range(prev_date_num, len(all_dates)):
-    end_data = all_dates[i]
-    start_data = all_dates[i-(prev_date_num-1)]
-    fun(end_data, start_data, end_data, stock_data, prev_date_num)
+for i in range(prev_date_num-1, len(all_dates)):
+    end_date = all_dates[i]
+    fun(i, end_date, stock_data, prev_date_num)
 
 
 
