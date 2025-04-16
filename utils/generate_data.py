@@ -17,7 +17,7 @@ min_neighbors = 3
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
-data_path = os.path.join(base_path, "data", "testbatch1")
+data_path = os.path.join(base_path, "data", "testbatch2")
 print(data_path)
 relation_path = os.path.join(data_path, "relations")
 print(relation_path)
@@ -25,6 +25,9 @@ raw_data_path = os.path.join(data_path, "stockdata")
 print(raw_data_path)
 stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
 print(stock_data_path)
+os.makedirs(os.path.join(data_path, "data_train_predict"), exist_ok=True)
+os.makedirs(os.path.join(data_path, "daily_stock"), exist_ok=True)
+
 
 # Functie om de CSV-bestanden in te lezen en om te zetten naar een DataFrame
 def load_stock_data(raw_stock_path, stock_data_path):

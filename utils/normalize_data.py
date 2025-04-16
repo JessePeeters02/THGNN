@@ -11,13 +11,15 @@ prev_date_num = 20
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
-data_path = os.path.join(base_path, "data", "testbatch1")
+data_path = os.path.join(base_path, "data", "testbatch2")
 print(data_path)
 input_path = os.path.join(data_path, "stockdata")  # Map waar de CSV-bestanden staan
 print(input_path)
 daily_data_path = os.path.join(data_path, "normaliseddailydata")  # Map waar de CSV-bestanden moeten komen
+os.makedirs(daily_data_path, exist_ok=True)  # Maak de map aan als deze nog niet bestaat
 print(daily_data_path)
 stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden moeten komen
+os.makedirs(stock_data_path, exist_ok=True)  # Maak de map aan als deze nog niet bestaat
 print(stock_data_path)
 
 
