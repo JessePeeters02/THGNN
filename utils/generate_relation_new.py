@@ -8,18 +8,21 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Configuration
-feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+# feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+feature_cols = ['Open', 'High', 'Low', 'Close', 'Turnover']
 window_size = 20  # Window size for correlation calculation
 n_jobs = -1  # Use all available cores (-1)
 
 # Path setup
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print(base_path)
-data_path = os.path.join(base_path, "data")
+# data_path = os.path.join(base_path, "data")
+data_path = os.path.join(base_path, "data", "testbatch1")
 print(data_path)
-relation_path = os.path.join(data_path, "relation_test")
+relation_path = os.path.join(data_path, "relations")
 print(relation_path)
-stock_data_path = os.path.join(data_path, "NASDAQ_per_dag")
+# stock_data_path = os.path.join(data_path, "NASDAQ_per_dag")
+stock_data_path = os.path.join(data_path, "dailydata")
 print(stock_data_path)
 
 def load_all_stocks(stock_data_path):
@@ -27,7 +30,7 @@ def load_all_stocks(stock_data_path):
     for file in tqdm(os.listdir(stock_data_path), desc="Loading data"):
         if file.endswith('.csv'):
             df = pd.read_csv(os.path.join(stock_data_path, file))
-            all_stock_data.append(df[['Date', 'Stock', 'Open', 'High', 'Low', 'Close', 'Volume']])
+            all_stock_data.append(df[['Date', 'Stock'] + feature_cols])
     all_stock_data = pd.concat(all_stock_data, ignore_index=True)
     print(all_stock_data.head()) # kleine test om te zien of data deftig is ingeladen
     return all_stock_data
@@ -54,7 +57,8 @@ def calculate_correlation_matrix(combined_df, date_range):
     # print(f"aantal unieke aandelen: {n_stocks}")
     corr_matrix = np.eye(n_stocks)
     # print("\nStarting correlation calculations...")
-    for i in tqdm(range(n_stocks), desc=f"Calculating {date_range[1]}"):
+    # for i in tqdm(range(n_stocks), desc=f"Calculating {date_range[1]}"): # with or without tqdm?
+    for i in range(n_stocks):
         for j in range(i+1, n_stocks):
             # stock_i = list(unique_stocks)[i]
             # stock_j = list(unique_stocks)[j]
@@ -73,7 +77,7 @@ def calculate_correlation_matrix(combined_df, date_range):
                 feature_correlations.append(corr)
             
             # Gemiddelde correlatie over alle features
-            avg_corr = np.nanmean(feature_correlations)
+            avg_corr = np.round(np.nanmean(feature_correlations), 3)
             # print(f"  Average correlation: {avg_corr:.4f}")
             corr_matrix[i,j] = avg_corr
             corr_matrix[j,i] = avg_corr
@@ -92,7 +96,7 @@ def main(asc):
     print(f"Total unique dates: {len(all_dates)}")
     
     indices = range(window_size, len(all_dates))
-    if not ascending:
+    if not asc:
         indices = reversed(indices)
 
     # Process each time window
