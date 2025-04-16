@@ -1,6 +1,8 @@
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
 import torch.nn as nn
+from transformer_encoder import TransformerEncoder
+from transformer_encoder.utils import PositionalEncoding
 import torch
 import math
 
@@ -98,12 +100,16 @@ class GraphAttnSemIndividual(Module):
 class StockHeteGAT(nn.Module):
     def __init__(self, in_features=6, out_features=8, num_heads=8, hidden_dim=64, num_layers=1):
         super(StockHeteGAT, self).__init__()
-        self.encoding = nn.GRU(
-            input_size=in_features,
-            hidden_size=hidden_dim,
-            num_layers=num_layers,
-            batch_first=True,
-            bidirectional=False,
+        self.input_layer = nn.Sequential(
+            nn.Linear(in_features, hidden_dim),
+            PositionalEncoding(d_model=hidden_dim, dropout=0.1, max_len=5000)
+        )
+
+        self.encoding = TransformerEncoder(
+            d_model=hidden_dim,
+            d_ff=hidden_dim * 4,
+            n_heads=4,
+            n_layers=2,
             dropout=0.1
         )
         self.pos_gat = GraphAttnMultiHead(
@@ -133,7 +139,10 @@ class StockHeteGAT(nn.Module):
                 nn.init.xavier_uniform_(m.weight, gain=0.02)
 
     def forward(self, inputs, pos_adj, neg_adj, requires_weight=False):
-        _, support = self.encoding(inputs)
+        x = self.input_layer(inputs)
+        x = x.transpose(0, 1)              
+        support = self.encoding(x)         
+        support = support[-1] 
         support = support.squeeze()
         pos_support, pos_attn_weights = self.pos_gat(support, pos_adj, requires_weight)
         neg_support, neg_attn_weights = self.neg_gat(support, neg_adj, requires_weight)
