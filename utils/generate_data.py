@@ -8,7 +8,8 @@ import pandas as pd
 from torch.autograd import Variable
 
 # Definieer de kolommen die we willen gebruiken uit de CSV-bestanden
-feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+# feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+feature_cols = ['Open', 'High', 'Low', 'Close', 'Turnover']
 prev_date_num = 20
 threshold = 0.6  # Drempelwaarde voor de correlatie
 
