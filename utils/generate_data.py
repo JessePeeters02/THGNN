@@ -55,7 +55,7 @@ def calculate_label(raw_df, current_date):
 
 # Laad de stock data
 raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
-print(stock_data)
+# print(stock_data)
 
 # Bepaal de unieke datums uit de data
 all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})

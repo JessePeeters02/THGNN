@@ -36,6 +36,7 @@ def check_pickles(nr, path, start):
         # Voor een idee van de inhoud:
         print("\nVoorbeeldshape features:", data['features'].shape)
         print("Aantal labels:", len(data['labels']))
+        print("Voorbeeldlabels:", data['labels'][:50])  # eerste 10 labels
         print("Voorbeeldmask:", data['mask'][:10])  # eerste 10 mask-waarden
         print("Positive adj shape:", data['pos_adj'].shape)
         print("Negative adj shape:", data['neg_adj'].shape)
@@ -53,8 +54,8 @@ def check_pickles(nr, path, start):
             print(f"Aandeel {i}: {int(pos_counts[i])} positieve buren, {int(neg_counts[i])} negatieve buren")
 
         # Eventueel 1 feature sample inspecteren
-        print("\features:")
-        print(data['features'])
+        # print("\features:")
+        # print(data['features'])
 
 def check_csi300():
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat """
