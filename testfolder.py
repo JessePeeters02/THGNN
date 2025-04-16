@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 # Pad configuratie
 base_path = os.path.dirname(os.path.abspath(__file__))
 # print(base_path)
-data_path = os.path.join(base_path, "originele_data")
+data_path = os.path.join(base_path, "data", "testbatch1")
 # print(data_path)
 daily_data_path = os.path.join(data_path, "NASDAQ_per_dag")
 # print(daily_data_path)
@@ -81,6 +81,6 @@ def check_csi300():
         
 
 """ aanroepen van alle testfuncties"""
-# check_pickles(1, "data_train_predict_DSE1", 0)
+check_pickles(1, "data_train_predict", 0)
 # check_pickles(30, "data_train_predict", 20)
-check_csi300()
+# check_csi300()
