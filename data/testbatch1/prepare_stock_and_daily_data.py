@@ -16,7 +16,7 @@ stock_data_output = os.path.join(data_path, "stockdata")
 print(f"stock_data_output: {stock_data_output}")
 daily_data_output = os.path.join(data_path, "dailydata")
 print(f"daily_data_output: {daily_data_output}")
-best_stocks_path = os.path.join(data_path, f"top_200_stocks.csv")  # Waar de resultaten worden opgeslagen
+best_stocks_path = os.path.join(data_path, "top_200_stocks.csv")  # Waar de resultaten worden opgeslagen
 print(f"best_stocks_path: {best_stocks_path}")
 
 
@@ -55,6 +55,7 @@ def transform_to_daily_structure(input_path, output_path):
     for date, group in tqdm(combined_df.groupby('Date'), desc="Saving daily files"):
         date_str = date.strftime('%Y-%m-%d')
         group.to_csv(os.path.join(output_path, f"{date_str}.csv"), index=False)
+    print(f"data saved in {output_path}")
 
 
 collect_topN_stock(stock_data_path, stock_data_output)
