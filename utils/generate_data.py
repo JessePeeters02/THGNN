@@ -15,33 +15,31 @@ threshold = 0.6  # Drempelwaarde voor de correlatie
 
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
-# print(base_path)
-data_path = os.path.join(base_path, "data")
-# print(data_path)
-relation_path = os.path.join(data_path, "relation")
-# print(relation_path)
-stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "NASDAQ_data")  # Map waar de CSV-bestanden staan
-# print(stock_data_path)
+print(base_path)
+data_path = os.path.join(base_path, "data", "testbatch1")
+print(data_path)
+relation_path = os.path.join(data_path, "relations")
+print(relation_path)
+stock_data_path = os.path.join(data_path, "dailydata")  # Map waar de CSV-bestanden staan
+print(stock_data_path)
 
 # Functie om de CSV-bestanden in te lezen en om te zetten naar een DataFrame
 def load_stock_data(stock_data_path):
-    stock_files = [f for f in os.listdir(stock_data_path) if f.endswith('.csv')]
-    stock_data = {}
-    for stock_file in stock_files:
-        stock_name = stock_file.split('.')[0]
-        stock_df = pd.read_csv(os.path.join(stock_data_path, stock_file))
-        stock_df['Date'] = pd.to_datetime(stock_df['Date'])
-        stock_data[stock_name] = stock_df
-    return stock_data
+    all_stock_data = []
+    for file in tqdm(os.listdir(stock_data_path), desc="Loading data"):
+        if file.endswith('.csv'):
+            df = pd.read_csv(os.path.join(stock_data_path, file))
+            all_stock_data.append(df[['Date', 'Stock'] + feature_cols])
+    all_stock_data = pd.concat(all_stock_data, ignore_index=True)
+    return all_stock_data
 
 # Laad de stock data
-print("Loading stock data...")
 stock_data = load_stock_data(stock_data_path)
-print("Stock data loaded.")
+print(stock_data)
 
 # Bepaal de unieke datums uit de data
 all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
-print("Unique dates determined.")
+print(f"Unique dates determined: {len(all_dates)}")
 # print(all_dates)
 
 # Functie om de relatiegrafieken te verwerken
@@ -49,19 +47,6 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
     print(relation_dt, start_dt_month, end_dt_month)
     relation_file = os.path.join(relation_path, f"{relation_dt}.csv")
     adj_all = pd.read_csv(relation_file, index_col=0)
-    
-    # Maak positieve en negatieve grafieken
-    # pos_g = nx.Graph(adj_all > 0.1)
-    # pos_adj = nx.adjacency_matrix(pos_g).toarray()
-    # pos_adj = pos_adj - np.diag(np.diag(pos_adj))
-    # pos_adj = torch.from_numpy(pos_adj).type(torch.float32)
-    
-    # neg_g = nx.Graph(adj_all < -0.1)
-    # neg_adj = nx.adjacency_matrix(neg_g)
-    # neg_adj.data = np.ones(neg_adj.data.shape)
-    # neg_adj = neg_adj.toarray()
-    # neg_adj = neg_adj - np.diag(np.diag(neg_adj))
-    # neg_adj = torch.from_numpy(neg_adj).type(torch.float32)
 
     #efficienter geprogrammeerd
     pos_adj = nx.adjacency_matrix(nx.Graph(adj_all > threshold)).toarray().astype(float)
@@ -74,7 +59,7 @@ def fun(relation_dt, start_dt_month, end_dt_month, stock_data, pdn):
     print(neg_adj.shape)
     
     dts = all_dates[all_dates.index(start_dt_month):all_dates.index(end_dt_month)+1]
-    print(dts)
+    print("Processing dates:", dts)
     
     for i in tqdm(range(len(dts))):
         end_data = dts[i]
