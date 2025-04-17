@@ -8,7 +8,7 @@ FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 # Pad configuratie
 base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 print(f"base_path: {base_path}")
-data_path = os.path.join(base_path, "data", "testbatch2")
+data_path = os.path.join(base_path, "data", "testbatch1")
 print(f"data_path: {data_path}")
 stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "NASDAQ_data_wTO")
 print(f"stock_data_path: {stock_data_path}")
@@ -16,7 +16,7 @@ stock_data_output = os.path.join(data_path, "stockdata")
 print(f"stock_data_output: {stock_data_output}")
 daily_data_output = os.path.join(data_path, "dailydata")
 print(f"daily_data_output: {daily_data_output}")
-best_stocks_path = os.path.join(data_path, "top_200_stocks.csv")  # Waar de resultaten worden opgeslagen
+best_stocks_path = os.path.join(data_path, "top_100_stocks.csv")  # Waar de resultaten worden opgeslagen
 print(f"best_stocks_path: {best_stocks_path}")
 
 
@@ -31,6 +31,8 @@ def collect_topN_stock(input_path, output_path):
         if stock_name in best_stocks:
             stock_counter += 1
             stock_df = pd.read_csv(os.path.join(input_path, stock_file))
+            stock_df["Stock"] = stock_name
+            stock_df = stock_df[['Date', 'Stock'] + FEATURE_COLS]
             stock_df.to_csv(os.path.join(output_path, f"{stock_name}.csv"), index=False)
     print(f"Stock counter: {stock_counter}")
 

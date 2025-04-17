@@ -11,7 +11,7 @@ prev_date_num = 20
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
-data_path = os.path.join(base_path, "data", "testbatch2")
+data_path = os.path.join(base_path, "data", "testbatch1")
 print(data_path)
 input_path = os.path.join(data_path, "stockdata")  # Map waar de CSV-bestanden staan
 print(input_path)
@@ -42,6 +42,7 @@ def normalise_stock_data(df):
             df_normalized[col] = (df[col] - df[col].rolling(window=prev_date_num).median()) / \
                      (df[col].rolling(window=prev_date_num).apply(lambda x: np.median(np.abs(x - x.median()))) + 1e-6)
         df_normalized = df_normalized.iloc[prev_date_num:]
+        df_normalized = df_normalized[['Date', 'Stock'] + feature_cols + ['Turnover']]
         df_normalized.to_csv(os.path.join(stock_data_path, f"{stockname}.csv"), index=False)
         for date in all_dates:
             date_data = df_normalized[df_normalized['Date'] == date]
