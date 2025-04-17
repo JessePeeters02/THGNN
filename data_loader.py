@@ -4,7 +4,7 @@ from torch.utils import data
 import pickle
 
 base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
-data_path = os.path.join(base_path, "data", "data_train_predict")
+data_path = os.path.join(base_path, "data", "testbatch1", "data_train_predict")
 os.makedirs(data_path, exist_ok=True)
 
 class AllGraphDataSampler(data.Dataset):
