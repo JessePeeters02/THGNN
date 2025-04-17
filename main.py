@@ -1,7 +1,7 @@
 # Leugen! het is 18:19 tegen dat ik hier gevonden heb hoe het moet
 from trainer.trainer import *
 from data_loader import *
-from model.Thgnn import *
+# from model.Thgnn import *
 from model.Thgnn_new import *
 import warnings
 import torch
@@ -18,7 +18,11 @@ t_float = torch.float64
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
-data_path = os.path.join(base_path, "data")
+print(f"base_path: {base_path}")
+data_path = os.path.join(base_path, "data", "testbatch1")
+print(f"data_path: {data_path}")
+save_path = os.path.join(data_path, "model_saved")
+os.makedirs(save_path, exist_ok=True)
 
 class Args:
     def __init__(self, gpu=0, subtask="regression"):
@@ -26,7 +30,7 @@ class Args:
         self.gpu = str(gpu)
         self.device = 'cpu'
         # data settings
-        adj_threshold = 0.1
+        adj_threshold = 0.4
         self.adj_str = str(int(100*adj_threshold))
         self.pos_adj_dir = "pos_adj_" + self.adj_str
         self.neg_adj_dir = "neg_adj_" + self.adj_str
@@ -52,7 +56,7 @@ class Args:
         self.loss_fcn = mse_loss
         # save model settings
         #self.save_path = os.path.join(os.path.abspath('.'), "/home/THGNN-main/data/model_saved/")
-        self.save_path = os.path.join(base_path, "data", "model_saved")
+        self.save_path = save_path
         self.load_path = self.save_path
         self.save_name = self.model_name + "_hidden_" + str(self.hidden_dim) + "_head_" + str(self.num_heads) + \
                          "_outfeat_" + str(self.out_features) + "_batchsize_" + str(self.batch_size) + "_adjth_" + \
@@ -93,10 +97,10 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     #                              data_middle=data_middle, data_end=data_end)
     #val_dataset = AllGraphDataSampler(base_dir="/home/THGNN-main/data/data_train_predict/", mode="val", data_start=data_start,
     #                                  data_middle=data_middle, data_end=data_end)
-    dataset = AllGraphDataSampler(base_dir=data_path, data_start=data_start,
+    dataset = AllGraphDataSampler(base_dir=os.path.join(data_path, "data_train_predict"), data_start=data_start,
                               data_middle=data_middle, data_end=data_end)
     # print(f"Aantal samples in dataset: {len(dataset)}")
-    val_dataset = AllGraphDataSampler(base_dir=data_path, mode="val", data_start=data_start,
+    val_dataset = AllGraphDataSampler(base_dir=os.path.join(data_path, "data_train_predict"), mode="val", data_start=data_start,
                                   data_middle=data_middle, data_end=data_end)
     dataset_loader = DataLoader(dataset, batch_size=args.batch_size, pin_memory=True, collate_fn=lambda x: x)
     val_dataset_loader = DataLoader(val_dataset, batch_size=1, pin_memory=True)
@@ -125,17 +129,17 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     # predict
     checkpoint = torch.load(os.path.join(args.load_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
     model.load_state_dict(checkpoint['model'])
-    data_files = os.path.join(base_path, "data", "daily_stock")
+    data_files = os.path.join(data_path, "daily_stock")
     data_code = sorted(os.listdir(data_files))
     data_code_last = data_code[data_middle:data_end]
     df_score=pd.DataFrame()
     for i in tqdm(range(len(val_dataset))):
-        file_path = os.path.join(base_path, "data", "daily_stock", data_code_last[i])
+        file_path = os.path.join(data_path, "daily_stock", data_code_last[i])
         if os.path.exists(file_path):
             df = pd.read_csv(file_path, dtype=object)
         else:
             print(f"File {file_path} not found!")
-        df = pd.read_csv(os.path.join(base_path, "data", "daily_stock", data_code_last[i]), dtype=object)
+        df = pd.read_csv(os.path.join(data_path, "daily_stock", data_code_last[i]), dtype=object)
         tmp_data = val_dataset[i]
         pos_adj, neg_adj, features, labels, mask = extract_data(tmp_data, args.device)
         model.train()
@@ -150,7 +154,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         df_score=pd.concat([df_score,df])
 
         #df.to_csv('prediction/' + data_code_last[i], encoding='utf-8-sig', index=False)
-    df_score.to_csv(os.path.join(base_path, "data", "prediction", "pred.csv"))
+    os.makedirs(os.path.join(data_path, "prediction"), exist_ok=True) 
+    df_score.to_csv(os.path.join(data_path, "prediction", "pred.csv"))
     print(df_score)
     
 if __name__ == "__main__":

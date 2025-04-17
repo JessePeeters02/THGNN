@@ -141,7 +141,7 @@ class StockHeteGAT(nn.Module):
     def forward(self, inputs, pos_adj, neg_adj, requires_weight=False):
         x = self.input_layer(inputs)
         x = x.transpose(0, 1)              
-        support = self.encoding(x)         
+        support = self.encoding(x, mask=None)         
         support = support[-1] 
         support = support.squeeze()
         pos_support, pos_attn_weights = self.pos_gat(support, pos_adj, requires_weight)
