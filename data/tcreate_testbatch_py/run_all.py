@@ -8,7 +8,7 @@ utils_path = os.path.join(base_path, "utils")
 venv_python = os.path.join(os.path.dirname(base_path), ".venv", "Scripts", "python.exe")
 
 bestanden = [
-    os.path.join(base_path, "data", "testbatch1", "prepare_stock_and_daily_data.py"),
+    os.path.join(base_path, "data", "tcreate_testbatch_py", "prepare_stock_and_daily_data.py"),
     os.path.join(utils_path, "generate_relation_new.py"),
     os.path.join(utils_path, "normalize_data.py"),
     os.path.join(utils_path, "generate_data.py")
