@@ -13,10 +13,10 @@ from collections import defaultdict
 print('hallo')
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(base_path, "data")
-daily_data_path = os.path.join(data_path, "NASDAQ_per_dag")
+data_path = os.path.join(base_path, "data", "testbatch1")
+daily_data_path = os.path.join(data_path, "normaliseddailydata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_noknn1")
+relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
 model_path = os.path.join(relation_path, "best_model.pth")
 os.makedirs(relation_path, exist_ok=True)
 
