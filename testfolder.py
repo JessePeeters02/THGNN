@@ -36,7 +36,7 @@ def check_pickles(nr, path, start):
         # Voor een idee van de inhoud:
         print("\nVoorbeeldshape features:", data['features'].shape)
         print("Aantal labels:", len(data['labels']))
-        print("Voorbeeldlabels:", data['labels'][:50])  # eerste 10 labels
+        print("Voorbeeldlabels:", data['labels'][:10])  # eerste 10 labels
         print("Voorbeeldmask:", data['mask'][:10])  # eerste 10 mask-waarden
         print("Positive adj shape:", data['pos_adj'].shape)
         print("Negative adj shape:", data['neg_adj'].shape)
