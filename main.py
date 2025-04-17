@@ -115,7 +115,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     for epoch in range(args.max_epochs):
         train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
                                  optimizer=optimizer, scheduler=default_scheduler, loss_fcn=mse_loss)
-        if epoch % args.epochs_eval == 0:
+        if (epoch+1) % args.epochs_eval == 0:
             eval_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader, loss_fcn=mse_loss)
             print('Epoch: {}/{}, train loss: {:.6f}, val loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss,
                                                                               eval_loss))
@@ -160,8 +160,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     
 if __name__ == "__main__":
     total_data_points = len(os.listdir(os.path.join(data_path, "data_train_predict")))
-    data_start = 20
-    data_middle = int(0.8 * (total_data_points-20)) + 20
+    data_start = 1140
+    data_middle = int(0.9 * (total_data_points-1140)) + 1140
     data_end = total_data_points
     pre_data = '2025-03-07'
     fun_train_predict(data_start, data_middle, data_end, pre_data)
