@@ -62,7 +62,12 @@ class DynamiSE(nn.Module):
         )
 
     def forward(self, x, edge_index_pos, edge_index_neg, t, method='dopri5'):
+        
         h = self.feature_encoder(x)
+        if torch.isnan(h).any() or torch.isinf(h).any():
+            print(f"h bevat NaN of Inf op snapshot {self.snapshot_date if hasattr(self, 'snapshot_date') else '??'}")
+            print(h)
+            raise ValueError("Invalid input features h")
         self.ode_func.set_graph(edge_index_pos, edge_index_neg)
         h = odeint(self.ode_func, h, t, method=method)[1]
         return h
@@ -293,10 +298,12 @@ def prepare_dynamic_data(stock_data, window_size=20):
             bool_eerste = False
             feature_matrix = (
                 window_data.groupby('Stock')[feature_cols]
-                .apply(lambda df: df.values.mean(axis=0))
+                .agg('mean')
                 .reindex(sorted(window_data['Stock'].unique()))
                 .values
             )
+            
+
             # Voeg toe: sla initiële edges op als vorige edges voor volgende snapshot
             snapshots.append({
                 'date': dates[i],
@@ -323,11 +330,11 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
                 feature_matrix = (
                     window_data.groupby('Stock')[feature_cols]
-                    .apply(lambda df: df.values.mean(axis=0))
+                    .agg('mean')
                     .reindex(sorted(window_data['Stock'].unique()))
                     .values
-                )     
-            # Check: levert balance theory iets op?
+                )
+                
             new_edges_found = pos_pairs.size(1) + neg_pairs.size(1)
 
             if new_edges_found == 0:
@@ -335,10 +342,11 @@ def prepare_dynamic_data(stock_data, window_size=20):
                 pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold=0.6)
                 feature_matrix = (
                     window_data.groupby('Stock')[feature_cols]
-                    .apply(lambda df: df.values.mean(axis=0))
+                    .agg('mean')
                     .reindex(sorted(window_data['Stock'].unique()))
                     .values
                 )
+                
             else:
                 print(f"Balance theory gevonden: {pos_pairs.size(1)} pos, {neg_pairs.size(1)} neg edges.")
         print('2')
@@ -354,10 +362,11 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
         feature_matrix = (
             window_data.groupby('Stock')[feature_cols]
-            .apply(lambda df: df.values.mean(axis=0))
+            .agg('mean')
             .reindex(sorted(window_data['Stock'].unique()))
             .values
         )
+        
         # Voeg de snapshot toe met dynamische veranderingen in de graaf
         snapshots.append({
             'date': dates[i],
