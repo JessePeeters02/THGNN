@@ -95,7 +95,7 @@ all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for 
 
 #     return pos_adj, neg_adj
 
-def prepare_adjacencymatrix(enddt, min_neighbors=5):
+def prepare_adjacencymatrix(enddt, min_neighbors=min_neighbors):
     relation_file = os.path.join(relation_path, f"{enddt}.csv")
     adj_all = pd.read_csv(relation_file, index_col=0)
     stock_names = adj_all.index.tolist()
@@ -130,7 +130,7 @@ def prepare_adjacencymatrix(enddt, min_neighbors=5):
     return torch.FloatTensor(pos_adj), torch.FloatTensor(neg_adj)
 
 
-# def prepare_adjacencymatrix(enddt, min_neighbors=5):
+# def prepare_adjacencymatrix(enddt, min_neighbors=min_neighbors):
 #     relation_file = os.path.join(relation_path, f"{enddt}.csv")
 #     adj_all = pd.read_csv(relation_file, index_col=0)
 #     stock_names = adj_all.index.tolist()
