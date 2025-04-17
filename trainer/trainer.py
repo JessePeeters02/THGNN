@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 
 def mse_loss(logits, targets):
     mse = nn.MSELoss()
@@ -34,7 +35,7 @@ def extract_data(data_dict, device):
 def train_epoch(epoch, args, model, dataset_train, optimizer, scheduler, loss_fcn):
     model.train()
     loss_return = 0
-    for batch_data in dataset_train:
+    for batch_data in tqdm(dataset_train):
         for batch_idx, data in enumerate(batch_data):
             model.zero_grad()
             pos_adj, neg_adj, features, labels, mask = extract_data(data, args.device)

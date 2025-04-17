@@ -38,4 +38,4 @@ class AllGraphDataSampler(data.Dataset):
 
     def __getitem__(self, idx):
         sample = self.data_all[idx]  # Hier kan de fout zitten
-        return self.data_all[idx]
+        return sample
