@@ -63,7 +63,9 @@ class DynamiSE(nn.Module):
 
     def forward(self, x, edge_index_pos, edge_index_neg, t, method='dopri5'):
         
+        print(x.shape)
         h = self.feature_encoder(x)
+        print(h.shape)
         if torch.isnan(h).any() or torch.isinf(h).any():
             print(f"h bevat NaN of Inf op snapshot {self.snapshot_date if hasattr(self, 'snapshot_date') else '??'}")
             print(h)
@@ -73,7 +75,7 @@ class DynamiSE(nn.Module):
         return h
 
     def predict_edge_weight(self, h, edge_index, combine_method='hadamard'):
-        src, dst = edge_index
+        src, dst = edge_index.long()
         h_src, h_dst = h[src], h[dst]
         
         if combine_method == 'hadamard':
@@ -127,13 +129,13 @@ class ODEFunc(nn.Module):
         self.psi_neg = nn.Linear(hidden_dim, hidden_dim)
 
     def set_graph(self, edge_index_pos, edge_index_neg):
-        self.edge_index_pos = edge_index_pos
-        self.edge_index_neg = edge_index_neg
+        self.edge_index_pos = edge_index_pos.long()
+        self.edge_index_neg = edge_index_neg.long()
 
     def forward(self, t, h):
         # Pos/Neg-specifieke propagatie (paper Eq.3-4)
-        h_pos = self.pos_conv(h, self.edge_index_pos)
-        h_neg = self.neg_conv(h, self.edge_index_neg)
+        h_pos = self.pos_conv(h, self.edge_index_pos.long())
+        h_neg = self.neg_conv(h, self.edge_index_neg.long())
         
         # Lineaire combinatie (paper Eq.5)
         delta_h = self.psi_pos(h_pos) + self.psi_neg(h_neg)  # Aparte lineaire lagen
@@ -265,9 +267,8 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes):
     print(f"New pos edges: {len(pos_edges_set)//2}, New neg edges: {len(neg_edges_set)//2}")
 
     # Converteer naar tensors
-    pos_edges = torch.LongTensor(list(zip(*pos_edges_set))) if pos_edges_set else torch.empty((2, 0))
-    neg_edges = torch.LongTensor(list(zip(*neg_edges_set))) if neg_edges_set else torch.empty((2, 0))
-    
+    pos_edges = torch.LongTensor(list(zip(*pos_edges_set))) if pos_edges_set else torch.empty((2, 0), dtype=torch.long)
+    neg_edges = torch.LongTensor(list(zip(*neg_edges_set))) if neg_edges_set else torch.empty((2, 0), dtype=torch.long)    
     return pos_edges, neg_edges
 
 def prepare_dynamic_data(stock_data, window_size=20):
@@ -282,7 +283,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
     for i in tqdm(range(window_size, len(dates)), desc="Preparing snapshots"):
         if dates[i] in already_done:
-            print(f"Snapshot {dates[i]} bestaat al, overslaan...")
+            # print(f"Snapshot {dates[i]} bestaat al, overslaan...")
             with open(os.path.join(snapshot_path, f"{dates[i]}.pkl"), 'rb') as f:
                 snapshots.append(pickle.load(f))
             continue
@@ -330,7 +331,8 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
                 feature_matrix = (
                     window_data.groupby('Stock')[feature_cols]
-                    .agg('mean')
+                    # .agg('mean')
+                    .last()
                     .reindex(sorted(window_data['Stock'].unique()))
                     .values
                 )
@@ -342,7 +344,8 @@ def prepare_dynamic_data(stock_data, window_size=20):
                 pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold=0.6)
                 feature_matrix = (
                     window_data.groupby('Stock')[feature_cols]
-                    .agg('mean')
+                    # .agg('mean')
+                    .last()
                     .reindex(sorted(window_data['Stock'].unique()))
                     .values
                 )
@@ -421,7 +424,7 @@ def edges_to_adj_matrix(edges, num_nodes):
 def main1_generate():
     # 1. prepare data
     stock_data = load_all_stocks(daily_data_path)
-    snapshots = prepare_dynamic_data(stock_data)
+    snapshots = prepare_dynamic_data(stock_data)[-600:]
     
     # test prints
     print(f"Aantal snapshots: {len(snapshots)}")
@@ -443,7 +446,13 @@ def main1_generate():
 
         for snapshot in tqdm(snapshots, desc=f"Epoch {epoch+1} van de {num_epochs}"):
             optimizer.zero_grad()
-            
+            print("\n", snapshot['date'])
+            if snapshot['date']=='2020-12-14':
+                print("\n\n")
+                print(snapshot['features'])
+            print("Input features stats - min:", snapshot['features'].min(), "max:", snapshot['features'].max(), "has NaN:", torch.isnan(snapshot['features']).any(), "has Inf:", torch.isinf(snapshot['features']).any())
+            print("pos edge shape: ", snapshot["pos_edges"].shape, "\nneg edge shape: ", snapshot["neg_edges"].shape)
+            print("pos edge type: ", type(snapshot["pos_edges"]), "\nneg edge type: ", type(snapshot["neg_edges"]))
             # Forward pass
             embeddings = model(
                 snapshot['features'],
@@ -490,7 +499,7 @@ def main1_generate():
 def main1_load():
 
     stock_data = load_all_stocks(daily_data_path)
-    snapshots = prepare_dynamic_data(stock_data)
+    snapshots = prepare_dynamic_data(stock_data)[-600:]
     # 4. Resultaatgeneratie
     model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth")))
