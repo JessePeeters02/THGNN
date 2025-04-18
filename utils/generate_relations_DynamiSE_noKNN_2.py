@@ -67,7 +67,7 @@ class DynamiSE(nn.Module):
         if torch.isnan(h).any() or torch.isinf(h).any():
             print(f"h bevat NaN of Inf op snapshot {self.snapshot_date if hasattr(self, 'snapshot_date') else '??'}")
             print(h)
-            raise ValueError("Invalid input features h")
+            raise ValueError("h bevat NaN of Inf")
         self.ode_func.set_graph(edge_index_pos, edge_index_neg)
         h = odeint(self.ode_func, h, t, method=method)[1]
         return h
