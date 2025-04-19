@@ -19,6 +19,8 @@ daily_data_path = os.path.join(data_path, "normaliseddailydata")
 relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
 model_path = os.path.join(relation_path, "best_model.pth")
 os.makedirs(relation_path, exist_ok=True)
+snapshot_path = os.path.join(data_path, "intermediate_snapshots")
+os.makedirs(snapshot_path, exist_ok=True)
 
 # Hyperparameters
 prev_date_num = 20
@@ -277,8 +279,6 @@ def prepare_dynamic_data(stock_data, window_size=20):
     unique_stocks = sorted(stock_data['Stock'].unique())
     snapshots = []
     bool_eerste = True
-    snapshot_path = os.path.join(data_path, "intermediate_snapshots")
-    os.makedirs(snapshot_path, exist_ok=True)
     already_done = set(fname.replace('.pkl', '') for fname in os.listdir(snapshot_path) if fname.endswith('.pkl'))
 
     for i in tqdm(range(window_size, len(dates)), desc="Preparing snapshots"):
@@ -292,7 +292,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
         window_data = stock_data[stock_data['Date'].isin(window_dates)]
         
         # Normalize features per stock
-        print('1')
+        # print('1')
         # Find approximate neighbors
         if bool_eerste:
             pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold=0.6)
@@ -352,13 +352,13 @@ def prepare_dynamic_data(stock_data, window_size=20):
                 
             else:
                 print(f"Balance theory gevonden: {pos_pairs.size(1)} pos, {neg_pairs.size(1)} neg edges.")
-        print('2')
+        # print('2')
         # Bereken ΔA_t voor de huidige snapshot (verandering in de graaf)
         prev_pos_edges = prev_snapshot['pos_edges'] if snapshots else []
         prev_neg_edges = prev_snapshot['neg_edges'] if snapshots else []
         # delta_pos = compute_delta_edges(pos_pairs, prev_pos_edges)
         # delta_neg = compute_delta_edges(neg_pairs, prev_neg_edges)
-        print('3')
+        # print('3')
         # Zet de delta's om naar edge_index tensors
         edge_index_pos = pos_pairs
         edge_index_neg = neg_pairs
@@ -424,7 +424,7 @@ def edges_to_adj_matrix(edges, num_nodes):
 def main1_generate():
     # 1. prepare data
     stock_data = load_all_stocks(daily_data_path)
-    snapshots = prepare_dynamic_data(stock_data)[-600:]
+    snapshots = prepare_dynamic_data(stock_data)
     
     # test prints
     print(f"Aantal snapshots: {len(snapshots)}")
