@@ -15,6 +15,7 @@ print('hallo')
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data", "testbatch1")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
+raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
 model_path = os.path.join(relation_path, "best_model.pth")
@@ -37,6 +38,15 @@ def load_all_stocks(stock_data_path):
     all_stock_data = pd.concat(all_stock_data, ignore_index=True)
     print(all_stock_data.head()) # kleine test om te zien of data deftig is ingeladen
     return all_stock_data
+
+def load_raw_stocks(raw_stock_path):
+    raw_files = [f for f in os.listdir(raw_stock_path) if f.endswith('.csv')]
+    raw_data = {}
+    for file in tqdm(raw_files, desc="Loading raw data"):
+        stock_name = file.split('.')[0]
+        df = pd.read_csv(os.path.join(raw_stock_path, file), parse_dates=['Date'])
+        raw_data[stock_name] = df
+    return raw_data
 
 class DynamiSE(nn.Module):
     def __init__(self, num_features, hidden_dim):
@@ -407,6 +417,13 @@ def edges_to_adj_matrix(edges, num_nodes):
         adj[edges[0], edges[1]] = 1.0
     return adj
 
+def calculate_label(raw_df, current_date):
+    date_idx = raw_df[raw_df['Date'] == current_date].index[0]
+    # print(date_idx)
+    close_today = raw_df.iloc[date_idx]['Close']
+    close_yesterday = raw_df.iloc[date_idx-1]['Close']
+    return (close_yesterday / close_today) - 1
+
 # def evaluate(model, snapshots):
 #     model.eval()
 #     rmse, mae = 0.0, 0.0
@@ -499,7 +516,8 @@ def main1_generate():
 def main1_load():
 
     stock_data = load_all_stocks(daily_data_path)
-    snapshots = prepare_dynamic_data(stock_data)[-600:]
+    raw_data = load_raw_stocks(raw_data_path)
+    snapshots = prepare_dynamic_data(stock_data)
     # 4. Resultaatgeneratie
     model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth")))
@@ -523,7 +541,8 @@ def main1_load():
                 window_data = window_data[window_data['Date'] <= snapshot['date']].tail(prev_date_num)
                 if len(window_data) == prev_date_num:
                     features.append(window_data[feature_cols].values)
-                    labels.append(window_data.iloc[-1]['Close'])
+                    raw_df = raw_data[stock_name]
+                    labels.append(calculate_label(raw_df, snapshot['date']))
                     stock_info.append([stock_name, snapshot['date']])
             
             # Opslag
@@ -542,5 +561,5 @@ def main1_load():
                 os.path.join(data_path, "daily_stock_DSE_noknn1", f"{snapshot['date']}.csv"), index=False)
             
 
-main1_generate()
+# main1_generate()
 main1_load()
