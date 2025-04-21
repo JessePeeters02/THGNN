@@ -18,7 +18,6 @@ daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
-model_path = os.path.join(relation_path, "best_model.pth")
 os.makedirs(relation_path, exist_ok=True)
 snapshot_path = os.path.join(data_path, "intermediate_snapshots")
 os.makedirs(snapshot_path, exist_ok=True)
@@ -28,6 +27,7 @@ prev_date_num = 20
 feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 hidden_dim = 64
 num_epochs = 10
+threshold = 0.6
 
 def load_all_stocks(stock_data_path):
     all_stock_data = []
@@ -75,9 +75,9 @@ class DynamiSE(nn.Module):
 
     def forward(self, x, edge_index_pos, edge_index_neg, t, method='dopri5'):
         
-        print(x.shape)
+        # print(x.shape)
         h = self.feature_encoder(x)
-        print(h.shape)
+        # print(h.shape)
         if torch.isnan(h).any() or torch.isinf(h).any():
             print(f"h bevat NaN of Inf op snapshot {self.snapshot_date if hasattr(self, 'snapshot_date') else '??'}")
             print(h)
@@ -101,7 +101,7 @@ class DynamiSE(nn.Module):
         else:
             raise ValueError("Ongeldige combinatiemethode")
         
-        return self.predictor(h_pair).squeeze()
+        return torch.tanh(self.predictor(h_pair)).squeeze()
 
     def full_loss(self, h, pos_edges, neg_edges, alpha=1.0, beta=0.001):
         # Reconstructieverlies (RMSE)
@@ -116,11 +116,19 @@ class DynamiSE(nn.Module):
             torch.log(1 + w_hat_pos).mean() + 
             torch.log(1 - w_hat_neg).mean()
         )
-        
+        print("w_hat_pos:", w_hat_pos.min().item(), w_hat_pos.max().item(), w_hat_pos.mean().item())
+        print("w_hat_neg:", w_hat_neg.min().item(), w_hat_neg.max().item(), w_hat_neg.mean().item())
+
         # Regularisatie
         reg_loss = beta * h.norm(p=2).mean()
-        
-        return recon_loss + sign_loss + reg_loss
+        total_loss = recon_loss + sign_loss + reg_loss
+        if torch.isnan(total_loss):
+            print("NaN in loss! Breaking down components:")
+            print("recon_loss:", recon_loss)
+            print("sign_loss:", sign_loss)
+            print("reg_loss:", reg_loss)
+            return torch.tensor(0.0, requires_grad=True)
+        return total_loss
 
     def edge_loss(self, h, edge_index, sign):
         w_hat = self.predict_edge_weight(h, edge_index)
@@ -172,17 +180,17 @@ def compute_delta_edges(
     else:
         return torch.empty((2, 0), dtype=torch.long)
 
-def build_initial_edges_via_correlation(window_data, threshold=0.6):
+def build_initial_edges_via_correlation(window_data, threshold):
     # Groepeer per stock en bereken correlaties per feature
     grouped = window_data.groupby('Stock')[feature_cols]
     
     # Maak een 3D array van features (stocks x features x time)
     stock_arrays = np.stack([group.values.T for name, group in grouped])
     n_stocks = stock_arrays.shape[0]
-    print(f"aantal stocks: {n_stocks}")
+    # print(f"aantal stocks: {n_stocks}")
     # Initialiseer correlatiematrix
     corr_matrix = np.zeros((n_stocks, n_stocks))
-    print(f"corr_matrix shape: {corr_matrix.shape}")
+    # print(f"corr_matrix shape: {corr_matrix.shape}")
     # Bereken correlaties tussen alle paren van stocks
     for i in tqdm(range(n_stocks), desc="Calculating correlations"):
         for j in range(i+1, n_stocks):
@@ -209,7 +217,7 @@ def build_initial_edges_via_correlation(window_data, threshold=0.6):
             elif corr_matrix[i,j] < -threshold:
                 neg_edges.append((i, j))
                 neg_edges.append((j, i))  # Maak ongericht
-    print(f"Pos edges: {len(pos_edges)/2}, Neg edges: {len(neg_edges)/2}")
+    # print(f"Pos edges: {len(pos_edges)/2}, Neg edges: {len(neg_edges)/2}")
 
     # Converteer naar torch Tensors
     pos_edges = torch.LongTensor(list(zip(*pos_edges))) if pos_edges else torch.empty((2, 0), dtype=torch.long)
@@ -219,7 +227,7 @@ def build_initial_edges_via_correlation(window_data, threshold=0.6):
 
 def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes):
     # Debug: Print input edges
-    print(f"\nInput pos edges: {prev_pos_edges.shape}, neg edges: {prev_neg_edges.shape}")
+    # print(f"\nInput pos edges: {prev_pos_edges.shape}, neg edges: {prev_neg_edges.shape}")
     
     adj_pos = defaultdict(set)
     adj_neg = defaultdict(set)
@@ -236,7 +244,7 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes):
 
     # Debug: Tel nodes met neighbors
     nodes_with_neighbors = sum(1 for j in range(num_nodes) if adj_pos[j] or adj_neg[j])
-    print(f"Nodes with neighbors: {nodes_with_neighbors}/{num_nodes}")
+    # print(f"Nodes with neighbors: {nodes_with_neighbors}/{num_nodes}")
 
     pos_edges_set = set()
     neg_edges_set = set()
@@ -247,13 +255,13 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes):
         for i, k in itertools.combinations(neighbors, 2):
             if i == k:
                 continue
-                
-            # Debug: Tel triadische checks
-            triangle_count += 1
-            
+                            
             # Check bestaande edges
             if (k in adj_pos[i]) or (k in adj_neg[i]):
                 continue
+
+            # Debug: Tel triadische checks
+            triangle_count += 1
 
             # Triadische check
             signs = []
@@ -275,8 +283,8 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes):
                     neg_edges_set.add((k, i))  # Ongericht
 
     # Debug prints
-    print(f"Triangles checked: {triangle_count}")
-    print(f"New pos edges: {len(pos_edges_set)//2}, New neg edges: {len(neg_edges_set)//2}")
+    # print(f"Triangles checked: {triangle_count}")
+    # print(f"New pos edges: {len(pos_edges_set)//2}, New neg edges: {len(neg_edges_set)//2}")
 
     # Converteer naar tensors
     pos_edges = torch.LongTensor(list(zip(*pos_edges_set))) if pos_edges_set else torch.empty((2, 0), dtype=torch.long)
@@ -305,7 +313,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
         # print('1')
         # Find approximate neighbors
         if bool_eerste:
-            pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold=0.6)
+            pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold)
             bool_eerste = False
             feature_matrix = (
                 window_data.groupby('Stock')[feature_cols]
@@ -337,7 +345,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             growth_ratio = new_edge_count / max(prev_edge_count, 1) 
             if growth_ratio > 1.2:
                 print(f"[Te veel groei] snapshot {dates[i]} overslaan (ratio={growth_ratio:.2f})")
-                pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold=0.6)
+                pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold)
 
                 feature_matrix = (
                     window_data.groupby('Stock')[feature_cols]
@@ -351,7 +359,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
             if new_edges_found == 0:
                 print(f"[Fallback] Geen nieuwe edges gevonden op dag {dates[i]} — fallback naar correlatie.")
-                pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold=0.6)
+                pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold)
                 feature_matrix = (
                     window_data.groupby('Stock')[feature_cols]
                     # .agg('mean')
@@ -463,13 +471,10 @@ def main1_generate():
 
         for snapshot in tqdm(snapshots, desc=f"Epoch {epoch+1} van de {num_epochs}"):
             optimizer.zero_grad()
-            print("\n", snapshot['date'])
-            if snapshot['date']=='2020-12-14':
-                print("\n\n")
-                print(snapshot['features'])
-            print("Input features stats - min:", snapshot['features'].min(), "max:", snapshot['features'].max(), "has NaN:", torch.isnan(snapshot['features']).any(), "has Inf:", torch.isinf(snapshot['features']).any())
-            print("pos edge shape: ", snapshot["pos_edges"].shape, "\nneg edge shape: ", snapshot["neg_edges"].shape)
-            print("pos edge type: ", type(snapshot["pos_edges"]), "\nneg edge type: ", type(snapshot["neg_edges"]))
+            # print("\n", snapshot['date'])
+            # print("Input features stats - min:", snapshot['features'].min(), "max:", snapshot['features'].max(), "has NaN:", torch.isnan(snapshot['features']).any(), "has Inf:", torch.isinf(snapshot['features']).any())
+            # print("pos edge shape: ", snapshot["pos_edges"].shape, "\nneg edge shape: ", snapshot["neg_edges"].shape)
+            # print("pos edge type: ", type(snapshot["pos_edges"]), "\nneg edge type: ", type(snapshot["neg_edges"]))
             # Forward pass
             embeddings = model(
                 snapshot['features'],
@@ -497,12 +502,12 @@ def main1_generate():
         avg_loss = weighted_avg_loss  # np.mean(epoch_losses)
         print(f"Epoch {epoch+1}, Avg Loss: {avg_loss}")
         training_results.append(avg_loss)
-
+        print(f" avg_loss is {avg_loss}, best_loss is {best_loss}")
         # Sla het beste model op
         if avg_loss < best_loss:
             best_loss = avg_loss
             torch.save(model.state_dict(), os.path.join(relation_path, "best_model.pth"))
-            print(f"Beste model opgeslagen in {model_path} met loss {best_loss}")
+            print(f"Beste model opgeslagen in {relation_path} met loss {best_loss}")
 
     # Sla de trainingsresultaten op
     results_df = pd.DataFrame({
@@ -561,5 +566,5 @@ def main1_load():
                 os.path.join(data_path, "daily_stock_DSE_noknn1", f"{snapshot['date']}.csv"), index=False)
             
 
-# main1_generate()
+main1_generate()
 main1_load()
