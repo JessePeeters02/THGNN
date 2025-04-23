@@ -10,7 +10,7 @@ from tqdm import tqdm
 import os
 import itertools
 from collections import defaultdict
-print('hallo')
+
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data", "testbatch1")
@@ -19,8 +19,12 @@ raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots")
+snapshot_path = os.path.join(data_path, "intermediate_snapshots1")
 os.makedirs(snapshot_path, exist_ok=True)
+os.makedirs(os.path.join(data_path, "data_train_predict_DSE_noknn1"), exist_ok=True)
+os.makedirs(os.path.join(data_path, "daily_stock_DSE_noknn1"), exist_ok=True)
+log_path = os.path.join(data_path, "snapshot_log.csv")
+os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Hyperparameters
 prev_date_num = 20
@@ -29,20 +33,29 @@ hidden_dim = 64
 num_epochs = 10
 threshold = 0.6
 
-def load_all_stocks(stock_data_path):
+def load_all_stocks(stock_data_path, restrict_last_n_days=80):
     all_stock_data = []
-    for file in tqdm(os.listdir(stock_data_path), desc="Loading data"):
+    for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
         if file.endswith('.csv'):
             df = pd.read_csv(os.path.join(stock_data_path, file))
             all_stock_data.append(df[['Date', 'Stock', 'Open', 'High', 'Low', 'Close', 'Volume']])
     all_stock_data = pd.concat(all_stock_data, ignore_index=True)
     print(all_stock_data.head()) # kleine test om te zien of data deftig is ingeladen
+
+        # Enkel laatste X dagen
+    if restrict_last_n_days is not None:
+        all_dates = sorted(all_stock_data['Date'].unique())
+        last_dates = all_dates[-restrict_last_n_days:]
+        all_stock_data = all_stock_data[all_stock_data['Date'].isin(last_dates)]
+
+    print(all_stock_data.head())  # test of data deftig is
+
     return all_stock_data
 
 def load_raw_stocks(raw_stock_path):
     raw_files = [f for f in os.listdir(raw_stock_path) if f.endswith('.csv')]
     raw_data = {}
-    for file in tqdm(raw_files, desc="Loading raw data"):
+    for file in tqdm(raw_files, desc="Loading raw data for label creation"):
         stock_name = file.split('.')[0]
         df = pd.read_csv(os.path.join(raw_stock_path, file), parse_dates=['Date'])
         raw_data[stock_name] = df
@@ -185,7 +198,7 @@ def build_initial_edges_via_correlation(window_data, threshold):
     grouped = window_data.groupby('Stock')[feature_cols]
     
     # Maak een 3D array van features (stocks x features x time)
-    stock_arrays = np.stack([group.values.T for name, group in grouped])
+    stock_arrays = np.array([group.values.T for name, group in grouped])
     n_stocks = stock_arrays.shape[0]
     # print(f"aantal stocks: {n_stocks}")
     # Initialiseer correlatiematrix
@@ -263,7 +276,7 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes):
             # Debug: Tel triadische checks
             triangle_count += 1
 
-            # Triadische check
+            # Triadische check  
             signs = []
             for u, v in [(i, j), (j, k)]:
                 if v in adj_pos[u]:
@@ -315,12 +328,14 @@ def prepare_dynamic_data(stock_data, window_size=20):
         if bool_eerste:
             pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold)
             bool_eerste = False
-            feature_matrix = (
-                window_data.groupby('Stock')[feature_cols]
-                .agg('mean')
-                .reindex(sorted(window_data['Stock'].unique()))
-                .values
-            )
+            feature_matrix = []
+            for stock in unique_stocks:
+                stock_data_window = window_data[window_data['Stock'] == stock]
+                if len(stock_data_window) != window_size:
+                    print(f"fout met window_size feature matrix van {stock} op {dates[i]}")
+                feature_matrix.append(stock_data_window[feature_cols].values)
+            print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
+            feature_matrix = np.array(feature_matrix)
             
 
             # Voeg toe: sla initiële edges op als vorige edges voor volgende snapshot
@@ -346,30 +361,17 @@ def prepare_dynamic_data(stock_data, window_size=20):
             if growth_ratio > 1.2:
                 print(f"[Te veel groei] snapshot {dates[i]} overslaan (ratio={growth_ratio:.2f})")
                 pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold)
-
-                feature_matrix = (
-                    window_data.groupby('Stock')[feature_cols]
-                    # .agg('mean')
-                    .last()
-                    .reindex(sorted(window_data['Stock'].unique()))
-                    .values
-                )
                 
             new_edges_found = pos_pairs.size(1) + neg_pairs.size(1)
 
             if new_edges_found == 0:
                 print(f"[Fallback] Geen nieuwe edges gevonden op dag {dates[i]} — fallback naar correlatie.")
                 pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold)
-                feature_matrix = (
-                    window_data.groupby('Stock')[feature_cols]
-                    # .agg('mean')
-                    .last()
-                    .reindex(sorted(window_data['Stock'].unique()))
-                    .values
-                )
+
                 
             else:
                 print(f"Balance theory gevonden: {pos_pairs.size(1)} pos, {neg_pairs.size(1)} neg edges.")
+
         # print('2')
         # Bereken ΔA_t voor de huidige snapshot (verandering in de graaf)
         prev_pos_edges = prev_snapshot['pos_edges'] if snapshots else []
@@ -381,12 +383,13 @@ def prepare_dynamic_data(stock_data, window_size=20):
         edge_index_pos = pos_pairs
         edge_index_neg = neg_pairs
 
-        feature_matrix = (
-            window_data.groupby('Stock')[feature_cols]
-            .agg('mean')
-            .reindex(sorted(window_data['Stock'].unique()))
-            .values
-        )
+        feature_matrix = []
+        for stock in unique_stocks:
+            stock_data_window = window_data[window_data['Stock'] == stock]
+            if len(stock_data_window) != window_size:
+                print(f"fout met window_size feature matrix van {stock} op {dates[i]}")
+            feature_matrix.append(stock_data_window[feature_cols].values)
+        feature_matrix = np.array(feature_matrix)
         
         # Voeg de snapshot toe met dynamische veranderingen in de graaf
         snapshots.append({
@@ -400,7 +403,6 @@ def prepare_dynamic_data(stock_data, window_size=20):
         with open(os.path.join(snapshot_path, f"{dates[i]}.pkl"), 'wb') as f:
             pickle.dump(snapshots[-1], f)
         # Append snapshot metadata naar CSV
-        log_path = os.path.join(data_path, "snapshot_log.csv")
         write_header = not os.path.exists(log_path) or os.path.getsize(log_path) == 0
         with open(log_path, "a") as log_f:
             if write_header:
@@ -447,10 +449,6 @@ def calculate_label(raw_df, current_date):
 # Main
 # if __name__ == "__main__":
 def main1_generate():
-    # 1. prepare data
-    stock_data = load_all_stocks(daily_data_path)
-    snapshots = prepare_dynamic_data(stock_data)
-    
     # test prints
     print(f"Aantal snapshots: {len(snapshots)}")
     print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
@@ -476,6 +474,7 @@ def main1_generate():
             # print("pos edge shape: ", snapshot["pos_edges"].shape, "\nneg edge shape: ", snapshot["neg_edges"].shape)
             # print("pos edge type: ", type(snapshot["pos_edges"]), "\nneg edge type: ", type(snapshot["neg_edges"]))
             # Forward pass
+            print(f"features shape: {snapshot['features'].shape})")
             embeddings = model(
                 snapshot['features'],
                 snapshot['pos_edges'],
@@ -520,17 +519,10 @@ def main1_generate():
 
 def main1_load():
 
-    stock_data = load_all_stocks(daily_data_path)
-    raw_data = load_raw_stocks(raw_data_path)
-    snapshots = prepare_dynamic_data(stock_data)
     # 4. Resultaatgeneratie
     model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth")))
     model.eval()
-
-    # voor efficientie later
-    stock_data = stock_data.sort_values(['Stock', 'Date'])  # Sorteer eenmalig
-    stock_groups = stock_data.groupby('Stock')  # Maak snelle lookup groups
 
     for snapshot in tqdm(snapshots, desc="Generating outputs"):
         with torch.no_grad():
@@ -540,18 +532,25 @@ def main1_load():
             neg_adj = edges_to_adj_matrix(snapshot['neg_edges'], N)
             
             # Features en labels
+            end_date = snapshot['date']
+            end_idx = date_to_idx[end_date]
+            start_idx = end_idx - prev_date_num + 1
+            if start_idx < 0:
+                print(f"Skipping {end_date} - not enough history")
+                continue
             features, labels, stock_info = [], [], []
             for stock_name in snapshot['tickers']:
-                window_data = stock_groups.get_group(stock_name)
-                window_data = window_data[window_data['Date'] <= snapshot['date']].tail(prev_date_num)
+                stock_df = stock_dict.get(stock_name)
+                window_data = stock_df.iloc[start_idx:end_idx+1]
                 if len(window_data) == prev_date_num:
                     features.append(window_data[feature_cols].values)
                     raw_df = raw_data[stock_name]
                     labels.append(calculate_label(raw_df, snapshot['date']))
                     stock_info.append([stock_name, snapshot['date']])
+                else:
+                    print(f" huh, window data klopt niet voor {stock_name} op {end_date}")
             
             # Opslag
-            os.makedirs(os.path.join(data_path, "data_train_predict_DSE_noknn1"), exist_ok=True)
             with open(os.path.join(data_path, "data_train_predict_DSE_noknn1", f"{snapshot['date']}.pkl"), 'wb') as f:
                 pickle.dump({
                     'pos_adj': pos_adj,
@@ -561,10 +560,22 @@ def main1_load():
                     'mask': [True] * len(labels)
                 }, f)
             
-            os.makedirs(os.path.join(data_path, "daily_stock_DSE_noknn1"), exist_ok=True)
             pd.DataFrame(stock_info, columns=['code', 'dt']).to_csv(
                 os.path.join(data_path, "daily_stock_DSE_noknn1", f"{snapshot['date']}.csv"), index=False)
             
 
+# eenmalig inladen van alle data
+stock_data = load_all_stocks(daily_data_path)
+raw_data = load_raw_stocks(raw_data_path)
+all_dates = sorted(stock_data['Date'].unique())
+unique_stocks = sorted(stock_data['Stock'].unique())
+snapshots = prepare_dynamic_data(stock_data)
+
+# Maak datastructuren voor efficiente toegang
+stock_data = stock_data.sort_values(['Stock', 'Date'])
+stock_dict = {name: group for name, group in stock_data.groupby('Stock')}
+date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
+
+# start model
 main1_generate()
 main1_load()
