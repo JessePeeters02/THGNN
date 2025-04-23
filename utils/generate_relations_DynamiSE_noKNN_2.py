@@ -304,7 +304,7 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes):
     neg_edges = torch.LongTensor(list(zip(*neg_edges_set))) if neg_edges_set else torch.empty((2, 0), dtype=torch.long)    
     return pos_edges, neg_edges
 
-def prepare_dynamic_data(stock_data, window_size=20):
+def prepare_dynamic_data(stock_data, window_size=prev_date_num):
     """Prepare time-evolving graph data without full correlation matrices"""
     dates = sorted(stock_data['Date'].unique())
     unique_stocks = sorted(stock_data['Stock'].unique())
@@ -321,7 +321,8 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
         window_dates = dates[i-window_size:i]
         window_data = stock_data[stock_data['Date'].isin(window_dates)]
-        
+        current_date_data = stock_data[stock_data['Date'] == dates[i-1]]
+
         # Normalize features per stock
         # print('1')
         # Find approximate neighbors
@@ -330,10 +331,10 @@ def prepare_dynamic_data(stock_data, window_size=20):
             bool_eerste = False
             feature_matrix = []
             for stock in unique_stocks:
-                stock_data_window = window_data[window_data['Stock'] == stock]
-                if len(stock_data_window) != window_size:
-                    print(f"fout met window_size feature matrix van {stock} op {dates[i]}")
-                feature_matrix.append(stock_data_window[feature_cols].values)
+                stock_data_current = current_date_data[current_date_data['Stock'] == stock]
+                if len(stock_data_current) != 1:
+                    print(f"fout met window_size feature matrix van {stock} op {dates[i-1]}")
+                feature_matrix.append(stock_data_current[feature_cols].values[0])
             print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
             feature_matrix = np.array(feature_matrix)
             
@@ -344,7 +345,8 @@ def prepare_dynamic_data(stock_data, window_size=20):
                 'features': torch.FloatTensor(feature_matrix),
                 'pos_edges': pos_pairs,
                 'neg_edges': neg_pairs,
-                'tickers': unique_stocks
+                'tickers': unique_stocks,
+                'full_window_data': window_data
             })
             continue
         else:
@@ -385,19 +387,22 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
         feature_matrix = []
         for stock in unique_stocks:
-            stock_data_window = window_data[window_data['Stock'] == stock]
-            if len(stock_data_window) != window_size:
-                print(f"fout met window_size feature matrix van {stock} op {dates[i]}")
-            feature_matrix.append(stock_data_window[feature_cols].values)
+            stock_data_current = current_date_data[current_date_data['Stock'] == stock]
+            if len(stock_data_current) != 1:
+                print(f"fout met window_size feature matrix van {stock} op {dates[i-1]}")
+            feature_matrix.append(stock_data_current[feature_cols].values[0])
+        print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
         feature_matrix = np.array(feature_matrix)
-        
-        # Voeg de snapshot toe met dynamische veranderingen in de graaf
+            
+
+        # Voeg toe: sla initiële edges op als vorige edges voor volgende snapshot
         snapshots.append({
             'date': dates[i],
             'features': torch.FloatTensor(feature_matrix),
-            'pos_edges': edge_index_pos,
-            'neg_edges': edge_index_neg,
-            'tickers': unique_stocks
+            'pos_edges': pos_pairs,
+            'neg_edges': neg_pairs,
+            'tickers': unique_stocks,
+            'full_window_data': window_data
         })
         # On-the-fly snapshot opslaan
         with open(os.path.join(snapshot_path, f"{dates[i]}.pkl"), 'wb') as f:
@@ -411,7 +416,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             log_f.write(line)
         print(f"Vorige pos_edges shape: {prev_pos_edges.shape if isinstance(prev_pos_edges, torch.Tensor) else 'Geen'}")
         print(f"Vorige neg_edges shape: {prev_neg_edges.shape if isinstance(prev_neg_edges, torch.Tensor) else 'Geen'}")
-    
+    del window_data, feature_matrix, pos_pairs, neg_pairs
     return snapshots
 
 def edge_prediction_loss(h, edge_index, sign, model):
@@ -539,11 +544,13 @@ def main1_load():
                 print(f"Skipping {end_date} - not enough history")
                 continue
             features, labels, stock_info = [], [], []
+            window_data = snapshot['full_window_data']
+            grouped = window_data.groupby('Stock')
+            stock_groups = {name: group for name, group in grouped}
             for stock_name in snapshot['tickers']:
-                stock_df = stock_dict.get(stock_name)
-                window_data = stock_df.iloc[start_idx:end_idx+1]
-                if len(window_data) == prev_date_num:
-                    features.append(window_data[feature_cols].values)
+                stock_data = stock_groups.get(stock_name)
+                if len(stock_data) == prev_date_num:
+                    features.append(stock_data[feature_cols].values)
                     raw_df = raw_data[stock_name]
                     labels.append(calculate_label(raw_df, snapshot['date']))
                     stock_info.append([stock_name, snapshot['date']])
@@ -562,6 +569,7 @@ def main1_load():
             
             pd.DataFrame(stock_info, columns=['code', 'dt']).to_csv(
                 os.path.join(data_path, "daily_stock_DSE_noknn1", f"{snapshot['date']}.csv"), index=False)
+            del output, pos_adj, neg_adj, features, labels, stock_info, grouped, stock_groups
             
 
 # eenmalig inladen van alle data
