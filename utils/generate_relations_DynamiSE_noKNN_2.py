@@ -96,7 +96,11 @@ class DynamiSE(nn.Module):
             print(h)
             raise ValueError("h bevat NaN of Inf")
         self.ode_func.set_graph(edge_index_pos, edge_index_neg)
-        h = odeint(self.ode_func, h, t, method=method)[1]
+        h = odeint(self.ode_func, h, t, 
+               method=method,
+               rtol=1e-3,
+               atol=1e-4,
+               options={'max_num_steps': 100})[1]
         return h
 
     def predict_edge_weight(self, h, edge_index, combine_method='hadamard'):
@@ -161,18 +165,29 @@ class ODEFunc(nn.Module):
         self.psi_pos = nn.Linear(hidden_dim, hidden_dim)
         self.psi_neg = nn.Linear(hidden_dim, hidden_dim)
 
+        # Stabilisatielagen
+        self.layer_norm = nn.LayerNorm(hidden_dim)
+        self.dropout = nn.Dropout(0.1)
+
     def set_graph(self, edge_index_pos, edge_index_neg):
         self.edge_index_pos = edge_index_pos.long()
         self.edge_index_neg = edge_index_neg.long()
 
     def forward(self, t, h):
+        # Voeg layer normalization toe voor stabiliteit
+        h = self.layer_norm(h)
+
         # Pos/Neg-specifieke propagatie (paper Eq.3-4)
         h_pos = self.pos_conv(h, self.edge_index_pos.long())
         h_neg = self.neg_conv(h, self.edge_index_neg.long())
         
+        # Dropout voor regularisatie
+        h_pos = self.dropout(h_pos)
+        h_neg = self.dropout(h_neg)
+
         # Lineaire combinatie (paper Eq.5)
         delta_h = self.psi_pos(h_pos) + self.psi_neg(h_neg)  # Aparte lineaire lagen
-        return delta_h
+        return delta_h.clamp(-50, 50)
 
 # ΔA_t edgeverschillen berekenen
 
@@ -474,30 +489,28 @@ def main1_generate():
 
         for snapshot in tqdm(snapshots, desc=f"Epoch {epoch+1} van de {num_epochs}"):
             optimizer.zero_grad()
-            # print("\n", snapshot['date'])
-            # print("Input features stats - min:", snapshot['features'].min(), "max:", snapshot['features'].max(), "has NaN:", torch.isnan(snapshot['features']).any(), "has Inf:", torch.isinf(snapshot['features']).any())
-            # print("pos edge shape: ", snapshot["pos_edges"].shape, "\nneg edge shape: ", snapshot["neg_edges"].shape)
-            # print("pos edge type: ", type(snapshot["pos_edges"]), "\nneg edge type: ", type(snapshot["neg_edges"]))
+            print("\n", snapshot['date'])
+            print("Input features stats - min:", snapshot['features'].min(), "max:", snapshot['features'].max(), "\nhas NaN:", torch.isnan(snapshot['features']).any(), "has Inf:", torch.isinf(snapshot['features']).any(), "has Zeros:", (snapshot['features'] == 0).any())
+            print("pos edge shape: ", snapshot["pos_edges"].shape, "\nneg edge shape: ", snapshot["neg_edges"].shape)
+            print("pos edge type: ", type(snapshot["pos_edges"]), "\nneg edge type: ", type(snapshot["neg_edges"]))
             # Forward pass
             print(f"features shape: {snapshot['features'].shape})")
-            embeddings = model(
-                snapshot['features'],
-                snapshot['pos_edges'],
-                snapshot['neg_edges'],
-                torch.tensor([0.0, 1.0])  # Time steps
-            )
-            loss = model.full_loss(embeddings, snapshot['pos_edges'], snapshot['neg_edges'])
-
-            # #DyanmiSE loss function 
-            # loss = dynamiSE_loss(
-            #     embeddings,
-            #     snapshot['pos_edges'],
-            #     snapshot['neg_edges'],
-            #     alpha=1.0,
-            #     beta=0.001
-            # )
-            loss.backward()
-            optimizer.step()
+            with torch.autograd.set_detect_anomaly(True):
+                embeddings = model(
+                    snapshot['features'],
+                    snapshot['pos_edges'],
+                    snapshot['neg_edges'],
+                    torch.tensor([0.0, 1.0])  # Time steps
+                )
+                loss = model.full_loss(embeddings, snapshot['pos_edges'], snapshot['neg_edges'])
+                if torch.isnan(loss):
+                    print("NaN loss detected!")
+                    for name, param in model.named_parameters():
+                        if torch.isnan(param.grad).any():
+                            print(f"NaN in gradients of {name}")
+                    raise ValueError("NaN in loss")
+                loss.backward()
+                optimizer.step()
             epoch_losses.append(loss.item())
             weights =  np.arange(1, len(epoch_losses)+1)
             weighted_avg_loss = np.average(epoch_losses, weights=weights)
