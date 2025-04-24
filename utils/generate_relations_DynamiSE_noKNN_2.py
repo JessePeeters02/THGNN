@@ -19,11 +19,11 @@ raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots2")
+snapshot_path = os.path.join(data_path, "intermediate_snapshots_5year")
 os.makedirs(snapshot_path, exist_ok=True)
-os.makedirs(os.path.join(data_path, "data_train_predict_DSE_noknn1"), exist_ok=True)
-os.makedirs(os.path.join(data_path, "daily_stock_DSE_noknn1"), exist_ok=True)
-log_path = os.path.join(data_path, "snapshot_log.csv")
+os.makedirs(os.path.join(data_path, "data_train_predict_DSE_noknn2_5y"), exist_ok=True)
+os.makedirs(os.path.join(data_path, "daily_stock_DSE_noknn2_5y"), exist_ok=True)
+log_path = os.path.join(data_path, "snapshot_log_5y.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Hyperparameters
@@ -35,6 +35,7 @@ threshold = 0.6
 sim_threshold_pos = 0.5
 sim_threshold_neg = 0.2
 min_neighbors = 5
+restrict_last_n_days= None # of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 
 
 def cosine_similarity(vec1, vec2):
@@ -42,7 +43,7 @@ def cosine_similarity(vec1, vec2):
         return 0
     return F.cosine_similarity(vec1.unsqueeze(0), vec2.unsqueeze(0)).item()
 
-def load_all_stocks(stock_data_path, restrict_last_n_days=80):
+def load_all_stocks(stock_data_path):
     all_stock_data = []
     for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
         if file.endswith('.csv'):
@@ -336,7 +337,7 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
                     break
             else:
                 neg_count = signs.count('-')
-                print(f"Signs for ({i}, {j}, {k}): {signs} → neg_count={neg_count}")
+                # print(f"Signs for ({i}, {j}, {k}): {signs} → neg_count={neg_count}")
 
                 vec_i = feature_matrix[i]
                 vec_k = feature_matrix[k]
@@ -346,14 +347,14 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
                     if sim > sim_threshold_pos:
                         pos_edges_set.add((i, k))
                         pos_edges_set.add((k, i))
-                    else:
-                        print(f"Rejected POS Edge({i}, {k}) - cosine similarity: {sim:.2f} < pos threshold {sim_threshold_pos}")  
+                    # else:
+                        # print(f"Rejected POS Edge({i}, {k}) - cosine similarity: {sim:.2f} < pos threshold {sim_threshold_pos}")  
                 else:
                     if sim < sim_threshold_neg:
                         neg_edges_set.add((i, k))
                         neg_edges_set.add((k, i)) 
-                    else:
-                        print(f"Rejected NEG Edge({i}, {k}) - cosine similarity: {sim:.2f} > neg threshold {sim_threshold_neg}")
+                    # else:
+                        # print(f"Rejected NEG Edge({i}, {k}) - cosine similarity: {sim:.2f} > neg threshold {sim_threshold_neg}")
 
     # Debug prints
     # print(f"Triangles checked: {triangle_count}")
@@ -395,7 +396,7 @@ def prepare_dynamic_data(stock_data, window_size=prev_date_num):
                 if len(stock_data_current) != 1:
                     print(f"fout met window_size feature matrix van {stock} op {dates[i-1]}")
                 feature_matrix.append(stock_data_current[feature_cols].values[0])
-            print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
+            # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
             feature_matrix = np.array(feature_matrix)
             
 
