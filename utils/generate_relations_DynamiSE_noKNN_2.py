@@ -10,7 +10,7 @@ from tqdm import tqdm
 import os
 import itertools
 from collections import defaultdict
-
+import torch.nn.functional as F
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data", "testbatch1")
@@ -32,7 +32,12 @@ feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 hidden_dim = 64
 num_epochs = 10
 threshold = 0.6
-
+sim_threshold_pos = 0.5
+sim_threshold_neg = 0.2
+def cosine_similarity(vec1, vec2):
+    if vec1.norm() == 0 or vec2.norm() == 0:
+        return -1
+    return F.cosine_similarity(vec1.unsqueeze(0), vec2.unsqueeze(0)).item()
 def load_all_stocks(stock_data_path, restrict_last_n_days=80):
     all_stock_data = []
     for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
@@ -253,10 +258,9 @@ def build_initial_edges_via_correlation(window_data, threshold):
 
     return pos_edges, neg_edges
 
-def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data):
+def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data, feature_matrix):
     # Debug: Print input edges
     # print(f"\nInput pos edges: {prev_pos_edges.shape}, neg edges: {prev_neg_edges.shape}")
-    
     adj_pos = defaultdict(set)
     adj_neg = defaultdict(set)
 
@@ -300,15 +304,26 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
                     signs.append('-')
                 else:
                     break
-            else:
+            
+            neg_count = signs.count('-')
+            print(f"Signs for ({i}, {j}, {k}): {signs} → neg_count={neg_count}")
+
+            vec_i = feature_matrix[i]
+            vec_k = feature_matrix[k]
+            sim = cosine_similarity(vec_i, vec_k)
                 # Balance theory toepassen
-                neg_count = signs.count('-')
-                if neg_count % 2 == 0:
+            if neg_count % 2 == 0:
+                if sim > sim_threshold_pos:
                     pos_edges_set.add((i, k))
-                    pos_edges_set.add((k, i))  # Ongericht
+                    pos_edges_set.add((k, i))
                 else:
+                    print(f"Rejected POS Edge({i}, {k}) - cosine similarity: {sim:.2f} < pos threshold {sim_threshold_pos}")  
+            else:
+                if sim < sim_threshold_neg:
                     neg_edges_set.add((i, k))
-                    neg_edges_set.add((k, i))  # Ongericht
+                    neg_edges_set.add((k, i)) 
+                else:
+                    print(f"Rejected NEG Edge({i}, {k}) - cosine similarity: {sim:.2f} > neg threshold {sim_threshold_neg}")
 
     # Debug prints
     # print(f"Triangles checked: {triangle_count}")
@@ -368,7 +383,7 @@ def prepare_dynamic_data(stock_data, window_size=prev_date_num):
             prev_snapshot = snapshots[-1]
             pos_pairs, neg_pairs = build_edges_via_balance_theory(
                 prev_snapshot['pos_edges'], prev_snapshot['neg_edges'],
-                len(unique_stocks), window_data['Stock', 'Date', 'Close']
+                len(unique_stocks), window_data[['Stock', 'Date', 'Close']], torch.FloatTensor(feature_matrix)
             )
             prev_edge_count = (
                 prev_snapshot['pos_edges'].shape[1] +
@@ -376,9 +391,7 @@ def prepare_dynamic_data(stock_data, window_size=prev_date_num):
             ) 
             new_edge_count = pos_pairs.shape[1] + neg_pairs.shape[1]
             growth_ratio = new_edge_count / max(prev_edge_count, 1) 
-            if growth_ratio > 1.2:
-                print(f"[Te veel groei] snapshot {dates[i]} overslaan (ratio={growth_ratio:.2f})")
-                pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold)
+            print(growth_ratio)
                 
             new_edges_found = pos_pairs.size(1) + neg_pairs.size(1)
 
