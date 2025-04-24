@@ -19,7 +19,7 @@ raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots1")
+snapshot_path = os.path.join(data_path, "intermediate_snapshots2")
 os.makedirs(snapshot_path, exist_ok=True)
 os.makedirs(os.path.join(data_path, "data_train_predict_DSE_noknn1"), exist_ok=True)
 os.makedirs(os.path.join(data_path, "daily_stock_DSE_noknn1"), exist_ok=True)
@@ -253,7 +253,7 @@ def build_initial_edges_via_correlation(window_data, threshold):
 
     return pos_edges, neg_edges
 
-def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes):
+def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data):
     # Debug: Print input edges
     # print(f"\nInput pos edges: {prev_pos_edges.shape}, neg edges: {prev_neg_edges.shape}")
     
@@ -367,7 +367,8 @@ def prepare_dynamic_data(stock_data, window_size=prev_date_num):
         else:
             prev_snapshot = snapshots[-1]
             pos_pairs, neg_pairs = build_edges_via_balance_theory(
-                prev_snapshot['pos_edges'], prev_snapshot['neg_edges'], len(unique_stocks)
+                prev_snapshot['pos_edges'], prev_snapshot['neg_edges'],
+                len(unique_stocks), window_data['Stock', 'Date', 'Close']
             )
             prev_edge_count = (
                 prev_snapshot['pos_edges'].shape[1] +
