@@ -34,10 +34,14 @@ num_epochs = 10
 threshold = 0.6
 sim_threshold_pos = 0.5
 sim_threshold_neg = 0.2
+min_neighbors = 5
+
+
 def cosine_similarity(vec1, vec2):
     if vec1.norm() == 0 or vec2.norm() == 0:
-        return -1
+        return 0
     return F.cosine_similarity(vec1.unsqueeze(0), vec2.unsqueeze(0)).item()
+
 def load_all_stocks(stock_data_path, restrict_last_n_days=80):
     all_stock_data = []
     for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
@@ -241,15 +245,41 @@ def build_initial_edges_via_correlation(window_data, threshold):
     # Bouw edges op basis van drempelwaarde
     pos_edges = []
     neg_edges = []
-    
+    np.fill_diagonal(corr_matrix, 0)
+
+    # Garandeer minimum aantal buren
     for i in range(n_stocks):
-        for j in range(i+1, n_stocks):
-            if corr_matrix[i,j] > threshold:
+        # Positieve edges
+        strong_pos = np.where(corr_matrix[i] > threshold)[0]
+        if len(strong_pos) < min_neighbors:
+            # Voeg extra buren toe als er te weinig zijn
+            corrs = corr_matrix[i].copy()
+            top_pos = np.argsort(-corrs)[:min_neighbors]
+            for j in top_pos:
+                if corr_matrix[i,j] > 0:  # Alleen positieve correlaties toevoegen
+                    pos_edges.append((i, j))
+                    pos_edges.append((j, i))
+        else:
+            # Gebruik alleen de sterke correlaties
+            for j in strong_pos:
                 pos_edges.append((i, j))
-                pos_edges.append((j, i))  # Maak ongericht
-            elif corr_matrix[i,j] < -threshold:
+                pos_edges.append((j, i))
+        
+        # Negatieve edges
+        strong_neg = np.where(corr_matrix[i] < -threshold)[0]
+        if len(strong_neg) < min_neighbors:
+            # Voeg extra buren toe als er te weinig zijn
+            corrs = corr_matrix[i].copy()
+            top_neg = np.argsort(corrs)[:min_neighbors]
+            for j in top_neg:
+                if corr_matrix[i,j] < 0:  # Alleen negatieve correlaties toevoegen
+                    neg_edges.append((i, j))
+                    neg_edges.append((j, i))
+        else:
+            # Gebruik alleen de sterke correlaties
+            for j in strong_neg:
                 neg_edges.append((i, j))
-                neg_edges.append((j, i))  # Maak ongericht
+                neg_edges.append((j, i))
     # print(f"Pos edges: {len(pos_edges)/2}, Neg edges: {len(neg_edges)/2}")
 
     # Converteer naar torch Tensors
@@ -304,26 +334,26 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
                     signs.append('-')
                 else:
                     break
-            
-            neg_count = signs.count('-')
-            print(f"Signs for ({i}, {j}, {k}): {signs} → neg_count={neg_count}")
-
-            vec_i = feature_matrix[i]
-            vec_k = feature_matrix[k]
-            sim = cosine_similarity(vec_i, vec_k)
-                # Balance theory toepassen
-            if neg_count % 2 == 0:
-                if sim > sim_threshold_pos:
-                    pos_edges_set.add((i, k))
-                    pos_edges_set.add((k, i))
-                else:
-                    print(f"Rejected POS Edge({i}, {k}) - cosine similarity: {sim:.2f} < pos threshold {sim_threshold_pos}")  
             else:
-                if sim < sim_threshold_neg:
-                    neg_edges_set.add((i, k))
-                    neg_edges_set.add((k, i)) 
+                neg_count = signs.count('-')
+                print(f"Signs for ({i}, {j}, {k}): {signs} → neg_count={neg_count}")
+
+                vec_i = feature_matrix[i]
+                vec_k = feature_matrix[k]
+                sim = cosine_similarity(vec_i, vec_k)
+                # Balance theory toepassen
+                if neg_count % 2 == 0:
+                    if sim > sim_threshold_pos:
+                        pos_edges_set.add((i, k))
+                        pos_edges_set.add((k, i))
+                    else:
+                        print(f"Rejected POS Edge({i}, {k}) - cosine similarity: {sim:.2f} < pos threshold {sim_threshold_pos}")  
                 else:
-                    print(f"Rejected NEG Edge({i}, {k}) - cosine similarity: {sim:.2f} > neg threshold {sim_threshold_neg}")
+                    if sim < sim_threshold_neg:
+                        neg_edges_set.add((i, k))
+                        neg_edges_set.add((k, i)) 
+                    else:
+                        print(f"Rejected NEG Edge({i}, {k}) - cosine similarity: {sim:.2f} > neg threshold {sim_threshold_neg}")
 
     # Debug prints
     # print(f"Triangles checked: {triangle_count}")
