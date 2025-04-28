@@ -8,15 +8,17 @@ FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 # Pad configuratie
 base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 print(f"base_path: {base_path}")
-data_path = os.path.join(base_path, "data", "testbatch1")
+data_path = os.path.join(base_path, "data", "testbatch_mini")
 print(f"data_path: {data_path}")
-stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "NASDAQ_data_wTO")
+stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "NASDAQ", "NASDAQ_data_wTO")
 print(f"stock_data_path: {stock_data_path}")
 stock_data_output = os.path.join(data_path, "stockdata")
+os.makedirs(stock_data_output, exist_ok=True)  # Maak de map aan als deze nog niet bestaat
 print(f"stock_data_output: {stock_data_output}")
 daily_data_output = os.path.join(data_path, "dailydata")
+os.makedirs(daily_data_output, exist_ok=True)  # Maak de map aan als deze nog niet bestaat
 print(f"daily_data_output: {daily_data_output}")
-best_stocks_path = os.path.join(data_path, "top_100_stocks.csv")  # Waar de resultaten worden opgeslagen
+best_stocks_path = os.path.join(data_path, "top_10_stocks.csv")  # Waar de resultaten worden gehaald
 print(f"best_stocks_path: {best_stocks_path}")
 
 

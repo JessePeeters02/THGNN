@@ -18,7 +18,7 @@ outlier_cap = 30
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
-data_path = os.path.join(base_path, "data", "testbatch1")
+data_path = os.path.join(base_path, "data", "testbatch_mini")
 print(data_path)
 input_path = os.path.join(data_path, "stockdata")  # Map waar de CSV-bestanden staan
 print(input_path)

@@ -5,10 +5,11 @@ from tqdm import tqdm
 # Configuratie
 base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 print(f"base_path: {base_path}")
-stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "NASDAQ_data_wTO")
+stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "NASDAQ", "NASDAQ_data_wTO")
 print(f"stock_data_path: {stock_data_path}")
-topN = 100  # Aantal aandelen om te selecteren
-output_path = os.path.join(base_path, "data", "testbatch1", f"top_{topN}_stocks.csv")  # Waar de resultaten worden opgeslagen
+topN = 10  # Aantal aandelen om te selecteren
+output_path = os.path.join(base_path, "data", "testbatch_mini", f"top_{topN}_stocks.csv")  # Waar de resultaten worden opgeslagen
+os.makedirs(os.path.dirname(output_path), exist_ok=True)  # Maak de map aan als deze nog niet bestaat
 print(f"output_path: {output_path}")
 
 def get_top_traded_stocks(stock_data_path, top_n):

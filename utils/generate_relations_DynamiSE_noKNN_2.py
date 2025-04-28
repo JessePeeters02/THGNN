@@ -13,13 +13,13 @@ from collections import defaultdict
 import torch.nn.functional as F
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(base_path, "data", "testbatch1")
+data_path = os.path.join(base_path, "data", "testbatch_mini")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots2")
+snapshot_path = os.path.join(data_path, "intermediate_snapshots")
 os.makedirs(snapshot_path, exist_ok=True)
 os.makedirs(os.path.join(data_path, "data_train_predict_DSE_noknn2"), exist_ok=True)
 os.makedirs(os.path.join(data_path, "daily_stock_DSE_noknn2"), exist_ok=True)
@@ -35,7 +35,7 @@ threshold = 0.6
 sim_threshold_pos = 0.5
 sim_threshold_neg = 0.2
 min_neighbors = 5
-restrict_last_n_days= 80 # of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
+restrict_last_n_days= 30 # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 
 
 def cosine_similarity(vec1, vec2):
