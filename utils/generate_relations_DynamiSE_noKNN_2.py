@@ -19,11 +19,11 @@ raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots_5year")
+snapshot_path = os.path.join(data_path, "intermediate_snapshots2")
 os.makedirs(snapshot_path, exist_ok=True)
-os.makedirs(os.path.join(data_path, "data_train_predict_DSE_noknn2_5y"), exist_ok=True)
-os.makedirs(os.path.join(data_path, "daily_stock_DSE_noknn2_5y"), exist_ok=True)
-log_path = os.path.join(data_path, "snapshot_log_5y.csv")
+os.makedirs(os.path.join(data_path, "data_train_predict_DSE_noknn2"), exist_ok=True)
+os.makedirs(os.path.join(data_path, "daily_stock_DSE_noknn2"), exist_ok=True)
+log_path = os.path.join(data_path, "snapshot_log2.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Hyperparameters
@@ -35,7 +35,7 @@ threshold = 0.6
 sim_threshold_pos = 0.5
 sim_threshold_neg = 0.2
 min_neighbors = 5
-restrict_last_n_days= None # of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
+restrict_last_n_days= 80 # of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 
 
 def cosine_similarity(vec1, vec2):
@@ -128,7 +128,7 @@ class DynamiSE(nn.Module):
         else:
             raise ValueError("Ongeldige combinatiemethode")
         
-        return torch.tanh(self.predictor(h_pair)).squeeze()
+        return self.predictor(h_pair).squeeze()
 
     def full_loss(self, h, pos_edges, neg_edges, alpha=1.0, beta=0.001):
         # Reconstructieverlies (RMSE)
@@ -197,6 +197,7 @@ class ODEFunc(nn.Module):
 
         # Lineaire combinatie (paper Eq.5)
         delta_h = self.psi_pos(h_pos) + self.psi_neg(h_neg)  # Aparte lineaire lagen
+        # print("   ", "max: ", delta_h.max().item(), "min: ", delta_h.min().item())
         return delta_h.clamp(-50, 50)
 
 # ΔA_t edgeverschillen berekenen
