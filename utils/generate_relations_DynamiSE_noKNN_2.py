@@ -286,12 +286,14 @@ def build_initial_edges_via_correlation(window_data, threshold):
     # print(f"Pos edges: {len(pos_edges)/2}, Neg edges: {len(neg_edges)/2}")
 
     # Converteer naar torch Tensors
+    pos_edges = list(set(pos_edges))
+    neg_edges = list(set(neg_edges))
     pos_edges = torch.LongTensor(list(zip(*pos_edges))) if pos_edges else torch.empty((2, 0), dtype=torch.long)
     neg_edges = torch.LongTensor(list(zip(*neg_edges))) if neg_edges else torch.empty((2, 0), dtype=torch.long)
 
     return pos_edges, neg_edges
 
-def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data, feature_matrix):
+def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data):
     # Debug: Print input edges
     # print(f"\nInput pos edges: {prev_pos_edges.shape}, neg edges: {prev_neg_edges.shape}")
     adj_pos = defaultdict(set)
@@ -301,14 +303,12 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
     if prev_pos_edges.numel() > 0:
         for src, dst in prev_pos_edges.T.tolist():
             adj_pos[src].add(dst)
-            adj_pos[dst].add(src)  # Maak ongericht
     if prev_neg_edges.numel() > 0:
         for src, dst in prev_neg_edges.T.tolist():
             adj_neg[src].add(dst)
-            adj_neg[dst].add(src)  # Maak ongericht
 
     # Debug: Tel nodes met neighbors
-    nodes_with_neighbors = sum(1 for j in range(num_nodes) if adj_pos[j] or adj_neg[j])
+    # nodes_with_neighbors = sum(1 for j in range(num_nodes) if adj_pos[j] or adj_neg[j])
     # print(f"Nodes with neighbors: {nodes_with_neighbors}/{num_nodes}")
 
     pos_edges_set = set()
@@ -341,8 +341,12 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
                 neg_count = signs.count('-')
                 # print(f"Signs for ({i}, {j}, {k}): {signs} → neg_count={neg_count}")
 
-                vec_i = feature_matrix[i]
-                vec_k = feature_matrix[k]
+                vec_i = close_data[i]
+                vec_k = close_data[k]
+                # waarom close data gebruiken? cosine_similarity moet nog verder worden uitgezocht
+                # close data omdat: time_window zit erin, close is de recentste dus reprecentatieve
+                # (hoe wordt de closing price gezet, is deze redenering logisch?)
+                # werken met genormaliseerde data of rauwe data?
                 sim = cosine_similarity(vec_i, vec_k)
                 # Balance theory toepassen
                 if neg_count % 2 == 0:
@@ -413,10 +417,17 @@ def prepare_dynamic_data(stock_data, window_size=prev_date_num):
             })
             continue
         else:
+            close_df = []
+            for stock in unique_stocks:
+                print(close_df)
+                stockdf = window_data[window_data['Stock'] == stock]
+                close_df.append(stockdf['Close'].values)
+            # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
+            close_df = np.array(close_df)
             prev_snapshot = snapshots[-1]
             pos_pairs, neg_pairs = build_edges_via_balance_theory(
                 prev_snapshot['pos_edges'], prev_snapshot['neg_edges'],
-                len(unique_stocks), window_data[['Stock', 'Date', 'Close']], torch.FloatTensor(feature_matrix)
+                len(unique_stocks), torch.FloatTensor(close_df)
             )
             prev_edge_count = (
                 prev_snapshot['pos_edges'].shape[1] +
