@@ -13,13 +13,13 @@ from collections import defaultdict
 import torch.nn.functional as F
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(base_path, "data", "testbatch_mini")
+data_path = os.path.join(base_path, "data", "testbatch1")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots")
+snapshot_path = os.path.join(data_path, "intermediate_snapshots_testcosinecorrelation")
 os.makedirs(snapshot_path, exist_ok=True)
 os.makedirs(os.path.join(data_path, "data_train_predict_DSE_noknn2"), exist_ok=True)
 os.makedirs(os.path.join(data_path, "daily_stock_DSE_noknn2"), exist_ok=True)
@@ -28,7 +28,7 @@ os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Hyperparameters
 prev_date_num = 20
-feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+feature_cols = ['Open', 'High', 'Low', 'Close']#, 'Volume']
 hidden_dim = 64
 num_epochs = 10
 threshold = 0.6
@@ -39,9 +39,15 @@ restrict_last_n_days= 30 # None of bv 80 om da laatse 60 dagen te nemen (20-day 
 
 
 def cosine_similarity(vec1, vec2):
-    if vec1.norm() == 0 or vec2.norm() == 0:
-        return 0
+    # if vec1.norm() == 0 or vec2.norm() == 0:
+    #     return 0
+    vec1 = torch.tensor(vec1, dtype=torch.float32)
+    vec2 = torch.tensor(vec2, dtype=torch.float32)
     return F.cosine_similarity(vec1.unsqueeze(0), vec2.unsqueeze(0)).item()
+
+def pearson_correlation(vec1, vec2):
+
+    return np.corrcoef(vec1, vec2)[0, 1]
 
 def load_all_stocks(stock_data_path):
     all_stock_data = []
@@ -220,13 +226,15 @@ def compute_delta_edges(
     else:
         return torch.empty((2, 0), dtype=torch.long)
 
-def build_initial_edges_via_correlation(window_data, threshold):
+def build_initial_edges_via_correlation(window_data, window_data_raw, threshold, close_data, close_data_raw):
     # Groepeer per stock en bereken correlaties per feature
     grouped = window_data.groupby('Stock')[feature_cols]
-    
+    rawgrouped = window_data_raw.groupby('Stock')[feature_cols]
     # Maak een 3D array van features (stocks x features x time)
     stock_arrays = np.array([group.values.T for name, group in grouped])
     n_stocks = stock_arrays.shape[0]
+    rawstock_arrays = np.array([group.values.T for name, group in rawgrouped])
+    rawn_stocks = rawstock_arrays.shape[0]
     # print(f"aantal stocks: {n_stocks}")
     # Initialiseer correlatiematrix
     corr_matrix = np.zeros((n_stocks, n_stocks))
@@ -234,16 +242,60 @@ def build_initial_edges_via_correlation(window_data, threshold):
     # Bereken correlaties tussen alle paren van stocks
     for i in tqdm(range(n_stocks), desc="Calculating correlations"):
         for j in range(i+1, n_stocks):
-            # Bereken correlatie voor elke feature apart
+            
+            # Bereken correlatie voor elke feature apart - normalized data
             feature_correlations = []
             for f in range(len(feature_cols)):
                 corr = np.corrcoef(stock_arrays[i,f,:], stock_arrays[j,f,:])[0,1]
-                feature_correlations.append(corr)
-            
-            # Gemiddelde correlatie over alle features
+                feature_correlations.append(corr)           
             avg_corr = np.nanmean(feature_correlations)
             corr_matrix[i,j] = avg_corr
             corr_matrix[j,i] = avg_corr
+
+            # Bereken correlatie voor elke feature apart - raw data
+            rawfeature_correlations = []
+            for f in range(len(feature_cols)):
+                rawcorr = np.corrcoef(rawstock_arrays[i,f,:], rawstock_arrays[j,f,:])[0,1]
+                rawfeature_correlations.append(rawcorr)
+            rawavg_corr = np.nanmean(rawfeature_correlations)
+
+            # Gemiddelde cosine similarity over features
+            feature_cosines = []
+            feature_cosines_raw = []
+            for f in range(len(feature_cols)):
+                vec1 = stock_arrays[i, f, :]
+                vec2 = stock_arrays[j, f, :]
+                cos_sim = cosine_similarity(vec1, vec2)
+                feature_cosines.append(cos_sim)
+
+                vec1_raw = rawstock_arrays[i, f, :]
+                vec2_raw = rawstock_arrays[j, f, :]
+                cos_sim_raw = cosine_similarity(vec1_raw, vec2_raw)
+                feature_cosines_raw.append(cos_sim_raw)
+            avg_cos_sim = np.nanmean(feature_cosines)
+            avg_cos_sim_raw = np.nanmean(feature_cosines_raw)
+
+
+            vec_i = close_data[i]
+            vec_k = close_data[j]
+            vec_i_raw = close_data_raw[i]
+            vec_k_raw = close_data_raw[j]
+            sim = cosine_similarity(vec_i, vec_k)
+            sim_raw = cosine_similarity(vec_i_raw, vec_k_raw)
+            cor_raw = pearson_correlation(vec_i_raw, vec_k_raw)
+            cor_nor = pearson_correlation(vec_i, vec_k)
+            print(
+                # "\nover de vijf features",
+                # "\n correlation normalized: ", feature_correlations, avg_corr,
+                "\n correlation raw: ", rawavg_corr,
+                "\n cosine similarity normalised: ", avg_cos_sim
+                # "\n cosine similarity raw: ", feature_cosines_raw, avg_cos_sim_raw,
+                # "\nover close feature",
+                # "\n correlation normalized: ", cor_nor,
+                # "\n correlation raw: ", cor_raw,
+                # "\n cosine similarity normalised: ", sim,
+                # "\n cosine similarity raw: ", sim_raw
+            )
     
     # Bouw edges op basis van drempelwaarde
     pos_edges = []
@@ -293,7 +345,7 @@ def build_initial_edges_via_correlation(window_data, threshold):
 
     return pos_edges, neg_edges
 
-def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data):
+def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data, close_data_raw):
     # Debug: Print input edges
     # print(f"\nInput pos edges: {prev_pos_edges.shape}, neg edges: {prev_neg_edges.shape}")
     adj_pos = defaultdict(set)
@@ -343,11 +395,22 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
 
                 vec_i = close_data[i]
                 vec_k = close_data[k]
+                vec_i_raw = close_data_raw[i]
+                vec_k_raw = close_data_raw[k]
                 # waarom close data gebruiken? cosine_similarity moet nog verder worden uitgezocht
                 # close data omdat: time_window zit erin, close is de recentste dus reprecentatieve
                 # (hoe wordt de closing price gezet, is deze redenering logisch?)
                 # werken met genormaliseerde data of rauwe data?
                 sim = cosine_similarity(vec_i, vec_k)
+                sim_raw = cosine_similarity(vec_i_raw, vec_k_raw)
+                cor_raw = pearson_correlation(vec_i_raw, vec_k_raw)
+                cor_nor = pearson_correlation(vec_i, vec_k)
+                print(
+                    "\n correlation raw: ", cor_raw,
+                    "\n correlation normalized: ", cor_nor,
+                    # "\n cosine similarity raw: ", sim_raw,
+                    "\n cosine similarity normalised: ", sim
+                )
                 # Balance theory toepassen
                 if neg_count % 2 == 0:
                     if sim > sim_threshold_pos:
@@ -389,12 +452,27 @@ def prepare_dynamic_data(stock_data, window_size=prev_date_num):
         window_dates = dates[i-window_size:i]
         window_data = stock_data[stock_data['Date'].isin(window_dates)]
         current_date_data = stock_data[stock_data['Date'] == dates[i-1]]
+        window_data_raw = pd.concat([
+            df[df['Date'].isin(window_dates)] for df in raw_data.values()
+        ], ignore_index=True)
 
         # Normalize features per stock
         # print('1')
         # Find approximate neighbors
         if bool_eerste:
-            pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold)
+            close_df = []
+            for stock in unique_stocks:
+                stockdf = window_data[window_data['Stock'] == stock]
+                close_df.append(stockdf['Close'].values)
+            # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
+            close_df = np.array(close_df)
+            close_df_raw = []
+            for stock in unique_stocks:
+                stockdf_raw = window_data_raw[window_data_raw['Stock'] == stock]
+                close_df_raw.append(stockdf_raw['Close'].values)
+            # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
+            close_df_raw = np.array(close_df_raw)
+            pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, window_data_raw, threshold, close_df, close_df_raw)
             bool_eerste = False
             feature_matrix = []
             for stock in unique_stocks:
@@ -419,15 +497,20 @@ def prepare_dynamic_data(stock_data, window_size=prev_date_num):
         else:
             close_df = []
             for stock in unique_stocks:
-                print(close_df)
                 stockdf = window_data[window_data['Stock'] == stock]
                 close_df.append(stockdf['Close'].values)
             # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
             close_df = np.array(close_df)
+            close_df_raw = []
+            for stock in unique_stocks:
+                stockdf_raw = window_data_raw[window_data_raw['Stock'] == stock]
+                close_df_raw.append(stockdf_raw['Close'].values)
+            # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
+            close_df_raw = np.array(close_df_raw)
             prev_snapshot = snapshots[-1]
             pos_pairs, neg_pairs = build_edges_via_balance_theory(
                 prev_snapshot['pos_edges'], prev_snapshot['neg_edges'],
-                len(unique_stocks), torch.FloatTensor(close_df)
+                len(unique_stocks), torch.FloatTensor(close_df), torch.FloatTensor(close_df_raw)
             )
             prev_edge_count = (
                 prev_snapshot['pos_edges'].shape[1] +
