@@ -128,14 +128,15 @@ class DynamiSE(nn.Module):
         else:
             raise ValueError("Ongeldige combinatiemethode")
         
-        return self.predictor(h_pair).squeeze()
+        return torch.tanh(self.predictor(h_pair).squeeze())
 
     def full_loss(self, h, pos_edges, neg_edges, alpha=1.0, beta=0.001):
         # Reconstructieverlies (RMSE)
+
         loss_pos = self.edge_loss(h, pos_edges, +1)
         loss_neg = self.edge_loss(h, neg_edges, -1)
         recon_loss = loss_pos + loss_neg
-        
+        print(loss_pos.shape())
         # Teken-constraint (paper Eq.7)
         w_hat_pos = self.predict_edge_weight(h, pos_edges)
         w_hat_neg = self.predict_edge_weight(h, neg_edges)
@@ -143,8 +144,8 @@ class DynamiSE(nn.Module):
             torch.log(1 + w_hat_pos).mean() + 
             torch.log(1 - w_hat_neg).mean()
         )
-        print("w_hat_pos:", w_hat_pos.min().item(), w_hat_pos.max().item(), w_hat_pos.mean().item())
-        print("w_hat_neg:", w_hat_neg.min().item(), w_hat_neg.max().item(), w_hat_neg.mean().item())
+        #print("w_hat_pos:", w_hat_pos.min().item(), w_hat_pos.max().item(), w_hat_pos.mean().item())
+        #print("w_hat_neg:", w_hat_neg.min().item(), w_hat_neg.max().item(), w_hat_neg.mean().item())
 
         # Regularisatie
         reg_loss = beta * h.norm(p=2).mean()
