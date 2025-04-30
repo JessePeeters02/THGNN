@@ -23,8 +23,10 @@ relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
 os.makedirs(relation_path, exist_ok=True)
 snapshot_path = os.path.join(data_path, "intermediate_snapshots_testcosinecorrelation")
 os.makedirs(snapshot_path, exist_ok=True)
-os.makedirs(os.path.join(data_path, "data_train_predict_DSE_noknn2"), exist_ok=True)
-os.makedirs(os.path.join(data_path, "daily_stock_DSE_noknn2"), exist_ok=True)
+data_train_predict_path = os.path.join(data_path, "data_train_predict_DSE_noknn2")
+os.makedirs(data_train_predict_path, exist_ok=True)
+daily_stock_path = os.path.join(data_path, "daily_stock_DSE_noknn2")
+os.makedirs(daily_stock_path, exist_ok=True)
 log_path = os.path.join(data_path, "snapshot_log2.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
@@ -34,10 +36,11 @@ feature_cols = ['Open', 'High', 'Low', 'Close']#, 'Volume']
 hidden_dim = 64
 num_epochs = 10
 threshold = 0.6
-sim_threshold_pos = 0.5
-sim_threshold_neg = 0.2
+sim_threshold_pos = 0.6
+sim_threshold_neg = -0.6
 min_neighbors = 5
 restrict_last_n_days= 30 # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
+
 class EdgeAgingManager:
     def __init__(self, min_age=5, relevance_threshold=0.4, max_age=None):
         self.min_age = min_age
@@ -98,14 +101,9 @@ def edge_info_to_tensor(edge_info):
     return torch.LongTensor(list(zip(*edges)))
 
 def cosine_similarity(vec1, vec2):
-    # if vec1.norm() == 0 or vec2.norm() == 0:
-    #     return 0
-    vec1 = torch.tensor(vec1, dtype=torch.float32)
-    vec2 = torch.tensor(vec2, dtype=torch.float32)
     return F.cosine_similarity(vec1.unsqueeze(0), vec2.unsqueeze(0)).item()
 
 def pearson_correlation(vec1, vec2):
-
     return np.corrcoef(vec1, vec2)[0, 1]
 
 def load_all_stocks(stock_data_path):
@@ -137,6 +135,7 @@ def load_raw_stocks(raw_stock_path):
             all_dates = sorted(df['Date'].unique())
             last_dates = all_dates[-restrict_last_n_days:]
             df = df[df['Date'].isin(last_dates)]
+        df = df.reset_index(drop=True)
         raw_data[stock_name] = df
     return raw_data
 
@@ -197,7 +196,8 @@ class DynamiSE(nn.Module):
         else:
             raise ValueError("Ongeldige combinatiemethode")
         
-        return torch.tanh(self.predictor(h_pair).squeeze())
+        # return torch.tanh(self.predictor(h_pair).squeeze())
+        return self.predictor(h_pair).squeeze()
 
     def full_loss(self, h, pos_edges, neg_edges, alpha=1.0, beta=0.001):
         # Reconstructieverlies (RMSE)
@@ -289,15 +289,15 @@ def compute_delta_edges(
     else:
         return torch.empty((2, 0), dtype=torch.long)
 
-def build_initial_edges_via_correlation(window_data, window_data_raw, threshold, close_data, close_data_raw):
+def build_initial_edges_via_correlation(window_data, threshold):#, window_data_raw, close_data, close_data_raw):
     # Groepeer per stock en bereken correlaties per feature
     grouped = window_data.groupby('Stock')[feature_cols]
-    rawgrouped = window_data_raw.groupby('Stock')[feature_cols]
+    # rawgrouped = window_data_raw.groupby('Stock')[feature_cols]
     # Maak een 3D array van features (stocks x features x time)
     stock_arrays = np.array([group.values.T for name, group in grouped])
     n_stocks = stock_arrays.shape[0]
-    rawstock_arrays = np.array([group.values.T for name, group in rawgrouped])
-    rawn_stocks = rawstock_arrays.shape[0]
+    # rawstock_arrays = np.array([group.values.T for name, group in rawgrouped])
+    # rawn_stocks = rawstock_arrays.shape[0]
     # print(f"aantal stocks: {n_stocks}")
     # Initialiseer correlatiematrix
     corr_matrix = np.zeros((n_stocks, n_stocks))
@@ -315,38 +315,38 @@ def build_initial_edges_via_correlation(window_data, window_data_raw, threshold,
             corr_matrix[i,j] = avg_corr
             corr_matrix[j,i] = avg_corr
 
-            # Bereken correlatie voor elke feature apart - raw data
-            rawfeature_correlations = []
-            for f in range(len(feature_cols)):
-                rawcorr = np.corrcoef(rawstock_arrays[i,f,:], rawstock_arrays[j,f,:])[0,1]
-                rawfeature_correlations.append(rawcorr)
-            rawavg_corr = np.nanmean(rawfeature_correlations)
+            # # Bereken correlatie voor elke feature apart - raw data
+            # rawfeature_correlations = []
+            # for f in range(len(feature_cols)):
+            #     rawcorr = np.corrcoef(rawstock_arrays[i,f,:], rawstock_arrays[j,f,:])[0,1]
+            #     rawfeature_correlations.append(rawcorr)
+            # rawavg_corr = np.nanmean(rawfeature_correlations)
 
             # Gemiddelde cosine similarity over features
-            feature_cosines = []
-            feature_cosines_raw = []
-            for f in range(len(feature_cols)):
-                vec1 = stock_arrays[i, f, :]
-                vec2 = stock_arrays[j, f, :]
-                cos_sim = cosine_similarity(vec1, vec2)
-                feature_cosines.append(cos_sim)
+            # feature_cosines = []
+            # feature_cosines_raw = []
+            # for f in range(len(feature_cols)):
+            #     vec1 = stock_arrays[i, f, :]
+            #     vec2 = stock_arrays[j, f, :]
+            #     cos_sim = cosine_similarity(vec1, vec2)
+            #     feature_cosines.append(cos_sim)
 
-                vec1_raw = rawstock_arrays[i, f, :]
-                vec2_raw = rawstock_arrays[j, f, :]
-                cos_sim_raw = cosine_similarity(vec1_raw, vec2_raw)
-                feature_cosines_raw.append(cos_sim_raw)
-            avg_cos_sim = np.nanmean(feature_cosines)
-            avg_cos_sim_raw = np.nanmean(feature_cosines_raw)
+            #     vec1_raw = rawstock_arrays[i, f, :]
+            #     vec2_raw = rawstock_arrays[j, f, :]
+            #     cos_sim_raw = cosine_similarity(vec1_raw, vec2_raw)
+            #     feature_cosines_raw.append(cos_sim_raw)
+            # avg_cos_sim = np.nanmean(feature_cosines)
+            # avg_cos_sim_raw = np.nanmean(feature_cosines_raw)
 
 
-            vec_i = close_data[i]
-            vec_k = close_data[j]
-            vec_i_raw = close_data_raw[i]
-            vec_k_raw = close_data_raw[j]
-            sim = cosine_similarity(vec_i, vec_k)
-            sim_raw = cosine_similarity(vec_i_raw, vec_k_raw)
-            cor_raw = pearson_correlation(vec_i_raw, vec_k_raw)
-            cor_nor = pearson_correlation(vec_i, vec_k)
+            # vec_i = close_data[i]
+            # vec_k = close_data[j]
+            # vec_i_raw = close_data_raw[i]
+            # vec_k_raw = close_data_raw[j]
+            # sim = cosine_similarity(vec_i, vec_k)
+            # sim_raw = cosine_similarity(vec_i_raw, vec_k_raw)
+            # cor_raw = pearson_correlation(vec_i_raw, vec_k_raw)
+            # cor_nor = pearson_correlation(vec_i, vec_k)
             # print(
             #     # "\nover de vijf features",
             #     # "\n correlation normalized: ", feature_correlations, avg_corr,
@@ -408,7 +408,7 @@ def build_initial_edges_via_correlation(window_data, window_data_raw, threshold,
 
     return pos_edges, neg_edges
 
-def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data, close_data_raw):
+def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data):#, close_data_raw):
     # Debug: Print input edges
     # print(f"\nInput pos edges: {prev_pos_edges.shape}, neg edges: {prev_neg_edges.shape}")
     adj_pos = defaultdict(set)
@@ -458,16 +458,16 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
 
                 vec_i = close_data[i]
                 vec_k = close_data[k]
-                vec_i_raw = close_data_raw[i]
-                vec_k_raw = close_data_raw[k]
+                # vec_i_raw = close_data_raw[i]
+                # vec_k_raw = close_data_raw[k]
                 # waarom close data gebruiken? cosine_similarity moet nog verder worden uitgezocht
                 # close data omdat: time_window zit erin, close is de recentste dus reprecentatieve
                 # (hoe wordt de closing price gezet, is deze redenering logisch?)
                 # werken met genormaliseerde data of rauwe data?
                 sim = cosine_similarity(vec_i, vec_k)
-                sim_raw = cosine_similarity(vec_i_raw, vec_k_raw)
-                cor_raw = pearson_correlation(vec_i_raw, vec_k_raw)
-                cor_nor = pearson_correlation(vec_i, vec_k)
+                # sim_raw = cosine_similarity(vec_i_raw, vec_k_raw)
+                # cor_raw = pearson_correlation(vec_i_raw, vec_k_raw)
+                # cor_nor = pearson_correlation(vec_i, vec_k)
                 # print(
                 #     "\n correlation raw: ", cor_raw,
                 #     "\n correlation normalized: ", cor_nor,
@@ -700,7 +700,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
             aging_manager.prune_edges(edge_info_pos, current_date, torch.FloatTensor(close_df))
             aging_manager.prune_edges(edge_info_neg, current_date, torch.FloatTensor(close_df))
-
+        print(f"\nPos edges: {len(edge_info_pos)}, Neg edges: {len(edge_info_neg)}")
         snapshots.append({
             'date': current_date,
             'features': torch.FloatTensor(feature_matrix),
@@ -739,7 +739,6 @@ def edges_to_adj_matrix(edges, num_nodes):
 
 def calculate_label(raw_df, current_date):
     date_idx = raw_df[raw_df['Date'] == current_date].index[0]
-    # print(date_idx)
     close_today = raw_df.iloc[date_idx]['Close']
     close_yesterday = raw_df.iloc[date_idx-1]['Close']
     return (close_yesterday / close_today) - 1
@@ -964,7 +963,7 @@ def main1_load():
                 else:
                     print(f"Window data klopt niet voor {stock_name} op {end_date}")
 
-            with open(os.path.join(data_path, "data_train_predict_DSE_noknn1", f"{snapshot['date']}.pkl"), 'wb') as f:
+            with open(os.path.join(data_train_predict_path, f"{snapshot['date']}.pkl"), 'wb') as f:
                 pickle.dump({
                     'pos_adj': pos_adj,
                     'neg_adj': neg_adj,
@@ -974,7 +973,7 @@ def main1_load():
                 }, f)
 
             pd.DataFrame(stock_info, columns=['code', 'dt']).to_csv(
-                os.path.join(data_path, "daily_stock_DSE_noknn1", f"{snapshot['date']}.csv"), index=False)
+                os.path.join(daily_stock_path, f"{snapshot['date']}.csv"), index=False)
 
 # eenmalig inladen van alle data
 stock_data = load_all_stocks(daily_data_path)
@@ -989,5 +988,5 @@ stock_dict = {name: group for name, group in stock_data.groupby('Stock')}
 date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
 
 # start model
-main1_generate()
+# main1_generate()
 main1_load()
