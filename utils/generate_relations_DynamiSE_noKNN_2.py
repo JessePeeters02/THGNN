@@ -11,6 +11,8 @@ import os
 import itertools
 from collections import defaultdict
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
+from sklearn.metrics.pairwise import cosine_similarity
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data", "testbatch1")
@@ -575,6 +577,7 @@ def prepare_dynamic_data(stock_data, window_size=prev_date_num):
     del window_data, feature_matrix, pos_pairs, neg_pairs
     return snapshots
 
+
 def edge_prediction_loss(h, edge_index, sign, model):
     """Loss op basis van voorspelde ŵ_{ij} tegenover ground truth sign."""
     w_hat = model.predict_edge_weight(h, edge_index)
@@ -731,12 +734,53 @@ stock_data = load_all_stocks(daily_data_path)
 raw_data = load_raw_stocks(raw_data_path)
 all_dates = sorted(stock_data['Date'].unique())
 unique_stocks = sorted(stock_data['Stock'].unique())
+close_prices = []
+for stock in unique_stocks:
+    df = stock_data[stock_data['Stock'] == stock].sort_values('Date')
+    close_prices.append(df['Close'].values)
+
+close_prices = np.array(close_prices)
+
+# Check
+print(f"Close prices shape: {close_prices.shape}")
+
+# Verzamel cosine similarities en correlaties
+cosines = []
+correlations = []
+
+for i in range(close_prices.shape[0]):
+    for j in range(i+1, close_prices.shape[0]):
+        vec1 = close_prices[i]
+        vec2 = close_prices[j]
+
+        # Cosine similarity
+        cos_sim = cosine_similarity(vec1.reshape(1, -1), vec2.reshape(1, -1))[0,0]
+
+        # Pearson correlation
+        cor = np.corrcoef(vec1, vec2)[0,1]
+
+        cosines.append(cos_sim)
+        correlations.append(cor)
+
+# Plotten
+plt.figure(figsize=(8,6))
+plt.scatter(cosines, correlations, alpha=0.6)
+plt.axvline(x=0.5, color='red', linestyle='--', label='Cosine Threshold 0.5')
+plt.axhline(y=0.5, color='green', linestyle='--', label='Correlation Threshold 0.5')
+plt.xlabel('Cosine Similarity')
+plt.ylabel('Pearson Correlation')
+plt.title('Correlation vs Cosine Similarity Scatterplot')
+plt.legend()
+plt.grid(True)
+plt.show()
 snapshots = prepare_dynamic_data(stock_data)
 
 # Maak datastructuren voor efficiente toegang
 stock_data = stock_data.sort_values(['Stock', 'Date'])
 stock_dict = {name: group for name, group in stock_data.groupby('Stock')}
 date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
+
+
 
 # start model
 main1_generate()
