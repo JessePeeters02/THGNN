@@ -13,13 +13,13 @@ from collections import defaultdict
 import torch.nn.functional as F
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(base_path, "data", "testbatch_mini")
+data_path = os.path.join(base_path, "data", "testbatch1")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots")
+snapshot_path = os.path.join(data_path, "intermediate_snapshots_aging")
 os.makedirs(snapshot_path, exist_ok=True)
 os.makedirs(os.path.join(data_path, "data_train_predict_DSE_noknn2"), exist_ok=True)
 os.makedirs(os.path.join(data_path, "daily_stock_DSE_noknn2"), exist_ok=True)
@@ -55,14 +55,37 @@ class EdgeAgingManager:
                 'last_update': current_date
             }
 
-    def prune_edges(self, edge_info, current_date):
+    def prune_edges(self, edge_info, current_date, close_data):
         to_delete = []
         for (src, dst), info in edge_info.items():
             age = self._calculate_age(info['created_at'], current_date)
-            if (age >= self.min_age and info['last_score'] < self.relevance_threshold) or (self.max_age and age > self.max_age):
-                to_delete.append((src, dst))
+            if (age >= self.min_age):
+                vec_i = close_data[src]
+                vec_k = close_data[dst]
+                sim = cosine_similarity(vec_i, vec_k)
+                
+                # Get the edge score to determine if it's positive or negative
+                edge_score = info['last_score']
+                
+                if edge_score > 0:  # Positive edge
+                    if sim > sim_threshold_pos:
+                        # Reset age by updating created_at to current date
+                        edge_info[(src,dst)]['created_at'] = current_date
+                    else:
+                        to_delete.append((src,dst))
+                else:  # Negative edge
+                    if sim < sim_threshold_neg:
+                        # Reset age by updating created_at to current date
+                        edge_info[(src,dst)]['created_at'] = current_date
+                    else:
+                        to_delete.append((src,dst))
+        print(to_delete)
+        print(len(to_delete))
+        print(len(edge_info))
+        # Delete edges that didn't meet the criteria
         for edge in to_delete:
             del edge_info[edge]
+        print(len(edge_info))    
 
     def _calculate_age(self, created_at, current_date):
         if isinstance(created_at, str):
@@ -467,8 +490,8 @@ def prepare_dynamic_data(stock_data, window_size=20):
             for src, dst in neg_pairs.T.tolist():
                 aging_manager.update_edge(edge_info_neg, src, dst, -1.0, current_date)
 
-            aging_manager.prune_edges(edge_info_pos, current_date)
-            aging_manager.prune_edges(edge_info_neg, current_date)
+            aging_manager.prune_edges(edge_info_pos, current_date, torch.FloatTensor(close_df))
+            aging_manager.prune_edges(edge_info_neg, current_date, torch.FloatTensor(close_df))
 
         snapshots.append({
             'date': current_date,
