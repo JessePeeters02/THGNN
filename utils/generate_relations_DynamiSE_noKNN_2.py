@@ -788,15 +788,37 @@ for i in range(close_prices_raw.shape[0]):
         cor_nors.append(cor_nor)
 
 # Plotten
-plt.figure(figsize=(8,6))
-plt.scatter(cos_nors, cor_raws, alpha=0.6)
-plt.axvline(x=0.5, color='red', linestyle='--', label='Cosine Threshold 0.5')
-plt.axhline(y=0.5, color='green', linestyle='--', label='Correlation Threshold 0.5')
-plt.xlabel('Cosine Similarity')
-plt.ylabel('Pearson Correlation')
-plt.title('Correlation vs Cosine Similarity Scatterplot')
-plt.legend()
-plt.grid(True)
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+plots = [
+    (cos_raws, cor_raws, 'Cosine (raw)', 'Correlation (raw)'),
+    (cos_raws, cor_nors, 'Cosine (raw)', 'Correlation (normalized)'),
+    (cos_nors, cor_raws, 'Cosine (normalized)', 'Correlation (raw)'),
+    (cos_nors, cor_nors, 'Cosine (normalized)', 'Correlation (normalized)'),
+]
+
+for ax, (x, y, xlabel, ylabel) in zip(axes.flatten(), plots):
+    ax.scatter(x, y, alpha=0.6)
+
+    # Thresholds
+    ax.axvline(x=0.5, color='red', linestyle='--', label='Cosine Threshold 0.5')
+    ax.axhline(y=0.5, color='green', linestyle='--', label='Correlation Threshold 0.5')
+
+    # Aslabels & titel
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(f'{ylabel} vs {xlabel}')
+
+    # Dynamische x-lim op basis van cosine type
+    if 'Cosine (raw)' in xlabel:
+        ax.set_xlim(0.9, 1)
+    else:
+        ax.set_xlim(-1, 1)
+    ax.set_ylim(-1, 1)
+
+    ax.grid(True)
+    ax.legend()
+
+plt.tight_layout()
 plt.show()
 
 
