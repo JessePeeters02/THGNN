@@ -11,12 +11,7 @@ import os
 import itertools
 from collections import defaultdict
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
-from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
-from sklearn.linear_model import LinearRegression
-from scipy.stats import pearsonr
-from sklearn.preprocessing import StandardScaler
-scaler = StandardScaler()
+
 
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
