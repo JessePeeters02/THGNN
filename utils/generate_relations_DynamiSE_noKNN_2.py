@@ -13,6 +13,7 @@ from collections import defaultdict
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
+from sklearn.linear_model import LinearRegression
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data", "testbatch1")
@@ -798,7 +799,12 @@ plots = [
 
 for ax, (x, y, xlabel, ylabel) in zip(axes.flatten(), plots):
     ax.scatter(x, y, alpha=0.6)
-
+    x_fit = np.array(x).reshape(-1, 1)
+    y_fit = np.array(y)
+    model = LinearRegression().fit(x_fit, y_fit)
+    x_line = np.linspace(min(x), max(x), 100).reshape(-1, 1)
+    y_line = model.predict(x_line)
+    ax.plot(x_line, y_line, color='orange', linewidth=2, label='Least Squares Fit')
     # Thresholds
     ax.axvline(x=0.5, color='red', linestyle='--', label='Cosine Threshold 0.5')
     ax.axhline(y=0.5, color='green', linestyle='--', label='Correlation Threshold 0.5')
