@@ -743,131 +743,13 @@ stock_data = load_all_stocks(daily_data_path)
 raw_data = load_raw_stocks(raw_data_path)
 all_dates = sorted(stock_data['Date'].unique())
 unique_stocks = sorted(stock_data['Stock'].unique())
+snapshots = prepare_dynamic_data(stock_data)
 
-close_prices_nor = []
-close_prices_raw = []
-close_prices_raw_norm = []
+# Maak datastructuren voor efficiente toegang
+stock_data = stock_data.sort_values(['Stock', 'Date'])
+stock_dict = {name: group for name, group in stock_data.groupby('Stock')}
+date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
 
-for stock in unique_stocks:
-    df_nor = stock_data[stock_data['Stock'] == stock].sort_values('Date')
-    close_prices_nor.append(df_nor['Close'].values)
-    
-    if stock in raw_data:
-        df_raw = raw_data[stock].sort_values('Date')
-        close_prices_raw.append(df_raw['Close'].values)
-    else:
-        print(f"Warning: {stock} not found in raw_data dict.")
-        continue
-
-for stock in unique_stocks:
-    if stock in raw_data:
-        df_raw_nor = raw_data[stock].sort_values('Date')
-        close_prices_raw_norm.append(scaler.fit_transform(df_raw_nor['Close'].values.reshape(-1, 1)).flatten())
-    else:
-        print(f"Warning: {stock} not found in raw_data dict.")
-        continue
-
-close_prices_nor = np.array(close_prices_nor)
-close_prices_raw = np.array(close_prices_raw)
-close_prices_raw_norm = np.array(close_prices_raw_norm)
-
-# Sanity check
-print(f"Genormaliseerde shape: {close_prices_nor.shape}")
-print(f"Ruwe shape: {close_prices_raw.shape}")
-print(f"Genormaliseerde shape zonder rolling window: {close_prices_raw_norm.shape}")
-
-# Verzamel cosine similarities en correlaties
-cos_raws, cor_raws = [], []
-cos_nors, cor_nors = [], []
-cos_raw_norms, cor_raw_norms = [], []
-
-for i in range(close_prices_raw.shape[0]):
-    for j in range(i+1, close_prices_raw.shape[0]):
-        vec_raw_i, vec_raw_j = close_prices_raw[i], close_prices_raw[j]
-        vec_nor_i, vec_nor_j = close_prices_nor[i], close_prices_nor[j]
-        vec_raw_norm_i, vec_raw_norm_j = close_prices_raw_norm[i], close_prices_raw_norm[j]
-        
-        if (len(vec_raw_i) != len(vec_raw_j)) or (len(vec_nor_i) != len(vec_nor_j)) or (len(vec_raw_norm_i) != len(vec_raw_norm_j)):
-            print("dees is zware error")
-            continue
-        
-        # Bereken alle metrics
-        cos_raw = cosine_similarity(vec_raw_i, vec_raw_j)
-        # cos_raw = sklearn_cosine_similarity(vec_raw_i.reshape(1, -1), vec_raw_j.reshape(1, -1))[0,0]
-        cor_raw = pearson_correlation(vec_raw_i, vec_raw_j)
-        cos_nor = cosine_similarity(vec_nor_i, vec_nor_j)
-        # cos_nor = sklearn_cosine_similarity(vec_nor_i.reshape(1, -1), vec_nor_j.reshape(1, -1))[0,0]
-        cor_nor = pearson_correlation(vec_nor_i, vec_nor_j)
-        cos_raw_norm = cosine_similarity(vec_raw_norm_i, vec_raw_norm_j)
-        # cos_raw_nor = sklearn_cosine_similarity(vec_raw_norm_i.reshape(1, -1), vec_raw_norm_j.reshape(1, -1))[0,0]
-        cor_raw_norm = pearson_correlation(vec_raw_norm_i, vec_raw_norm_j)
-
-        if any(np.isnan(x) for x in [cos_raw, cor_raw, cos_nor, cor_nor, cos_raw_norm, cor_raw_norm]):
-            print("zware error dit hier mag niet!")
-            continue
-
-        cos_raws.append(cos_raw)
-        cor_raws.append(cor_raw)
-        cos_nors.append(cos_nor)
-        cor_nors.append(cor_nor)
-        cos_raw_norms.append(cos_raw_norm)
-        cor_raw_norms.append(cor_raw_norm)
-
-# Plotten
-fig, axes = plt.subplots(3, 2, figsize=(14, 12))
-plots = [
-    (cos_raws, cor_raws, 'Cosine (raw)', 'Correlation (raw)'),
-    (cos_raws, cor_nors, 'Cosine (raw)', 'Correlation (normalized)'),
-    (cos_nors, cor_raws, 'Cosine (normalized)', 'Correlation (raw)'),
-    (cos_nors, cor_nors, 'Cosine (normalized)', 'Correlation (normalized)'),
-    (cos_raw_norms, cor_raws, 'Cosine (raw normalized)', 'Correlation (raw)'),
-    (cos_raw_norms, cor_nors, 'Cosine (raw normalized)', 'Correlation (normalized)'),
-]
-
-for ax, (x, y, xlabel, ylabel) in zip(axes.flatten(), plots):
-    ax.scatter(x, y, alpha=0.6)
-    x_fit = np.array(x).reshape(-1, 1)
-    y_fit = np.array(y)
-    model = LinearRegression().fit(x_fit, y_fit)
-    x_line = np.linspace(min(x), max(x), 100).reshape(-1, 1)
-    y_line = model.predict(x_line)
-    ax.plot(x_line, y_line, color='orange', linewidth=2, label='Least Squares Fit')
-    # Thresholds
-    ax.axvline(x=0.5, color='red', linestyle='--', label='Cosine Threshold 0.5')
-    ax.axhline(y=0.5, color='green', linestyle='--', label='Correlation Threshold 0.5')
-
-    # Aslabels & titel
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.set_title(f'{ylabel} vs {xlabel}')
-
-    # Dynamische x-lim op basis van cosine type
-    if 'Cosine (raw)' in xlabel:
-        ax.set_xlim(0.9, 1)
-    else:
-        ax.set_xlim(-1, 1)
-    ax.set_ylim(-1, 1)
-
-    ax.grid(True)
-    ax.legend()
-    
-    print(f"\n{ylabel} vs {xlabel}:")
-    r_squared = model.score(x_fit, y_fit)
-    print(f"R²: {r_squared:.4f}")
-    corr, p_value = pearsonr(x, y)
-    print(f"Pearson r: {corr:.4f}, p-value: {p_value:.4e}")
-
-plt.tight_layout()
-plt.show()
-
-
-# snapshots = prepare_dynamic_data(stock_data)
-
-# # Maak datastructuren voor efficiente toegang
-# stock_data = stock_data.sort_values(['Stock', 'Date'])
-# stock_dict = {name: group for name, group in stock_data.groupby('Stock')}
-# date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
-
-# # start model
-# main1_generate()
-# main1_load()
+# start model
+main1_generate()
+main1_load()
