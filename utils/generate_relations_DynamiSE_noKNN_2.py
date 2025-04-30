@@ -12,7 +12,7 @@ import itertools
 from collections import defaultdict
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data", "testbatch1")
@@ -734,37 +734,62 @@ stock_data = load_all_stocks(daily_data_path)
 raw_data = load_raw_stocks(raw_data_path)
 all_dates = sorted(stock_data['Date'].unique())
 unique_stocks = sorted(stock_data['Stock'].unique())
-close_prices = []
+
+close_prices_nor = []
+close_prices_raw = []
 for stock in unique_stocks:
-    df = stock_data[stock_data['Stock'] == stock].sort_values('Date')
-    close_prices.append(df['Close'].values)
+    df_nor = stock_data[stock_data['Stock'] == stock].sort_values('Date')
+    close_prices_nor.append(df_nor['Close'].values)
+    
+    if stock in raw_data:
+        df_raw = raw_data[stock].sort_values('Date')
+        if restrict_last_n_days is not None:
+            df_raw = df_raw[df_raw['Date'].isin(df_nor['Date'].values)]
+        close_prices_raw.append(df_raw['Close'].values)
+    else:
+        print(f"Warning: {stock} not found in raw_data dict.")
+        continue
 
-close_prices = np.array(close_prices)
+close_prices_nor = np.array(close_prices_nor)
+close_prices_raw = np.array(close_prices_raw)
 
-# Check
-print(f"Close prices shape: {close_prices.shape}")
+# Sanity check
+print(f"Genormaliseerde shape: {close_prices_nor.shape}")
+print(f"Ruwe shape: {close_prices_raw.shape}")
 
 # Verzamel cosine similarities en correlaties
-cosines = []
-correlations = []
+cos_raws, cor_raws = [], []
+cos_nors, cor_nors = [], []
 
-for i in range(close_prices.shape[0]):
-    for j in range(i+1, close_prices.shape[0]):
-        vec1 = close_prices[i]
-        vec2 = close_prices[j]
+for i in range(close_prices_raw.shape[0]):
+    for j in range(i+1, close_prices_raw.shape[0]):
+        vec_raw_i, vec_raw_j = close_prices_raw[i], close_prices_raw[j]
+        vec_nor_i, vec_nor_j = close_prices_nor[i], close_prices_nor[j]
+        
+        if (len(vec_raw_i) != len(vec_raw_j)) or (len(vec_nor_i) != len(vec_nor_j)):
+            print("dees is zware error")
+            continue
+        
+        # Bereken alle metrics
+        cos_raw = cosine_similarity(vec_raw_i, vec_raw_j)
+        # cos_raw = sklearn_cosine_similarity(vec_raw_i.reshape(1, -1), vec_raw_j.reshape(1, -1))[0,0]
+        cor_raw = pearson_correlation(vec_raw_i, vec_raw_j)
+        cos_nor = cosine_similarity(vec_nor_i, vec_nor_j)
+        # cos_nor = sklearn_cosine_similarity(vec_nor_i.reshape(1, -1), vec_nor_j.reshape(1, -1))[0,0]
+        cor_nor = pearson_correlation(vec_nor_i, vec_nor_j)
 
-        # Cosine similarity
-        cos_sim = cosine_similarity(vec1.reshape(1, -1), vec2.reshape(1, -1))[0,0]
+        if any(np.isnan(x) for x in [cos_raw, cor_raw, cos_nor, cor_nor]):
+            print("zware error dit hier mag niet!")
+            continue
 
-        # Pearson correlation
-        cor = np.corrcoef(vec1, vec2)[0,1]
-
-        cosines.append(cos_sim)
-        correlations.append(cor)
+        cos_raws.append(cos_raw)
+        cor_raws.append(cor_raw)
+        cos_nors.append(cos_nor)
+        cor_nors.append(cor_nor)
 
 # Plotten
 plt.figure(figsize=(8,6))
-plt.scatter(cosines, correlations, alpha=0.6)
+plt.scatter(cos_nors, cor_raws, alpha=0.6)
 plt.axvline(x=0.5, color='red', linestyle='--', label='Cosine Threshold 0.5')
 plt.axhline(y=0.5, color='green', linestyle='--', label='Correlation Threshold 0.5')
 plt.xlabel('Cosine Similarity')
@@ -773,15 +798,15 @@ plt.title('Correlation vs Cosine Similarity Scatterplot')
 plt.legend()
 plt.grid(True)
 plt.show()
-snapshots = prepare_dynamic_data(stock_data)
-
-# Maak datastructuren voor efficiente toegang
-stock_data = stock_data.sort_values(['Stock', 'Date'])
-stock_dict = {name: group for name, group in stock_data.groupby('Stock')}
-date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
 
 
+# snapshots = prepare_dynamic_data(stock_data)
 
-# start model
-main1_generate()
-main1_load()
+# # Maak datastructuren voor efficiente toegang
+# stock_data = stock_data.sort_values(['Stock', 'Date'])
+# stock_dict = {name: group for name, group in stock_data.groupby('Stock')}
+# date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
+
+# # start model
+# main1_generate()
+# main1_load()
