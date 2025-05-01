@@ -114,7 +114,7 @@ def load_all_stocks(stock_data_path):
     for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
         if file.endswith('.csv'):
             df = pd.read_csv(os.path.join(stock_data_path, file))
-            all_stock_data.append(df[['Date', 'Stock'] + feature_cols2])
+            all_stock_data.append(df[['Date', 'Stock'] + feature_cols1])
     all_stock_data = pd.concat(all_stock_data, ignore_index=True)
     print(all_stock_data.head()) # kleine test om te zien of data deftig is ingeladen
 
@@ -139,7 +139,7 @@ def load_raw_stocks(raw_stock_path):
             last_dates = all_dates[-restrict_last_n_days:]
             df = df[df['Date'].isin(last_dates)]
         df = df.reset_index(drop=True)
-        raw_data[stock_name] = df[['Date', 'Stock'] + feature_cols2]
+        raw_data[stock_name] = df[['Date', 'Stock'] + feature_cols1]
     return raw_data
 
 class DynamiSE(nn.Module):
@@ -199,8 +199,9 @@ class DynamiSE(nn.Module):
         else:
             raise ValueError("Ongeldige combinatiemethode")
         
-        # return torch.tanh(self.predictor(h_pair).squeeze())
-        return self.predictor(h_pair).squeeze()
+        
+        return torch.tanh(self.predictor(h_pair).squeeze())
+        # return self.predictor(h_pair).squeeze()
 
     def full_loss(self, h, pos_edges, neg_edges, alpha=1.0, beta=0.001):
         # Reconstructieverlies (RMSE)
@@ -648,7 +649,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             stock_data_current = current_date_data[current_date_data['Stock'] == stock]
             if len(stock_data_current) != 1:
                 print(f"Fout bij feature matrix van {stock} op {current_date}")
-            feature_matrix.append(stock_data_current[feature_cols2].values[0])
+            feature_matrix.append(stock_data_current[feature_cols1].values[0])
         feature_matrix = np.array(feature_matrix)
 
         if bool_eerste:
@@ -728,7 +729,7 @@ def main1_generate():
     print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
     print(f"Gemiddelde edges per snapshot: {np.mean([len(s['pos_edges_info']) + len(s['neg_edges_info']) for s in snapshots]):.0f}")
 
-    model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim)
+    model = DynamiSE(num_features=len(feature_cols1), hidden_dim=hidden_dim)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     best_loss = float('inf')
@@ -782,7 +783,7 @@ def main1_generate():
 
             
 def main1_load():
-    model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim)
+    model = DynamiSE(num_features=len(feature_cols1), hidden_dim=hidden_dim)
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth")))
     model.eval()
 
@@ -809,7 +810,7 @@ def main1_load():
             for stock_name in snapshot['tickers']:
                 stock_data = stock_groups.get(stock_name)
                 if len(stock_data) == prev_date_num:
-                    features.append(stock_data[feature_cols2].values)
+                    features.append(stock_data[feature_cols1].values)
                     raw_df = raw_data[stock_name]
                     labels.append(calculate_label(raw_df, snapshot['date']))
                     stock_info.append([stock_name, end_date])
