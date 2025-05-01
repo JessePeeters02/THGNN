@@ -1103,12 +1103,9 @@ stock_data = load_all_stocks(daily_data_path)
 raw_data = load_raw_stocks(raw_data_path)
 all_dates = sorted(stock_data['Date'].unique())
 unique_stocks = sorted(stock_data['Stock'].unique())
-snapshots = prepare_dynamic_data(stock_data)
-
-# Maak datastructuren voor efficiente toegang
-stock_data = stock_data.sort_values(['Stock', 'Date'])
-stock_dict = {name: group for name, group in stock_data.groupby('Stock')}
 date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
+stock_data = stock_data.sort_values(['Stock', 'Date'])
+snapshots = prepare_dynamic_data(stock_data)
 
 # start model
 main1_generate()
