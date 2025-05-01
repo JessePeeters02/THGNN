@@ -621,7 +621,6 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
 """
 
 # def prepare_dynamic_data(stock_data, window_size=prev_date_num):
-#     """Prepare time-evolving graph data without full correlation matrices"""
 #     dates = sorted(stock_data['Date'].unique())
 #     unique_stocks = sorted(stock_data['Stock'].unique())
 #     snapshots = []
@@ -765,8 +764,6 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
 #     return snapshots
 
 def prepare_dynamic_data(stock_data, window_size=20):
-    dates = sorted(stock_data['Date'].unique())
-    unique_stocks = sorted(stock_data['Stock'].unique())
     snapshots = []
     bool_eerste = True
     already_done = set(fname.replace('.pkl', '') for fname in os.listdir(snapshot_path) if fname.endswith('.pkl'))
@@ -776,16 +773,16 @@ def prepare_dynamic_data(stock_data, window_size=20):
     edge_info_pos = {}
     edge_info_neg = {}
 
-    for i in tqdm(range(window_size, len(dates)), desc="Preparing snapshots"):
-        current_date = dates[i]
+    for i in tqdm(range(window_size, len(date_to_idx)), desc="Preparing snapshots"):
+        current_date = all_dates[i]
         if current_date in already_done:
             with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'rb') as f:
                 snapshots.append(pickle.load(f))
             continue
 
-        window_dates = dates[i-window_size:i]
+        window_dates = all_dates[i-window_size:i]
         window_data = stock_data[stock_data['Date'].isin(window_dates)]
-        current_date_data = stock_data[stock_data['Date'] == dates[i-1]]
+        current_date_data = stock_data[stock_data['Date'] == current_date]
 
         feature_matrix = []
         for stock in unique_stocks:
