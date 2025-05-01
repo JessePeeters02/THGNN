@@ -11,6 +11,7 @@ import os
 import itertools
 from collections import defaultdict
 import torch.nn.functional as F
+import psutil
 
 
 # alle paden relatief aanmaken
@@ -620,148 +621,6 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
     return pos_edges, neg_edges
 """
 
-# def prepare_dynamic_data(stock_data, window_size=prev_date_num):
-#     dates = sorted(stock_data['Date'].unique())
-#     unique_stocks = sorted(stock_data['Stock'].unique())
-#     snapshots = []
-#     bool_eerste = True
-#     already_done = set(fname.replace('.pkl', '') for fname in os.listdir(snapshot_path) if fname.endswith('.pkl'))
-#     aging_manager = EdgeAgingManager(min_age=5, relevance_threshold=0.4, max_age=None)
-
-#     edge_info_pos = {}
-#     edge_info_neg = {}
-#     for i in tqdm(range(window_size, len(dates)), desc="Preparing snapshots"):
-#         if dates[i] in already_done:
-#             # print(f"Snapshot {dates[i]} bestaat al, overslaan...")
-#             with open(os.path.join(snapshot_path, f"{dates[i]}.pkl"), 'rb') as f:
-#                 snapshots.append(pickle.load(f))
-#             continue
-
-#         window_dates = dates[i-window_size:i]
-#         window_data = stock_data[stock_data['Date'].isin(window_dates)]
-#         current_date_data = stock_data[stock_data['Date'] == dates[i-1]]
-#         window_data_raw = pd.concat([
-#             df[df['Date'].isin(window_dates)] for df in raw_data.values()
-#         ], ignore_index=True)
-
-#         # Normalize features per stock
-#         # print('1')
-#         # Find approximate neighbors
-#         if bool_eerste:
-#             close_df = []
-#             for stock in unique_stocks:
-#                 stockdf = window_data[window_data['Stock'] == stock]
-#                 close_df.append(stockdf['Close'].values)
-#             # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
-#             close_df = np.array(close_df)
-#             close_df_raw = []
-#             for stock in unique_stocks:
-#                 stockdf_raw = window_data_raw[window_data_raw['Stock'] == stock]
-#                 close_df_raw.append(stockdf_raw['Close'].values)
-#             # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
-#             close_df_raw = np.array(close_df_raw)
-#             pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, window_data_raw, threshold, close_df, close_df_raw)
-#             bool_eerste = False
-#             feature_matrix = []
-#             for stock in unique_stocks:
-#                 stock_data_current = current_date_data[current_date_data['Stock'] == stock]
-#                 if len(stock_data_current) != 1:
-#                     print(f"fout met window_size feature matrix van {stock} op {dates[i-1]}")
-#                 feature_matrix.append(stock_data_current[feature_cols2].values[0])
-#             # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
-#             feature_matrix = np.array(feature_matrix)
-            
-
-#             # Voeg toe: sla initiële edges op als vorige edges voor volgende snapshot
-#             snapshots.append({
-#                 'date': dates[i],
-#                 'features': torch.FloatTensor(feature_matrix),
-#                 'pos_edges': pos_pairs,
-#                 'neg_edges': neg_pairs,
-#                 'tickers': unique_stocks,
-#                 'full_window_data': window_data
-#             })
-#             continue
-#         else:
-#             close_df = []
-#             for stock in unique_stocks:
-#                 stockdf = window_data[window_data['Stock'] == stock]
-#                 close_df.append(stockdf['Close'].values)
-#             # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
-#             close_df = np.array(close_df)
-#             close_df_raw = []
-#             for stock in unique_stocks:
-#                 stockdf_raw = window_data_raw[window_data_raw['Stock'] == stock]
-#                 close_df_raw.append(stockdf_raw['Close'].values)
-#             # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
-#             close_df_raw = np.array(close_df_raw)
-#             prev_snapshot = snapshots[-1]
-#             pos_pairs, neg_pairs = build_edges_via_balance_theory(
-#                 prev_snapshot['pos_edges'], prev_snapshot['neg_edges'],
-#                 len(unique_stocks), torch.FloatTensor(close_df), torch.FloatTensor(close_df_raw)
-#             )
-#             prev_edge_count = (
-#                 prev_snapshot['pos_edges'].shape[1] +
-#                 prev_snapshot['neg_edges'].shape[1]
-#             ) 
-#             new_edge_count = pos_pairs.shape[1] + neg_pairs.shape[1]
-#             growth_ratio = new_edge_count / max(prev_edge_count, 1) 
-#             print(growth_ratio)
-                
-#             new_edges_found = pos_pairs.size(1) + neg_pairs.size(1)
-
-#             if new_edges_found == 0:
-#                 print(f"[Fallback] Geen nieuwe edges gevonden op dag {dates[i]} — fallback naar correlatie.")
-#                 pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold)
-
-                
-#             else:
-#                 print(f"Balance theory gevonden: {pos_pairs.size(1)} pos, {neg_pairs.size(1)} neg edges.")
-
-#         # print('2')
-#         # Bereken ΔA_t voor de huidige snapshot (verandering in de graaf)
-#         prev_pos_edges = prev_snapshot['pos_edges'] if snapshots else []
-#         prev_neg_edges = prev_snapshot['neg_edges'] if snapshots else []
-#         # delta_pos = compute_delta_edges(pos_pairs, prev_pos_edges)
-#         # delta_neg = compute_delta_edges(neg_pairs, prev_neg_edges)
-#         # print('3')
-#         # Zet de delta's om naar edge_index tensors
-#         edge_index_pos = pos_pairs
-#         edge_index_neg = neg_pairs
-
-#         feature_matrix = []
-#         for stock in unique_stocks:
-#             stock_data_current = current_date_data[current_date_data['Stock'] == stock]
-#             if len(stock_data_current) != 1:
-#                 print(f"fout met window_size feature matrix van {stock} op {dates[i-1]}")
-#             feature_matrix.append(stock_data_current[feature_cols2].values[0])
-#         print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
-#         feature_matrix = np.array(feature_matrix)
-            
-
-#         # Voeg toe: sla initiële edges op als vorige edges voor volgende snapshot
-#         snapshots.append({
-#             'date': dates[i],
-#             'features': torch.FloatTensor(feature_matrix),
-#             'pos_edges': pos_pairs,
-#             'neg_edges': neg_pairs,
-#             'tickers': unique_stocks,
-#             'full_window_data': window_data
-#         })
-#         # On-the-fly snapshot opslaan
-#         with open(os.path.join(snapshot_path, f"{dates[i]}.pkl"), 'wb') as f:
-#             pickle.dump(snapshots[-1], f)
-#         # Append snapshot metadata naar CSV
-#         write_header = not os.path.exists(log_path) or os.path.getsize(log_path) == 0
-#         with open(log_path, "a") as log_f:
-#             if write_header:
-#                 log_f.write("date,nodes,pos_edges,neg_edges\n")
-#             line = f"{dates[i]},{len(unique_stocks)},{edge_index_pos.shape[1]},{edge_index_neg.shape[1]}\n"
-#             log_f.write(line)
-#         print(f"Vorige pos_edges shape: {prev_pos_edges.shape if isinstance(prev_pos_edges, torch.Tensor) else 'Geen'}")
-#         print(f"Vorige neg_edges shape: {prev_neg_edges.shape if isinstance(prev_neg_edges, torch.Tensor) else 'Geen'}")
-#         del window_data, feature_matrix, pos_pairs, neg_pairs
-#     return snapshots
 
 def prepare_dynamic_data(stock_data, window_size=20):
     snapshots = []
@@ -806,6 +665,9 @@ def prepare_dynamic_data(stock_data, window_size=20):
                 close_df.append(stockdf['Close'].values)
             close_df = np.array(close_df)
 
+            aging_manager.prune_edges(edge_info_pos, current_date, torch.FloatTensor(close_df))
+            aging_manager.prune_edges(edge_info_neg, current_date, torch.FloatTensor(close_df))
+
             pos_pairs, neg_pairs = build_edges_via_balance_theory(
                 edge_info_to_tensor(edge_info_pos),
                 edge_info_to_tensor(edge_info_neg),
@@ -818,9 +680,6 @@ def prepare_dynamic_data(stock_data, window_size=20):
             for src, dst in neg_pairs.T.tolist():
                 aging_manager.update_edge(edge_info_neg, src, dst, -1.0, current_date)
 
-            aging_manager.prune_edges(edge_info_pos, current_date, torch.FloatTensor(close_df))
-            aging_manager.prune_edges(edge_info_neg, current_date, torch.FloatTensor(close_df))
-        print(f"\nPos edges: {len(edge_info_pos)}, Neg edges: {len(edge_info_neg)}")
         snapshots.append({
             'date': current_date,
             'features': torch.FloatTensor(feature_matrix),
@@ -863,86 +722,6 @@ def calculate_label(raw_df, current_date):
     close_yesterday = raw_df.iloc[date_idx-1]['Close']
     return (close_yesterday / close_today) - 1
 
-# def evaluate(model, snapshots):
-#     model.eval()
-#     rmse, mae = 0.0, 0.0
-#     for snapshot in snapshots:
-#         with torch.no_grad():
-#             h = model(...)
-#             w_hat = model.predict_edge_weight(h, snapshot['edges'])
-#             w_true = get_ground_truth(snapshot)  # Implementeer dit
-#             rmse += torch.sqrt(((w_hat - w_true)**2).mean()).item()
-#             mae += torch.abs(w_hat - w_true).mean().item()
-#     print(f"RMSE: {rmse/len(snapshots):.4f}, MAE: {mae/len(snapshots):.4f}")
-
-# Main
-# if __name__ == "__main__":
-# def main1_generate():
-#     # test prints
-#     print(f"Aantal snapshots: {len(snapshots)}")
-#     print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
-#     print(f"Gemiddelde edges per snapshot: {np.mean([s['pos_edges'].shape[1] + s['neg_edges'].shape[1] for s in snapshots]):.0f}")
-
-#     # 2. Initialize model
-#     model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim)
-#     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-#     # Training loop met opslag van model en resultaten
-#     best_loss = float('inf')
-#     training_results = []
-
-#     # 3. Training loop
-#     for epoch in range(num_epochs):
-#         model.train()
-#         epoch_losses = []
-
-#         for snapshot in tqdm(snapshots, desc=f"Epoch {epoch+1} van de {num_epochs}"):
-#             optimizer.zero_grad()
-#             print("\n", snapshot['date'])
-#             print("Input features stats - min:", snapshot['features'].min(), "max:", snapshot['features'].max(), "\nhas NaN:", torch.isnan(snapshot['features']).any(), "has Inf:", torch.isinf(snapshot['features']).any(), "has Zeros:", (snapshot['features'] == 0).any())
-#             print("pos edge shape: ", snapshot["pos_edges"].shape, "\nneg edge shape: ", snapshot["neg_edges"].shape)
-#             print("pos edge type: ", type(snapshot["pos_edges"]), "\nneg edge type: ", type(snapshot["neg_edges"]))
-#             # Forward pass
-#             print(f"features shape: {snapshot['features'].shape})")
-#             with torch.autograd.set_detect_anomaly(True):
-#                 embeddings = model(
-#                     snapshot['features'],
-#                     snapshot['pos_edges'],
-#                     snapshot['neg_edges'],
-#                     torch.tensor([0.0, 1.0])  # Time steps
-#                 )
-#                 loss = model.full_loss(embeddings, snapshot['pos_edges'], snapshot['neg_edges'])
-#                 if torch.isnan(loss):
-#                     print("NaN loss detected!")
-#                     for name, param in model.named_parameters():
-#                         if torch.isnan(param.grad).any():
-#                             print(f"NaN in gradients of {name}")
-#                     raise ValueError("NaN in loss")
-#                 loss.backward()
-#                 optimizer.step()
-#             epoch_losses.append(loss.item())
-#             weights =  np.arange(1, len(epoch_losses)+1)
-#             weighted_avg_loss = np.average(epoch_losses, weights=weights)
-
-#         # Bereken gemiddeld verlies voor deze epoch
-#         avg_loss = weighted_avg_loss  # np.mean(epoch_losses)
-#         print(f"Epoch {epoch+1}, Avg Loss: {avg_loss}")
-#         training_results.append(avg_loss)
-#         print(f" avg_loss is {avg_loss}, best_loss is {best_loss}")
-#         # Sla het beste model op
-#         if avg_loss < best_loss:
-#             best_loss = avg_loss
-#             torch.save(model.state_dict(), os.path.join(relation_path, "best_model.pth"))
-#             print(f"Beste model opgeslagen in {relation_path} met loss {best_loss}")
-
-#     # Sla de trainingsresultaten op
-#     results_df = pd.DataFrame({
-#         'epoch': range(1, len(training_results) + 1),
-#         'loss': training_results
-#     })
-#     results_path = os.path.join(relation_path, "training_results.csv")
-#     results_df.to_csv(results_path, index=False)
-#     print(f"Trainingsresultaten opgeslagen in {results_path}")
 
 def main1_generate():
     print(f"Aantal snapshots: {len(snapshots)}")
@@ -979,6 +758,9 @@ def main1_generate():
                 loss = model.full_loss(embeddings, pos_edges_tensor, neg_edges_tensor)
                 if torch.isnan(loss):
                     print("NaN loss detected!")
+                    for name, param in model.named_parameters():
+                        if torch.isnan(param.grad).any():
+                            print(f"NaN in gradients of {name}")
                     raise ValueError("NaN in loss")
                 loss.backward()
                 optimizer.step()
@@ -998,55 +780,6 @@ def main1_generate():
     results_df.to_csv(os.path.join(relation_path, "training_results.csv"), index=False)
     print(f"Trainingsresultaten opgeslagen.")
 
-
-# def main1_load():
-
-#     # 4. Resultaatgeneratie
-#     model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim)
-#     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth")))
-#     model.eval()
-
-#     for snapshot in tqdm(snapshots, desc="Generating outputs"):
-#         with torch.no_grad():
-#             # Adjacency matrices
-#             N = len(snapshot['tickers'])
-#             pos_adj = edges_to_adj_matrix(snapshot['pos_edges'], N)
-#             neg_adj = edges_to_adj_matrix(snapshot['neg_edges'], N)
-            
-#             # Features en labels
-#             end_date = snapshot['date']
-#             end_idx = date_to_idx[end_date]
-#             start_idx = end_idx - prev_date_num + 1
-#             if start_idx < 0:
-#                 print(f"Skipping {end_date} - not enough history")
-#                 continue
-#             features, labels, stock_info = [], [], []
-#             window_data = snapshot['full_window_data']
-#             grouped = window_data.groupby('Stock')
-#             stock_groups = {name: group for name, group in grouped}
-#             for stock_name in snapshot['tickers']:
-#                 stock_data = stock_groups.get(stock_name)
-#                 if len(stock_data) == prev_date_num:
-#                     features.append(stock_data[feature_cols2].values)
-#                     raw_df = raw_data[stock_name]
-#                     labels.append(calculate_label(raw_df, snapshot['date']))
-#                     stock_info.append([stock_name, snapshot['date']])
-#                 else:
-#                     print(f" huh, window data klopt niet voor {stock_name} op {end_date}")
-            
-#             # Opslag
-#             with open(os.path.join(data_path, "data_train_predict_DSE_noknn1", f"{snapshot['date']}.pkl"), 'wb') as f:
-#                 pickle.dump({
-#                     'pos_adj': pos_adj,
-#                     'neg_adj': neg_adj,
-#                     'features': torch.FloatTensor(np.array(features)),
-#                     'labels': torch.FloatTensor(labels),
-#                     'mask': [True] * len(labels)
-#                 }, f)
-            
-#             pd.DataFrame(stock_info, columns=['code', 'dt']).to_csv(
-#                 os.path.join(data_path, "daily_stock_DSE_noknn1", f"{snapshot['date']}.csv"), index=False)
-#             del output, pos_adj, neg_adj, features, labels, stock_info, grouped, stock_groups
             
 def main1_load():
     model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim)
@@ -1079,11 +812,11 @@ def main1_load():
                     features.append(stock_data[feature_cols2].values)
                     raw_df = raw_data[stock_name]
                     labels.append(calculate_label(raw_df, snapshot['date']))
-                    stock_info.append([stock_name, snapshot['date']])
+                    stock_info.append([stock_name, end_date])
                 else:
                     print(f"Window data klopt niet voor {stock_name} op {end_date}")
 
-            with open(os.path.join(data_train_predict_path, f"{snapshot['date']}.pkl"), 'wb') as f:
+            with open(os.path.join(data_train_predict_path, f"{end_date}.pkl"), 'wb') as f:
                 pickle.dump({
                     'pos_adj': pos_adj,
                     'neg_adj': neg_adj,
@@ -1093,7 +826,8 @@ def main1_load():
                 }, f)
 
             pd.DataFrame(stock_info, columns=['code', 'dt']).to_csv(
-                os.path.join(daily_stock_path, f"{snapshot['date']}.csv"), index=False)
+                os.path.join(daily_stock_path, f"{end_date}.csv"), index=False)
+
 
 # eenmalig inladen van alle data
 stock_data = load_all_stocks(daily_data_path)
