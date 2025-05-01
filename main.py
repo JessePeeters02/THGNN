@@ -19,7 +19,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
 print(f"base_path: {base_path}")
-data_path = os.path.join(base_path, "data", "testbatch1")
+data_path = os.path.join(base_path, "data", "testbatch2")
 print(f"data_path: {data_path}")
 save_path = os.path.join(data_path, "model_saved")
 os.makedirs(save_path, exist_ok=True)
@@ -97,10 +97,10 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     #                              data_middle=data_middle, data_end=data_end)
     #val_dataset = AllGraphDataSampler(base_dir="/home/THGNN-main/data/data_train_predict/", mode="val", data_start=data_start,
     #                                  data_middle=data_middle, data_end=data_end)
-    dataset = AllGraphDataSampler(base_dir=os.path.join(data_path, "data_train_predict"), data_start=data_start,
+    dataset = AllGraphDataSampler(base_dir=os.path.join(data_path, "data_train_predict_DSE_noknn2"), data_start=data_start,
                               data_middle=data_middle, data_end=data_end)
     # print(f"Aantal samples in dataset: {len(dataset)}")
-    val_dataset = AllGraphDataSampler(base_dir=os.path.join(data_path, "data_train_predict"), mode="val", data_start=data_start,
+    val_dataset = AllGraphDataSampler(base_dir=os.path.join(data_path, "data_train_predict_DSE_noknn2"), mode="val", data_start=data_start,
                                   data_middle=data_middle, data_end=data_end)
     dataset_loader = DataLoader(dataset, batch_size=args.batch_size, pin_memory=True, collate_fn=lambda x: x)
     val_dataset_loader = DataLoader(val_dataset, batch_size=1, pin_memory=True)
@@ -129,17 +129,17 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     # predict
     checkpoint = torch.load(os.path.join(args.load_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
     model.load_state_dict(checkpoint['model'])
-    data_files = os.path.join(data_path, "daily_stock")
+    data_files = os.path.join(data_path, "daily_stock_DSE_noknn2")
     data_code = sorted(os.listdir(data_files))
     data_code_last = data_code[data_middle:data_end]
     df_score=pd.DataFrame()
     for i in tqdm(range(len(val_dataset))):
-        file_path = os.path.join(data_path, "daily_stock", data_code_last[i])
+        file_path = os.path.join(data_path, "daily_stock_DSE_noknn2", data_code_last[i])
         if os.path.exists(file_path):
             df = pd.read_csv(file_path, dtype=object)
         else:
             print(f"File {file_path} not found!")
-        df = pd.read_csv(os.path.join(data_path, "daily_stock", data_code_last[i]), dtype=object)
+        df = pd.read_csv(os.path.join(data_path, "daily_stock_DSE_noknn2", data_code_last[i]), dtype=object)
         tmp_data = val_dataset[i]
         pos_adj, neg_adj, features, labels, mask = extract_data(tmp_data, args.device)
         model.train()
@@ -159,9 +159,9 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     print(df_score)
     
 if __name__ == "__main__":
-    total_data_points = len(os.listdir(os.path.join(data_path, "data_train_predict")))
-    data_start = 1140
-    data_middle = int(0.9 * (total_data_points-1140)) + 1140
+    total_data_points = len(os.listdir(os.path.join(data_path, "data_train_predict_DSE_noknn2")))
+    data_start = 0
+    data_middle = 8
     data_end = total_data_points
     pre_data = '2025-03-07'
     fun_train_predict(data_start, data_middle, data_end, pre_data)
