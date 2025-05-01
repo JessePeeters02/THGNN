@@ -32,7 +32,8 @@ os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Hyperparameters
 prev_date_num = 20
-feature_cols = ['Open', 'High', 'Low', 'Close']#, 'Volume']
+feature_cols1 = ['Open', 'High', 'Low', 'Close']
+feature_cols2 = ['Open', 'High', 'Low', 'Close', 'Volume']
 hidden_dim = 64
 num_epochs = 10
 threshold = 0.6
@@ -40,12 +41,15 @@ sim_threshold_pos = 0.6
 sim_threshold_neg = -0.6
 min_neighbors = 5
 restrict_last_n_days= 30 # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
+relevance_threshold = 0
+max_age = 5
+
 
 class EdgeAgingManager:
-    def __init__(self, min_age=5, relevance_threshold=0.4, max_age=None):
-        self.min_age = min_age
+    def __init__(self, relevance_threshold, max_age, date_to_idx):
         self.relevance_threshold = relevance_threshold
         self.max_age = max_age
+        self.date_to_idx = date_to_idx
 
     def update_edge(self, edge_info, src, dst, new_score, current_date):
         key = (src, dst)
@@ -62,37 +66,35 @@ class EdgeAgingManager:
     def prune_edges(self, edge_info, current_date, close_data):
         to_delete = []
         for (src, dst), info in edge_info.items():
-            age = self._calculate_age(info['created_at'], current_date)
-            if (age >= self.min_age):
+            age = self._calculate_age(info['last_update'], current_date)
+            if (age >= self.max_age):
                 vec_i = close_data[src]
                 vec_k = close_data[dst]
                 sim = cosine_similarity(vec_i, vec_k)
-                
+
                 # Get the edge score to determine if it's positive or negative
                 edge_score = info['last_score']
-                
                 if edge_score > 0:  # Positive edge
                     if sim > sim_threshold_pos:
                         # Reset age by updating created_at to current date
-                        edge_info[(src,dst)]['created_at'] = current_date
+                        edge_info[(src,dst)]['last_update'] = current_date
                     else:
                         to_delete.append((src,dst))
                 else:  # Negative edge
                     if sim < sim_threshold_neg:
                         # Reset age by updating created_at to current date
-                        edge_info[(src,dst)]['created_at'] = current_date
+                        edge_info[(src,dst)]['last_update'] = current_date
                     else:
                         to_delete.append((src,dst))
-        
+
         # Delete edges that didn't meet the criteria
         for edge in to_delete:
             del edge_info[edge]
-    def _calculate_age(self, created_at, current_date):
-        if isinstance(created_at, str):
-            created_at = pd.to_datetime(created_at)
-        if isinstance(current_date, str):
-            current_date = pd.to_datetime(current_date)
-        return (current_date - created_at).days  
+
+    def _calculate_age(self, last_update, current_date):
+        idx_created = self.date_to_idx[last_update]
+        idx_current = self.date_to_idx[current_date]
+        return idx_current - idx_created
 
 def edge_info_to_tensor(edge_info):
     if not edge_info:
@@ -111,7 +113,7 @@ def load_all_stocks(stock_data_path):
     for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
         if file.endswith('.csv'):
             df = pd.read_csv(os.path.join(stock_data_path, file))
-            all_stock_data.append(df[['Date', 'Stock', 'Open', 'High', 'Low', 'Close', 'Volume']])
+            all_stock_data.append(df[['Date', 'Stock'] + feature_cols2])
     all_stock_data = pd.concat(all_stock_data, ignore_index=True)
     print(all_stock_data.head()) # kleine test om te zien of data deftig is ingeladen
 
@@ -136,7 +138,7 @@ def load_raw_stocks(raw_stock_path):
             last_dates = all_dates[-restrict_last_n_days:]
             df = df[df['Date'].isin(last_dates)]
         df = df.reset_index(drop=True)
-        raw_data[stock_name] = df
+        raw_data[stock_name] = df[['Date', 'Stock'] + feature_cols2]
     return raw_data
 
 class DynamiSE(nn.Module):
@@ -270,29 +272,76 @@ class ODEFunc(nn.Module):
         # print("   ", "max: ", delta_h.max().item(), "min: ", delta_h.min().item())
         return delta_h.clamp(-50, 50)
 
-# ΔA_t edgeverschillen berekenen
 
-def compute_delta_edges(
-    current_edges: torch.LongTensor,
-    previous_edges: torch.LongTensor
-) -> torch.LongTensor:
-    
-    curr = set(map(tuple, current_edges.T.tolist()))
-    if len(previous_edges) > 0:
-        prev = set(map(tuple, previous_edges.T.tolist()))
-    else:
-        prev = set()
-        print("Geen vorige edges gevonden, dus geen delta.")    
-    delta = curr - prev
-    if delta:
-        return torch.LongTensor(list(zip(*list(delta))))
-    else:
-        return torch.empty((2, 0), dtype=torch.long)
+def build_initial_edges_via_correlation(window_data, threshold):
+    grouped = window_data.groupby('Stock')[feature_cols1]
+    stock_arrays = np.array([group.values.T for name, group in grouped])
+    n_stocks = stock_arrays.shape[0]
+    corr_matrix = np.zeros((n_stocks, n_stocks))
 
-def build_initial_edges_via_correlation(window_data, threshold):#, window_data_raw, close_data, close_data_raw):
+    # Bereken correlaties tussen alle paren van stocks
+    for i in tqdm(range(n_stocks), desc="Calculating correlations"):
+        for j in range(i+1, n_stocks):
+            
+            feature_correlations = []
+            for f in range(len(feature_cols1)):
+                corr = np.corrcoef(stock_arrays[i,f,:], stock_arrays[j,f,:])[0,1]
+                feature_correlations.append(corr)           
+            avg_corr = np.nanmean(feature_correlations)
+            corr_matrix[i,j] = avg_corr
+            corr_matrix[j,i] = avg_corr
+
+    # Bouw edges op basis van drempelwaarde
+    pos_edges = []
+    neg_edges = []
+
+    # Garandeer minimum aantal buren
+    for i in range(n_stocks):
+        # Positieve edges
+        strong_pos = np.where(corr_matrix[i] > threshold)[0]
+        if len(strong_pos) < min_neighbors:
+            # Voeg extra buren toe als er te weinig zijn
+            corrs = corr_matrix[i].copy()
+            top_pos = np.argsort(-corrs)[:min_neighbors]
+            for j in top_pos:
+                if corr_matrix[i,j] > 0:  # Alleen positieve correlaties toevoegen
+                    pos_edges.append((i, j))
+                    pos_edges.append((j, i))
+        else:
+            # Gebruik alleen de sterke correlaties
+            for j in strong_pos:
+                pos_edges.append((i, j))
+                pos_edges.append((j, i))
+        
+        # Negatieve edges
+        strong_neg = np.where(corr_matrix[i] < -threshold)[0]
+        if len(strong_neg) < min_neighbors:
+            # Voeg extra buren toe als er te weinig zijn
+            corrs = corr_matrix[i].copy()
+            top_neg = np.argsort(corrs)[:min_neighbors]
+            for j in top_neg:
+                if corr_matrix[i,j] < 0:  # Alleen negatieve correlaties toevoegen
+                    neg_edges.append((i, j))
+                    neg_edges.append((j, i))
+        else:
+            # Gebruik alleen de sterke correlaties
+            for j in strong_neg:
+                neg_edges.append((i, j))
+                neg_edges.append((j, i))
+
+    # Converteer naar torch Tensors
+    pos_edges = list(set(pos_edges))
+    neg_edges = list(set(neg_edges))
+    pos_edges = torch.LongTensor(list(zip(*pos_edges))) if pos_edges else torch.empty((2, 0), dtype=torch.long)
+    neg_edges = torch.LongTensor(list(zip(*neg_edges))) if neg_edges else torch.empty((2, 0), dtype=torch.long)
+
+    return pos_edges, neg_edges
+
+""" # build_initial_edges_via_correlation maar dan met de vele tests
+def build_initial_edges_via_correlation(window_data, threshold, window_data_raw, close_data, close_data_raw):
     # Groepeer per stock en bereken correlaties per feature
-    grouped = window_data.groupby('Stock')[feature_cols]
-    # rawgrouped = window_data_raw.groupby('Stock')[feature_cols]
+    grouped = window_data.groupby('Stock')[feature_cols1]
+    # rawgrouped = window_data_raw.groupby('Stock')[feature_cols1]
     # Maak een 3D array van features (stocks x features x time)
     stock_arrays = np.array([group.values.T for name, group in grouped])
     n_stocks = stock_arrays.shape[0]
@@ -308,7 +357,7 @@ def build_initial_edges_via_correlation(window_data, threshold):#, window_data_r
             
             # Bereken correlatie voor elke feature apart - normalized data
             feature_correlations = []
-            for f in range(len(feature_cols)):
+            for f in range(len(feature_cols1)):
                 corr = np.corrcoef(stock_arrays[i,f,:], stock_arrays[j,f,:])[0,1]
                 feature_correlations.append(corr)           
             avg_corr = np.nanmean(feature_correlations)
@@ -317,7 +366,7 @@ def build_initial_edges_via_correlation(window_data, threshold):#, window_data_r
 
             # # Bereken correlatie voor elke feature apart - raw data
             # rawfeature_correlations = []
-            # for f in range(len(feature_cols)):
+            # for f in range(len(feature_cols1)):
             #     rawcorr = np.corrcoef(rawstock_arrays[i,f,:], rawstock_arrays[j,f,:])[0,1]
             #     rawfeature_correlations.append(rawcorr)
             # rawavg_corr = np.nanmean(rawfeature_correlations)
@@ -325,7 +374,7 @@ def build_initial_edges_via_correlation(window_data, threshold):#, window_data_r
             # Gemiddelde cosine similarity over features
             # feature_cosines = []
             # feature_cosines_raw = []
-            # for f in range(len(feature_cols)):
+            # for f in range(len(feature_cols1)):
             #     vec1 = stock_arrays[i, f, :]
             #     vec2 = stock_arrays[j, f, :]
             #     cos_sim = cosine_similarity(vec1, vec2)
@@ -407,8 +456,81 @@ def build_initial_edges_via_correlation(window_data, threshold):#, window_data_r
     neg_edges = torch.LongTensor(list(zip(*neg_edges))) if neg_edges else torch.empty((2, 0), dtype=torch.long)
 
     return pos_edges, neg_edges
+"""
 
 def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data):#, close_data_raw):
+    adj_pos = defaultdict(set)
+    adj_neg = defaultdict(set)
+
+    # Bouw adjacency lists
+    if prev_pos_edges.numel() > 0:
+        for src, dst in prev_pos_edges.T.tolist():
+            adj_pos[src].add(dst)
+    if prev_neg_edges.numel() > 0:
+        for src, dst in prev_neg_edges.T.tolist():
+            adj_neg[src].add(dst)
+
+    pos_edges_set = set()
+    neg_edges_set = set()
+    triangle_count = 0
+    confirmed_edges = set()
+    attempted_edges = defaultdict(set)
+
+    for j in tqdm(range(num_nodes), desc="triangles"):
+        neighbors = adj_pos[j] | adj_neg[j]
+        for i, k in itertools.combinations(neighbors, 2):
+            if i == k:
+                continue
+
+            edge_key = frozenset((i, k))
+            if edge_key in confirmed_edges:
+                continue
+
+            # Check bestaande edges
+            if (k in adj_pos[i]) or (k in adj_neg[i]):
+                continue
+
+            # Debug: Tel triadische checks
+            triangle_count += 1
+
+            # Triadische check  
+            signs = []
+            for u, v in [(i, j), (j, k)]:
+                if v in adj_pos[u]:
+                    signs.append('+')
+                elif v in adj_neg[u]:
+                    signs.append('-')
+                else:
+                    break
+            else:
+                neg_count = signs.count('-')
+                signature = 'positive' if neg_count % 2 == 0 else 'negative'
+
+                if signature in attempted_edges[edge_key]:
+                    continue  # deze context al geprobeerd
+                attempted_edges[edge_key].add(signature)
+
+                vec_i = close_data[i]
+                vec_k = close_data[k]
+                sim = cosine_similarity(vec_i, vec_k)
+
+                # Balance theory toepassen
+                if signature == 'positive' and sim > sim_threshold_pos:
+                    pos_edges_set.add((i, k))
+                    pos_edges_set.add((k, i))
+                    confirmed_edges.add(edge_key)
+                elif signature == 'negative' and sim < sim_threshold_neg:
+                    neg_edges_set.add((i, k))
+                    neg_edges_set.add((k, i))
+                    confirmed_edges.add(edge_key) 
+
+    # Converteer naar tensors
+    pos_edges = torch.LongTensor(list(zip(*pos_edges_set))) if pos_edges_set else torch.empty((2, 0), dtype=torch.long)
+    neg_edges = torch.LongTensor(list(zip(*neg_edges_set))) if neg_edges_set else torch.empty((2, 0), dtype=torch.long)    
+    return pos_edges, neg_edges
+
+""" build_edges_via_balance_theory maar dan met de tests
+def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data, close_data_raw):
     # Debug: Print input edges
     # print(f"\nInput pos edges: {prev_pos_edges.shape}, neg edges: {prev_neg_edges.shape}")
     adj_pos = defaultdict(set)
@@ -496,6 +618,7 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
     pos_edges = torch.LongTensor(list(zip(*pos_edges_set))) if pos_edges_set else torch.empty((2, 0), dtype=torch.long)
     neg_edges = torch.LongTensor(list(zip(*neg_edges_set))) if neg_edges_set else torch.empty((2, 0), dtype=torch.long)    
     return pos_edges, neg_edges
+"""
 
 # def prepare_dynamic_data(stock_data, window_size=prev_date_num):
 #     """Prepare time-evolving graph data without full correlation matrices"""
@@ -545,7 +668,7 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
 #                 stock_data_current = current_date_data[current_date_data['Stock'] == stock]
 #                 if len(stock_data_current) != 1:
 #                     print(f"fout met window_size feature matrix van {stock} op {dates[i-1]}")
-#                 feature_matrix.append(stock_data_current[feature_cols].values[0])
+#                 feature_matrix.append(stock_data_current[feature_cols2].values[0])
 #             # print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
 #             feature_matrix = np.array(feature_matrix)
             
@@ -612,7 +735,7 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
 #             stock_data_current = current_date_data[current_date_data['Stock'] == stock]
 #             if len(stock_data_current) != 1:
 #                 print(f"fout met window_size feature matrix van {stock} op {dates[i-1]}")
-#             feature_matrix.append(stock_data_current[feature_cols].values[0])
+#             feature_matrix.append(stock_data_current[feature_cols2].values[0])
 #         print(f"feature_matrix shape: {np.array(feature_matrix).shape}")
 #         feature_matrix = np.array(feature_matrix)
             
@@ -648,7 +771,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
     bool_eerste = True
     already_done = set(fname.replace('.pkl', '') for fname in os.listdir(snapshot_path) if fname.endswith('.pkl'))
 
-    aging_manager = EdgeAgingManager(min_age=5, relevance_threshold=0.4, max_age=None)
+    aging_manager = EdgeAgingManager(relevance_threshold, max_age, date_to_idx)
 
     edge_info_pos = {}
     edge_info_neg = {}
@@ -669,7 +792,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             stock_data_current = current_date_data[current_date_data['Stock'] == stock]
             if len(stock_data_current) != 1:
                 print(f"Fout bij feature matrix van {stock} op {current_date}")
-            feature_matrix.append(stock_data_current[feature_cols].values[0])
+            feature_matrix.append(stock_data_current[feature_cols2].values[0])
         feature_matrix = np.array(feature_matrix)
 
         if bool_eerste:
@@ -764,7 +887,7 @@ def calculate_label(raw_df, current_date):
 #     print(f"Gemiddelde edges per snapshot: {np.mean([s['pos_edges'].shape[1] + s['neg_edges'].shape[1] for s in snapshots]):.0f}")
 
 #     # 2. Initialize model
-#     model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
+#     model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim)
 #     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
 #     # Training loop met opslag van model en resultaten
@@ -829,7 +952,7 @@ def main1_generate():
     print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
     print(f"Gemiddelde edges per snapshot: {np.mean([len(s['pos_edges_info']) + len(s['neg_edges_info']) for s in snapshots]):.0f}")
 
-    model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
+    model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     best_loss = float('inf')
@@ -882,7 +1005,7 @@ def main1_generate():
 # def main1_load():
 
 #     # 4. Resultaatgeneratie
-#     model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
+#     model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim)
 #     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth")))
 #     model.eval()
 
@@ -907,7 +1030,7 @@ def main1_generate():
 #             for stock_name in snapshot['tickers']:
 #                 stock_data = stock_groups.get(stock_name)
 #                 if len(stock_data) == prev_date_num:
-#                     features.append(stock_data[feature_cols].values)
+#                     features.append(stock_data[feature_cols2].values)
 #                     raw_df = raw_data[stock_name]
 #                     labels.append(calculate_label(raw_df, snapshot['date']))
 #                     stock_info.append([stock_name, snapshot['date']])
@@ -929,7 +1052,7 @@ def main1_generate():
 #             del output, pos_adj, neg_adj, features, labels, stock_info, grouped, stock_groups
             
 def main1_load():
-    model = DynamiSE(num_features=len(feature_cols), hidden_dim=hidden_dim)
+    model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim)
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth")))
     model.eval()
 
@@ -956,7 +1079,7 @@ def main1_load():
             for stock_name in snapshot['tickers']:
                 stock_data = stock_groups.get(stock_name)
                 if len(stock_data) == prev_date_num:
-                    features.append(stock_data[feature_cols].values)
+                    features.append(stock_data[feature_cols2].values)
                     raw_df = raw_data[stock_name]
                     labels.append(calculate_label(raw_df, snapshot['date']))
                     stock_info.append([stock_name, snapshot['date']])
@@ -988,5 +1111,5 @@ stock_dict = {name: group for name, group in stock_data.groupby('Stock')}
 date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
 
 # start model
-# main1_generate()
+main1_generate()
 main1_load()
