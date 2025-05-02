@@ -101,9 +101,9 @@ class EdgeAgingManager:
 
 def edge_info_to_tensor(edge_info):
     if not edge_info:
-        return torch.empty((2, 0), dtype=torch.long)
+        return torch.empty((2, 0), dtype=torch.long).to(device)
     edges = list(edge_info.keys())
-    return torch.LongTensor(list(zip(*edges)))
+    return torch.LongTensor(list(zip(*edges))).to(device)
 
 def cosine_similarity(vec1, vec2):
     return F.cosine_similarity(vec1.unsqueeze(0), vec2.unsqueeze(0)).item()
@@ -149,36 +149,40 @@ class DynamiSE(nn.Module):
         super(DynamiSE, self).__init__()
         self.hidden_dim = hidden_dim
 
-        self.feature_encoder = nn.Linear(num_features, hidden_dim)
+        self.feature_encoder = nn.Linear(num_features, hidden_dim).to(device)
 
         # Positieve en negatieve convoluties
-        self.pos_conv = GCNConv(hidden_dim, hidden_dim)
-        self.neg_conv = GCNConv(hidden_dim, hidden_dim)
+        self.pos_conv = GCNConv(hidden_dim, hidden_dim).to(device)
+        self.neg_conv = GCNConv(hidden_dim, hidden_dim).to(device)
 
         # Combinatiefunctie Ψ
         self.psi = nn.Sequential(
             nn.Linear(2 * hidden_dim, hidden_dim),
             nn.ReLU()
-        )
+        ).to(device)
 
-        self.ode_func = ODEFunc(hidden_dim, self.pos_conv, self.neg_conv, self.psi)
+        self.ode_func = ODEFunc(hidden_dim, self.pos_conv, self.neg_conv, self.psi).to(device)
 
         self.predictor = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1)
-        )
+        ).to(device)
 
     def forward(self, x, edge_index_pos, edge_index_neg, t, method='dopri5'):
         
         # print(x.shape)
+        x = x.to(device)
         h = self.feature_encoder(x)
         # print(h.shape)
         if torch.isnan(h).any() or torch.isinf(h).any():
             print(f"h bevat NaN of Inf op snapshot {self.snapshot_date if hasattr(self, 'snapshot_date') else '??'}")
             print(h)
             raise ValueError("h bevat NaN of Inf")
+        edge_index_pos = edge_index_pos.to(device)
+        edge_index_neg = edge_index_neg.to(device)
         self.ode_func.set_graph(edge_index_pos, edge_index_neg)
+        t = t.to(device)
         h = odeint(self.ode_func, h, t, 
                method=method,
                rtol=1e-3,
@@ -788,7 +792,7 @@ def main1_generate():
             
 def main1_load():
     model = DynamiSE(num_features=len(feature_cols1), hidden_dim=hidden_dim)
-    model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth")))
+    model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth"), map_location=device))
     model.eval()
 
     for snapshot in tqdm(snapshots, desc="Generating outputs"):
