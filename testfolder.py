@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pickle
 from trainer.trainer import *
@@ -9,6 +10,7 @@ from model.Thgnn import *
 from torch.utils.data import DataLoader
 import torch
 import psutil
+import seaborn as sns
 
 # Pad configuratie
 base_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,31 +35,86 @@ def check_pickles(nr, path, start):
             data = pickle.load(f)
 
         # Print de keys van het opgeslagen dict
-        print("Keys in het bestand:", data.keys())
+        # print("Keys in het bestand:", data.keys())
 
         # Voor een idee van de inhoud:
-        print("\nVoorbeeldshape features:", data['features'].shape)
-        print("Aantal labels:", len(data['labels']))
-        print("Voorbeeldlabels:", data['labels'][:10])  # eerste 10 labels
-        print("Voorbeeldmask:", data['mask'][:10])  # eerste 10 mask-waarden
-        print("Positive adj shape:", data['pos_adj'].shape)
-        print("Negative adj shape:", data['neg_adj'].shape)
+        # print("\nVoorbeeldshape features:", data['features'].shape)
+        # print("Aantal labels:", len(data['labels']))
+        # print("Voorbeeldlabels:", data['labels'])  # eerste 10 labels
+        # print("Voorbeeldmask:", data['mask'][:10])  # eerste 10 mask-waarden
+        # print("Positive adj shape:", data['pos_adj'].shape)
+        # print("Negative adj shape:", data['neg_adj'].shape)
 
-        print("Positive adjacency (10x10):")
-        print(data['pos_adj'][:10, :10])
+        # print("Positive adjacency (10x10):")
+        # print(data['pos_adj'][:15, :15])
 
-        print("\nNegative adjacency (10x10):")
-        print(data['neg_adj'][:10, :10])
+        # print("\nNegative adjacency (10x10):")
+        # print(data['neg_adj'][:15, :15])
 
         pos_counts = data['pos_adj'].sum(dim=1)
         neg_counts = data['neg_adj'].sum(dim=1)
 
-        for i in range(10):
-            print(f"Aandeel {i}: {int(pos_counts[i])} positieve buren, {int(neg_counts[i])} negatieve buren")
+        total_pos = pos_counts.sum()
+        total_neg = neg_counts.sum()
+
+        print(f"Totaal aantal positieve buren: {total_pos}")
+        print(f"Totaal aantal negatieve buren: {total_neg}")
+
+        # for i in range(len(pos_counts)):
+        #     print(f"Aandeel {i}: {int(pos_counts[i])} positieve buren, {int(neg_counts[i])} negatieve buren")
 
         # Eventueel 1 feature sample inspecteren
         # print("\features:")
         # print(data['features'])
+
+def check_labelsvsprediction(nr, path, start):
+    """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat """
+    bestandspad = os.path.join(data_path, path)
+    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_on_corr", "pred.csv"))
+    predictions = predictionsdf["score"].values
+    print("Bestandspad:", bestandspad)
+    labels = []
+    for file in os.listdir(bestandspad)[start:start+nr]:
+        print("Bestand:", file)
+        file = os.path.join(bestandspad, file)
+        with open(file, 'rb') as f:
+            data = pickle.load(f)
+        labels.append(data['labels'].numpy())
+    labels = np.concatenate(labels)
+
+    print(len(labels), len(predictions))
+
+    label_stats = f"Labels - Gemiddelde: {np.mean(labels):.4f}, Std: {np.std(labels):.4f}"
+    pred_stats = f"Voorspellingen - Gemiddelde: {np.mean(predictions):.4f}, Std: {np.std(predictions):.4f}"
+    
+    print(label_stats)
+    print(pred_stats)
+
+    # Plot optimalisaties
+    bins = 50
+    min_val = min(np.min(labels), np.min(predictions))
+    max_val = max(np.max(labels), np.max(predictions))
+    
+    # Maak figuren parallel
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
+    
+    # Histogram
+    ax1.hist(predictions, bins=bins, range=(min_val, max_val), 
+            alpha=0.5, label="Voorspellingen", density=True)
+    ax1.hist(labels, bins=bins, range=(min_val, max_val),
+            alpha=0.5, label="Echte labels", density=True)
+    ax1.legend()
+    ax1.set_title("Verdeling van returns")
+    ax1.grid(True)
+    
+    # Boxplot
+    ax2.boxplot([predictions, labels], tick_labels=["Voorspellingen", "Echte labels"])
+    ax2.set_title("Spreiding van returns")
+    ax2.grid(True)
+    
+    plt.tight_layout()
+    plt.show()
+
 
 def check_csi300():
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat """
@@ -143,9 +200,11 @@ def gpu_info():
 
 
 """ aanroepen van alle testfuncties"""
-# check_pickles(1, "data_train_predict_DSE_noknn2", 0)
+# check_pickles(3, "data_train_predict_DSE_noknn2", 7)
+# check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
+check_labelsvsprediction(1, "data_train_predict_DSE_noknn2", 9)
 # check_pickles(30, "data_train_predict", 20)
 # check_csi300()
-memory_info()
-cpu_info()
-gpu_info()
+# memory_info()
+# cpu_info()
+# gpu_info()
