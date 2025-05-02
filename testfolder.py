@@ -38,22 +38,22 @@ def check_pickles(nr, path, start):
         # Voor een idee van de inhoud:
         print("\nVoorbeeldshape features:", data['features'].shape)
         print("Aantal labels:", len(data['labels']))
-        print("Voorbeeldlabels:", data['labels'][:10])  # eerste 10 labels
-        print("Voorbeeldmask:", data['mask'][:10])  # eerste 10 mask-waarden
-        print("Positive adj shape:", data['pos_adj'].shape)
-        print("Negative adj shape:", data['neg_adj'].shape)
+        print("Voorbeeldlabels:", data['labels'])  # eerste 10 labels
+        # print("Voorbeeldmask:", data['mask'][:10])  # eerste 10 mask-waarden
+        # print("Positive adj shape:", data['pos_adj'].shape)
+        # print("Negative adj shape:", data['neg_adj'].shape)
 
-        print("Positive adjacency (10x10):")
-        print(data['pos_adj'][:10, :10])
+        # print("Positive adjacency (10x10):")
+        # print(data['pos_adj'][:15, :15])
 
-        print("\nNegative adjacency (10x10):")
-        print(data['neg_adj'][:10, :10])
+        # print("\nNegative adjacency (10x10):")
+        # print(data['neg_adj'][:15, :15])
 
-        pos_counts = data['pos_adj'].sum(dim=1)
-        neg_counts = data['neg_adj'].sum(dim=1)
+        # pos_counts = data['pos_adj'].sum(dim=1)
+        # neg_counts = data['neg_adj'].sum(dim=1)
 
-        for i in range(10):
-            print(f"Aandeel {i}: {int(pos_counts[i])} positieve buren, {int(neg_counts[i])} negatieve buren")
+        # for i in range(10):
+        #     print(f"Aandeel {i}: {int(pos_counts[i])} positieve buren, {int(neg_counts[i])} negatieve buren")
 
         # Eventueel 1 feature sample inspecteren
         # print("\features:")
@@ -143,9 +143,9 @@ def gpu_info():
 
 
 """ aanroepen van alle testfuncties"""
-# check_pickles(1, "data_train_predict_DSE_noknn2", 0)
+check_pickles(10, "data_train_predict_DSE_noknn2", 0)
 # check_pickles(30, "data_train_predict", 20)
 # check_csi300()
-memory_info()
-cpu_info()
-gpu_info()
+# memory_info()
+# cpu_info()
+# gpu_info()

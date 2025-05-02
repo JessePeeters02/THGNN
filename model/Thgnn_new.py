@@ -98,7 +98,7 @@ class GraphAttnSemIndividual(Module):
 
 
 class StockHeteGAT(nn.Module):
-    def __init__(self, in_features=4, out_features=8, num_heads=8, hidden_dim=64, num_layers=1):
+    def __init__(self, in_features=6, out_features=8, num_heads=8, hidden_dim=64, num_layers=1):
         super(StockHeteGAT, self).__init__()
         self.input_layer = nn.Sequential(
             nn.Linear(in_features, hidden_dim),
