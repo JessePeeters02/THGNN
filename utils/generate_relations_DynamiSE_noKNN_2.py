@@ -13,6 +13,8 @@ from collections import defaultdict
 import torch.nn.functional as F
 import psutil
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"Device: {device}")
 
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -20,15 +22,15 @@ data_path = os.path.join(base_path, "data", "testbatch2")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2")
+relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2_gpu")
 os.makedirs(relation_path, exist_ok=True)
 snapshot_path = os.path.join(data_path, "intermediate_snapshots_testcosinecorrelation")
 os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_DSE_noknn2")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_DSE_noknn2")
+daily_stock_path = os.path.join(data_path, "daily_stock_gpu")
 os.makedirs(daily_stock_path, exist_ok=True)
-log_path = os.path.join(data_path, "snapshot_log2.csv")
+log_path = os.path.join(data_path, "snapshot_log_gpu.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Hyperparameters
@@ -729,7 +731,7 @@ def main1_generate():
     print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
     print(f"Gemiddelde edges per snapshot: {np.mean([len(s['pos_edges_info']) + len(s['neg_edges_info']) for s in snapshots]):.0f}")
 
-    model = DynamiSE(num_features=len(feature_cols1), hidden_dim=hidden_dim)
+    model = DynamiSE(num_features=len(feature_cols1), hidden_dim=hidden_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     best_loss = float('inf')
@@ -742,19 +744,21 @@ def main1_generate():
         for snapshot in tqdm(snapshots, desc=f"Epoch {epoch+1} van de {num_epochs}"):
             optimizer.zero_grad()
 
-            pos_edges_tensor = edge_info_to_tensor(snapshot['pos_edges_info'])
-            neg_edges_tensor = edge_info_to_tensor(snapshot['neg_edges_info'])
+            features = snapshot['features'].to(device)
+            pos_edges_tensor = edge_info_to_tensor(snapshot['pos_edges_info']).to(device)
+            neg_edges_tensor = edge_info_to_tensor(snapshot['neg_edges_info']).to(device)
+            t = torch.tensor([0.0, 1.0], device=device)
 
             print("\n", snapshot['date'])
-            print("Input features stats - min:", snapshot['features'].min(), "max:", snapshot['features'].max())
+            print("Input features stats - min:", features.min(), "max:", features.max())
             print("pos edge shape: ", pos_edges_tensor.shape, "\nneg edge shape: ", neg_edges_tensor.shape)
 
             with torch.autograd.set_detect_anomaly(True):
                 embeddings = model(
-                    snapshot['features'],
+                    features,
                     pos_edges_tensor,
                     neg_edges_tensor,
-                    torch.tensor([0.0, 1.0])
+                    t
                 )
                 loss = model.full_loss(embeddings, pos_edges_tensor, neg_edges_tensor)
                 if torch.isnan(loss):
