@@ -41,7 +41,7 @@ threshold = 0.6
 sim_threshold_pos = 0.6
 sim_threshold_neg = -0.6
 min_neighbors = 5
-restrict_last_n_days= 30 # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
+restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 relevance_threshold = 0
 max_age = 5
 
@@ -199,7 +199,7 @@ class DynamiSE(nn.Module):
         else:
             raise ValueError("Ongeldige combinatiemethode")
         
-        
+        h_pair = F.layer_norm(h_pair, h_pair.shape[1:])
         return torch.tanh(self.predictor(h_pair).squeeze())
         # return self.predictor(h_pair).squeeze()
 
