@@ -51,7 +51,7 @@ class Args:
         self.max_epochs = 60
         self.epochs_eval = 10
         # learning rate settings
-        self.lr = 0.0002
+        self.lr = 0.001
         self.gamma = 0.3
         # model settings
         self.hidden_dim = 128
@@ -166,8 +166,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
 if __name__ == "__main__":
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
-    data_start = 0
-    data_middle = total_data_points-30
+    data_start = total_data_points-20
+    data_middle = total_data_points-1
     data_end = total_data_points
     pre_data = '2025-03-07'
     fun_train_predict(data_start, data_middle, data_end, pre_data)

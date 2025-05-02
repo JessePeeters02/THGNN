@@ -202,9 +202,9 @@ def gpu_info():
 """ aanroepen van alle testfuncties"""
 # check_pickles(3, "data_train_predict_DSE_noknn2", 7)
 # check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
-check_labelsvsprediction(1, "data_train_predict_DSE_noknn2", 9)
+# check_labelsvsprediction(1, "data_train_predict_DSE_noknn2", 9)
 # check_pickles(30, "data_train_predict", 20)
 # check_csi300()
-# memory_info()
-# cpu_info()
-# gpu_info()
+memory_info()
+cpu_info()
+gpu_info()

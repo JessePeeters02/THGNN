@@ -130,8 +130,8 @@ class StockHeteGAT(nn.Module):
                                               hidden_size=hidden_dim,
                                               act=nn.Tanh())
         self.predictor = nn.Sequential(
-            nn.Linear(hidden_dim, 1),
-            nn.Sigmoid()
+            nn.Linear(hidden_dim, 1)#,
+            #nn.Sigmoid()
         )
 
         for m in self.modules():
