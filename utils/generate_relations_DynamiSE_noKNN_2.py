@@ -24,7 +24,7 @@ raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2_gpu")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots_testcosinecorrelation")
+snapshot_path = os.path.join(data_path, "intermediate_snapshots_gru")
 os.makedirs(snapshot_path, exist_ok=True)
 data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu")
 os.makedirs(data_train_predict_path, exist_ok=True)
@@ -41,7 +41,7 @@ hidden_dim = 64
 num_epochs = 10
 threshold = 0.6
 sim_threshold_pos = 0.6
-sim_threshold_neg = -0.6
+sim_threshold_neg = -0.4
 min_neighbors = 5
 restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 relevance_threshold = 0
@@ -484,7 +484,8 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
     confirmed_edges = set()
     attempted_edges = defaultdict(set)
 
-    for j in tqdm(range(num_nodes), desc="triangles"):
+    # for j in tqdm(range(num_nodes), desc="triangles"):
+    for j in range(num_nodes):
         neighbors = adj_pos[j] | adj_neg[j]
         for i, k in itertools.combinations(neighbors, 2):
             if i == k:
@@ -689,7 +690,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
         snapshots.append({
             'date': current_date,
-            'features': torch.FloatTensor(feature_matrix),
+            'features': torch.FloatTensor(feature_matrix).to(device),
             'pos_edges_info': dict(edge_info_pos),
             'neg_edges_info': dict(edge_info_neg),
             'tickers': unique_stocks,
@@ -753,9 +754,9 @@ def main1_generate():
             neg_edges_tensor = edge_info_to_tensor(snapshot['neg_edges_info']).to(device)
             t = torch.tensor([0.0, 1.0], device=device)
 
-            print("\n", snapshot['date'])
-            print("Input features stats - min:", features.min(), "max:", features.max())
-            print("pos edge shape: ", pos_edges_tensor.shape, "\nneg edge shape: ", neg_edges_tensor.shape)
+            # print("\n", snapshot['date'])
+            # print("Input features stats - min:", features.min(), "max:", features.max())
+            # print("pos edge shape: ", pos_edges_tensor.shape, "\nneg edge shape: ", neg_edges_tensor.shape)
 
             with torch.autograd.set_detect_anomaly(True):
                 embeddings = model(
@@ -798,10 +799,10 @@ def main1_load():
     for snapshot in tqdm(snapshots, desc="Generating outputs"):
         with torch.no_grad():
             N = len(snapshot['tickers'])
-            pos_edges_tensor = edge_info_to_tensor(snapshot['pos_edges_info'])
-            neg_edges_tensor = edge_info_to_tensor(snapshot['neg_edges_info'])
-            pos_adj = edges_to_adj_matrix(pos_edges_tensor, N)
-            neg_adj = edges_to_adj_matrix(neg_edges_tensor, N)
+            pos_edges_tensor = edge_info_to_tensor(snapshot['pos_edges_info']).to(device)
+            neg_edges_tensor = edge_info_to_tensor(snapshot['neg_edges_info']).to(device)
+            pos_adj = edges_to_adj_matrix(pos_edges_tensor, N).to(device)
+            neg_adj = edges_to_adj_matrix(neg_edges_tensor, N).to(device)
 
             end_date = snapshot['date']
             end_idx = date_to_idx[end_date]
