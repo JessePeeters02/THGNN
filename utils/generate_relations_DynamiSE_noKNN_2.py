@@ -1,4 +1,3 @@
-# commit om 11u55
 import torch
 import torch.nn as nn
 from torch_geometric.nn import GCNConv
@@ -11,7 +10,6 @@ import os
 import itertools
 from collections import defaultdict
 import torch.nn.functional as F
-import psutil
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Device: {device}")
@@ -66,13 +64,13 @@ class EdgeAgingManager:
                 'last_update': current_date
             }
 
-    def prune_edges(self, edge_info, current_date, close_data):
+    def prune_edges(self, edge_info, current_date, price_data):
         to_delete = []
         for (src, dst), info in edge_info.items():
             age = self._calculate_age(info['last_update'], current_date)
             if (age >= self.max_age):
-                vec_i = close_data[src]
-                vec_k = close_data[dst]
+                vec_i = price_data[src]
+                vec_k = price_data[dst]
                 sim = cosine_similarity(vec_i, vec_k)
 
                 # Get the edge score to determine if it's positive or negative
@@ -105,8 +103,32 @@ def edge_info_to_tensor(edge_info):
     edges = list(edge_info.keys())
     return torch.LongTensor(list(zip(*edges))).to(device)
 
+def warn_nodes_without_neighbors(adj_pos, adj_neg, num_nodes, snapshot_date=None):
+    all_nodes = set(range(num_nodes))
+
+    nodes_with_pos = set(adj_pos.keys())
+    nodes_with_neg = set(adj_neg.keys())
+
+    nodes_without_pos = all_nodes - nodes_with_pos
+    nodes_without_neg = all_nodes - nodes_with_neg
+
+    date_str = snapshot_date if snapshot_date else "unknown"
+
+    if nodes_without_pos:
+        print(f"[WARN] Snapshot {date_str}: {len(nodes_without_pos)} nodes hebben GEEN positieve buren (bv. {list(nodes_without_pos)[:5]})")
+    if nodes_without_neg:
+        print(f"[WARN] Snapshot {date_str}: {len(nodes_without_neg)} nodes hebben GEEN negatieve buren (bv. {list(nodes_without_neg)[:5]})")
+    isolated_nodes = all_nodes - (nodes_with_pos | nodes_with_neg)
+    if isolated_nodes:
+        print(f"[WARN] Snapshot {date_str}: {len(isolated_nodes)} nodes hebben GEEN buren (positief noch negatief)")
+
+
 def cosine_similarity(vec1, vec2):
-    return F.cosine_similarity(vec1.unsqueeze(0), vec2.unsqueeze(0)).item()
+    cos = []
+    for i in range(vec1.shape[0]):
+        sim = F.cosine_similarity(vec1[i].unsqueeze(0), vec2[i].unsqueeze(0)).item()
+        cos.append(sim)
+    return np.mean(cos)
 
 def pearson_correlation(vec1, vec2):
     return np.corrcoef(vec1, vec2)[0, 1]
@@ -150,14 +172,19 @@ class DynamiSE(nn.Module):
         self.hidden_dim = hidden_dim
 
         self.feature_encoder = nn.Linear(num_features, hidden_dim).to(device)
+        self.feature_norm = nn.LayerNorm(hidden_dim)
 
         # Positieve en negatieve convoluties
         self.pos_conv = GCNConv(hidden_dim, hidden_dim).to(device)
         self.neg_conv = GCNConv(hidden_dim, hidden_dim).to(device)
 
+        self.pair_norm = nn.LayerNorm(hidden_dim)
+        self.concat_norm = nn.LayerNorm(2 * hidden_dim) 
+
         # Combinatiefunctie Ψ
         self.psi = nn.Sequential(
             nn.Linear(2 * hidden_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim, eps=1e-6),
             nn.ReLU()
         ).to(device)
 
@@ -173,8 +200,8 @@ class DynamiSE(nn.Module):
         
         # print(x.shape)
         x = x.to(device)
-        h = self.feature_encoder(x)
-        print(f"\nFeature encoder out - mean: {h.mean().item():.4f}, std: {h.std().item():.4f}")
+        h = self.feature_norm(self.feature_encoder(x))
+        # print(f"\nFeature encoder out - mean: {h.mean().item():.4f}, std: {h.std().item():.4f}")
         # print(h.shape)
         if torch.isnan(h).any() or torch.isinf(h).any():
             print(f"h bevat NaN of Inf op snapshot {self.snapshot_date if hasattr(self, 'snapshot_date') else '??'}")
@@ -189,7 +216,7 @@ class DynamiSE(nn.Module):
                rtol=1e-3,
                atol=1e-4,
                options={'max_num_steps': 100})[1]
-        print(f"ODE out - mean: {h.mean().item():.4f}, std: {h.std().item():.4f}")
+        # print(f"ODE out - mean: {h.mean().item():.4f}, std: {h.std().item():.4f}")
         return h
 
     def predict_edge_weight(self, h, edge_index, combine_method='hadamard'):
@@ -197,9 +224,9 @@ class DynamiSE(nn.Module):
         h_src, h_dst = h[src], h[dst]
         
         if combine_method == 'hadamard':
-            h_pair = h_src * h_dst
+            h_pair = self.pair_norm(h_src * h_dst)
         elif combine_method == 'concat':
-            h_pair = torch.cat([h_src, h_dst], dim=1)
+            h_pair = self.concat_norm(torch.cat([h_src, h_dst], dim=1))
         elif combine_method == 'average':
             h_pair = (h_src + h_dst) / 2
         elif combine_method == 'subtract':
@@ -207,29 +234,27 @@ class DynamiSE(nn.Module):
         else:
             raise ValueError("Ongeldige combinatiemethode")
         
-        h_pair = F.layer_norm(h_pair, h_pair.shape[1:])
         return torch.tanh(self.predictor(h_pair).squeeze())
-        # return self.predictor(h_pair).squeeze()
 
     def full_loss(self, h, pos_edges, neg_edges, alpha=0.1, beta=0.001):
         # Reconstructieverlies (RMSE)
 
         loss_pos = self.edge_loss(h, pos_edges, +1)
         loss_neg = self.edge_loss(h, neg_edges, -1)
-        print(f"loss_pos range: [{loss_pos.min().item():.4f}, {loss_pos.max().item():.4f}]")
-        print(f"loss_neg range: [{loss_neg.min().item():.4f}, {loss_neg.max().item():.4f}]")
+        # print(f"loss_pos range: [{loss_pos.min().item():.4f}, {loss_pos.max().item():.4f}]")
+        # print(f"loss_neg range: [{loss_neg.min().item():.4f}, {loss_neg.max().item():.4f}]")
         recon_loss = loss_pos + loss_neg
         # print(loss_pos.shape())
         # Teken-constraint (paper Eq.7)
         w_hat_pos = self.predict_edge_weight(h, pos_edges)
         w_hat_neg = self.predict_edge_weight(h, neg_edges)
 
-        print(f"w_hat_pos range: [{w_hat_pos.min().item():.4f}, {w_hat_pos.max().item():.4f}]")
-        print(f"w_hat_neg range: [{w_hat_neg.min().item():.4f}, {w_hat_neg.max().item():.4f}]")
+        # print(f"w_hat_pos range: [{w_hat_pos.min().item():.4f}, {w_hat_pos.max().item():.4f}]")
+        # print(f"w_hat_neg range: [{w_hat_neg.min().item():.4f}, {w_hat_neg.max().item():.4f}]")
         log_pos = torch.log(1 + w_hat_pos)
         log_neg = torch.log(1 - w_hat_neg)
-        print(f"log_pos range: [{log_pos.min().item():.4f}, {log_pos.max().item():.4f}]")
-        print(f"log_neg range: [{log_neg.min().item():.4f}, {log_neg.max().item():.4f}]")
+        # print(f"log_pos range: [{log_pos.min().item():.4f}, {log_pos.max().item():.4f}]")
+        # print(f"log_neg range: [{log_neg.min().item():.4f}, {log_neg.max().item():.4f}]")
 
         sign_loss = -alpha * (
             torch.log(1 + w_hat_pos).mean() + 
@@ -241,7 +266,7 @@ class DynamiSE(nn.Module):
         # Regularisatie
         reg_loss = beta * h.norm(p=2).mean()
         total_loss = recon_loss + sign_loss + reg_loss
-        print(f"Loss components - recon: {recon_loss.item():.4f}, sign: {sign_loss.item():.4f}, reg: {reg_loss.item():.4f}")
+        # print(f"Loss components - recon: {recon_loss.item():.4f}, sign: {sign_loss.item():.4f}, reg: {reg_loss.item():.4f}")
         if torch.isnan(total_loss):
             print("NaN in loss! Breaking down components:")
             print("recon_loss:", recon_loss)
@@ -255,8 +280,8 @@ class DynamiSE(nn.Module):
         w_true = torch.full_like(w_hat, sign, dtype=torch.float32)
         recon = (w_hat - w_true).pow(2)
         log_term = torch.log1p(torch.exp(-w_true * w_hat))
-        print(f"recon range: [{recon.min().item():.4f}, {recon.max().item():.4f}]")
-        print(f"log_term range: [{log_term.min().item():.4f}, {log_term.max().item():.4f}]")
+        # print(f"recon range: [{recon.min().item():.4f}, {recon.max().item():.4f}]")
+        # print(f"log_term range: [{log_term.min().item():.4f}, {log_term.max().item():.4f}]")
         return recon.mean() + log_term.mean()
 
 class ODEFunc(nn.Module):
@@ -267,8 +292,6 @@ class ODEFunc(nn.Module):
         self.psi = psi
         self.edge_index_pos = None
         self.edge_index_neg = None
-        self.psi_pos = nn.Linear(hidden_dim, hidden_dim)
-        self.psi_neg = nn.Linear(hidden_dim, hidden_dim)
 
         # Stabilisatielagen
         self.layer_norm = nn.LayerNorm(hidden_dim)
@@ -291,8 +314,8 @@ class ODEFunc(nn.Module):
         h_neg = self.dropout(h_neg)
 
         # Lineaire combinatie (paper Eq.5)
-        delta_h = self.psi_pos(h_pos) + self.psi_neg(h_neg)  # Aparte lineaire lagen
-        # print("   ", "max: ", delta_h.max().item(), "min: ", delta_h.min().item())
+        delta_h = self.psi(torch.cat([h_pos, h_neg], dim=1))
+        # print(f"ODE delta_h range: [{delta_h.min():.2f}, {delta_h.max():.2f}]")
         return delta_h.clamp(-50, 50)
 
 
@@ -481,7 +504,7 @@ def build_initial_edges_via_correlation(window_data, threshold, window_data_raw,
     return pos_edges, neg_edges
 """
 
-def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data):#, close_data_raw):
+def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, price_data, current_date):#, close_data_raw):
     adj_pos = defaultdict(set)
     adj_neg = defaultdict(set)
 
@@ -492,6 +515,8 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
     if prev_neg_edges.numel() > 0:
         for src, dst in prev_neg_edges.T.tolist():
             adj_neg[src].add(dst)
+
+    warn_nodes_without_neighbors(adj_pos, adj_neg, num_nodes, snapshot_date=current_date)
 
     pos_edges_set = set()
     neg_edges_set = set()
@@ -534,8 +559,8 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, cl
                     continue  # deze context al geprobeerd
                 attempted_edges[edge_key].add(signature)
 
-                vec_i = close_data[i]
-                vec_k = close_data[k]
+                vec_i = price_data[i]
+                vec_k = price_data[k]
                 sim = cosine_similarity(vec_i, vec_k)
 
                 # Balance theory toepassen
@@ -658,8 +683,12 @@ def prepare_dynamic_data(stock_data, window_size=20):
     for i in tqdm(range(window_size, len(date_to_idx)), desc="Preparing snapshots"):
         current_date = all_dates[i]
         if current_date in already_done:
+            bool_eerste = False
             with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'rb') as f:
-                snapshots.append(pickle.load(f))
+                loaded_snapshot = pickle.load(f)
+                snapshots.append(loaded_snapshot)
+                edge_info_pos = dict(loaded_snapshot['pos_edges_info'])
+                edge_info_neg = dict(loaded_snapshot['neg_edges_info'])
             continue
 
         window_dates = all_dates[i-window_size:i]
@@ -672,7 +701,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             if len(stock_data_current) != 1:
                 print(f"Fout bij feature matrix van {stock} op {current_date}")
             feature_matrix.append(stock_data_current[feature_cols1].values[0])
-        feature_matrix = np.array(feature_matrix)
+        feature_matrix = torch.FloatTensor(np.array(feature_matrix)).to(device)
 
         if bool_eerste:
             pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, threshold)
@@ -682,20 +711,21 @@ def prepare_dynamic_data(stock_data, window_size=20):
             for src, dst in neg_pairs.T.tolist():
                 edge_info_neg[(src, dst)] = {'created_at': current_date, 'last_score': -1.0, 'last_update': current_date}
         else:
-            close_df = []
+            price_df = []
             for stock in unique_stocks:
                 stockdf = window_data[window_data['Stock'] == stock]
-                close_df.append(stockdf['Close'].values)
-            close_df = np.array(close_df)
+                price_df.append(stockdf[feature_cols1].values)
+            price_df = torch.FloatTensor(np.array(price_df))
 
-            aging_manager.prune_edges(edge_info_pos, current_date, torch.FloatTensor(close_df))
-            aging_manager.prune_edges(edge_info_neg, current_date, torch.FloatTensor(close_df))
+            aging_manager.prune_edges(edge_info_pos, current_date, price_df)
+            aging_manager.prune_edges(edge_info_neg, current_date, price_df)
 
             pos_pairs, neg_pairs = build_edges_via_balance_theory(
                 edge_info_to_tensor(edge_info_pos),
                 edge_info_to_tensor(edge_info_neg),
                 len(unique_stocks),
-                torch.FloatTensor(close_df)
+                price_df,
+                current_date
             )
 
             for src, dst in pos_pairs.T.tolist():
@@ -705,7 +735,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
         snapshots.append({
             'date': current_date,
-            'features': torch.FloatTensor(feature_matrix).to(device),
+            'features': feature_matrix.detach().cpu(),
             'pos_edges_info': dict(edge_info_pos),
             'neg_edges_info': dict(edge_info_neg),
             'tickers': unique_stocks,
@@ -729,6 +759,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
 def edge_prediction_loss(h, edge_index, sign, model):
     """Loss op basis van voorspelde ŵ_{ij} tegenover ground truth sign."""
     w_hat = model.predict_edge_weight(h, edge_index)
+    # print(f"w_hat range: [{w_hat.min():.2f}, {w_hat.max():.2f}]")
     w_true = torch.full_like(w_hat, sign, dtype=torch.float32)
     return ((w_hat - w_true) ** 2).mean()
 
@@ -764,7 +795,7 @@ def main1_generate():
         for snapshot in tqdm(snapshots, desc=f"Epoch {epoch+1} van de {num_epochs}"):
             optimizer.zero_grad()
 
-            features = snapshot['features'].to(device)
+            features = snapshot['features'].float().to(device)
             pos_edges_tensor = edge_info_to_tensor(snapshot['pos_edges_info']).to(device)
             neg_edges_tensor = edge_info_to_tensor(snapshot['neg_edges_info']).to(device)
             t = torch.tensor([0.0, 1.0], device=device)
@@ -773,22 +804,22 @@ def main1_generate():
             # print("Input features stats - min:", features.min(), "max:", features.max())
             # print("pos edge shape: ", pos_edges_tensor.shape, "\nneg edge shape: ", neg_edges_tensor.shape)
 
-            with torch.autograd.set_detect_anomaly(True):
-                embeddings = model(
-                    features,
-                    pos_edges_tensor,
-                    neg_edges_tensor,
-                    t
-                )
-                loss = model.full_loss(embeddings, pos_edges_tensor, neg_edges_tensor)
-                if torch.isnan(loss):
-                    print("NaN loss detected!")
-                    for name, param in model.named_parameters():
-                        if torch.isnan(param.grad).any():
-                            print(f"NaN in gradients of {name}")
-                    raise ValueError("NaN in loss")
-                loss.backward()
-                optimizer.step()
+            # with torch.autograd.set_detect_anomaly(True):
+            embeddings = model(
+                features,
+                pos_edges_tensor,
+                neg_edges_tensor,
+                t
+            )
+            loss = model.full_loss(embeddings, pos_edges_tensor, neg_edges_tensor)
+            if torch.isnan(loss):
+                print("NaN loss detected!")
+                for name, param in model.named_parameters():
+                    if torch.isnan(param.grad).any():
+                        print(f"NaN in gradients of {name}")
+                raise ValueError("NaN in loss")
+            loss.backward()
+            optimizer.step()
 
             epoch_losses.append(loss.item())
 
