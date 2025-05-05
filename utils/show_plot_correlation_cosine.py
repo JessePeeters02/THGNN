@@ -9,12 +9,14 @@ import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
 from sklearn.linear_model import LinearRegression
 from scipy.stats import pearsonr
+from fastdtw import fastdtw
 from sklearn.preprocessing import StandardScaler
 scaler = StandardScaler()
 
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data", "testbatch2")
+daily_data_log_path = os.path.join(data_path, "normaliseddailydata_log")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 
@@ -30,8 +32,11 @@ def cosine_similarity(vec1, vec2):
     vec2 = torch.tensor(vec2, dtype=torch.float32)
     return F.cosine_similarity(vec1.unsqueeze(0), vec2.unsqueeze(0)).item()
 
-def pearson_correlation(vec1, vec2):
+def dtw_similarity(series1, series2):
+    distance, _ = fastdtw(series1, series2)
+    return 1 / (1 + distance)
 
+def pearson_correlation(vec1, vec2):
     return np.corrcoef(vec1, vec2)[0, 1]
 
 def load_all_stocks(stock_data_path):
@@ -68,18 +73,23 @@ def load_raw_stocks(raw_stock_path):
 
 
 stock_data = load_all_stocks(daily_data_path)
+stock_log_data = load_all_stocks(daily_data_log_path)
 raw_data = load_raw_stocks(raw_data_path)
 all_dates = sorted(stock_data['Date'].unique())
 unique_stocks = sorted(stock_data['Stock'].unique())
 
 close_prices_nor = []
+close_prices_log = []
 close_prices_raw = []
 close_prices_raw_norm = []
 
 for stock in unique_stocks:
     df_nor = stock_data[stock_data['Stock'] == stock].sort_values('Date')
     close_prices_nor.append(df_nor['Close'].values)
-    
+
+    df_log = stock_log_data[stock_log_data['Stock'] == stock].sort_values('Date')
+    close_prices_log.append(df_log['Close'].values)
+
     if stock in raw_data:
         df_raw = raw_data[stock].sort_values('Date')
         close_prices_raw.append(df_raw['Close'].values)
@@ -96,26 +106,31 @@ for stock in unique_stocks:
         continue
 
 close_prices_nor = np.array(close_prices_nor)
+close_prices_log = np.array(close_prices_log)
 close_prices_raw = np.array(close_prices_raw)
 close_prices_raw_norm = np.array(close_prices_raw_norm)
 
 # Sanity check
 print(f"Genormaliseerde shape: {close_prices_nor.shape}")
+print(f"log return shape: {close_prices_log.shape}")
 print(f"Ruwe shape: {close_prices_raw.shape}")
 print(f"Genormaliseerde shape zonder rolling window: {close_prices_raw_norm.shape}")
 
 # Verzamel cosine similarities en correlaties
 cos_raws, cor_raws = [], []
 cos_nors, cor_nors = [], []
+cos_logs, cor_logs = [], []
+dtw_logs = []
 cos_raw_norms, cor_raw_norms = [], []
 
 for i in range(close_prices_raw.shape[0]):
     for j in range(i+1, close_prices_raw.shape[0]):
         vec_raw_i, vec_raw_j = close_prices_raw[i], close_prices_raw[j]
         vec_nor_i, vec_nor_j = close_prices_nor[i], close_prices_nor[j]
+        vec_log_i, vec_log_j = close_prices_log[i], close_prices_log[j]
         vec_raw_norm_i, vec_raw_norm_j = close_prices_raw_norm[i], close_prices_raw_norm[j]
         
-        if (len(vec_raw_i) != len(vec_raw_j)) or (len(vec_nor_i) != len(vec_nor_j)) or (len(vec_raw_norm_i) != len(vec_raw_norm_j)):
+        if (len(vec_raw_i) != len(vec_raw_j)) or (len(vec_nor_i) != len(vec_nor_j)) or (len(vec_raw_norm_i) != len(vec_raw_norm_j)) or (len(vec_log_i) != len(vec_log_j)):
             print("dees is zware error")
             continue
         
@@ -126,11 +141,14 @@ for i in range(close_prices_raw.shape[0]):
         # cos_nor = cosine_similarity(vec_nor_i, vec_nor_j)
         cos_nor = sklearn_cosine_similarity(vec_nor_i.reshape(1, -1), vec_nor_j.reshape(1, -1))[0,0]
         cor_nor = pearson_correlation(vec_nor_i, vec_nor_j)
+        # cos_log = cosine_similarity(vec_log_i, vec_log_j)
+        cos_log = sklearn_cosine_similarity(vec_log_i.reshape(1, -1), vec_log_j.reshape(1, -1))[0,0]
+        cor_log = pearson_correlation(vec_log_i, vec_log_j)
         # cos_raw_norm = cosine_similarity(vec_raw_norm_i, vec_raw_norm_j)
         cos_raw_nor = sklearn_cosine_similarity(vec_raw_norm_i.reshape(1, -1), vec_raw_norm_j.reshape(1, -1))[0,0]
         cor_raw_nor = pearson_correlation(vec_raw_norm_i, vec_raw_norm_j)
-
-        if any(np.isnan(x) for x in [cos_raw, cor_raw, cos_nor, cor_nor, cos_raw_nor, cor_raw_nor]):
+        dtw_log = dtw_similarity(vec_log_i, vec_log_j)
+        if any(np.isnan(x) for x in [cos_raw, cor_raw, cos_nor, cor_nor, cos_raw_nor, cor_raw_nor, cos_log, cor_log, dtw_log]):
             print("zware error dit hier mag niet!")
             continue
 
@@ -138,18 +156,26 @@ for i in range(close_prices_raw.shape[0]):
         cor_raws.append(cor_raw)
         cos_nors.append(cos_nor)
         cor_nors.append(cor_nor)
+        cos_logs.append(cos_log)
+        cor_logs.append(cor_log)
         cos_raw_norms.append(cos_raw_nor)
         cor_raw_norms.append(cor_raw_nor)
+        dtw_logs.append(dtw_log)
 
 # Plotten
-fig, axes = plt.subplots(3, 2, figsize=(14, 12))
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
 plots = [
+    (cor_logs, cor_raws, 'correlatie (logreturns)', 'Correlation (raw)'),
     (cos_raws, cor_raws, 'Cosine (raw)', 'Correlation (raw)'),
     (cos_raws, cor_nors, 'Cosine (raw)', 'Correlation (normalized)'),
     (cos_nors, cor_raws, 'Cosine (normalized)', 'Correlation (raw)'),
-    (cos_nors, cor_nors, 'Cosine (normalized)', 'Correlation (normalized)'),
-    (cos_raw_norms, cor_raws, 'Cosine (raw normalized)', 'Correlation (raw)'),
-    (cos_raw_norms, cor_nors, 'Cosine (raw normalized)', 'Correlation (normalized)'),
+    # (cos_nors, cor_nors, 'Cosine (normalized)', 'Correlation (normalized)'),
+    # (cos_logs, cor_raws, 'Cosine (logreturns)', 'Correlation (raw)'),
+    # (cos_logs, cor_nors, 'Cosine (logreturns)', 'Correlation (normalized)'),
+    # (dtw_logs, cor_raws, 'dtw (logreturns)', 'Correlation (raw)'),
+    # (dtw_logs, cor_nors, 'dtw (logreturns)', 'Correlation (normalized)'),
+    # (cos_raw_norms, cor_raws, 'Cosine (raw normalized)', 'Correlation (raw)'),
+    # (cos_raw_norms, cor_nors, 'Cosine (raw normalized)', 'Correlation (normalized)'),
 ]
 
 for ax, (x, y, xlabel, ylabel) in zip(axes.flatten(), plots):
