@@ -19,14 +19,16 @@ base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidi
 print(base_path)
 data_path = os.path.join(base_path, "data", "testbatch2")
 print(data_path)
-relation_path = os.path.join(data_path, "relations")
+relation_path = os.path.join(data_path, "relations_oldway")
 print(relation_path)
 raw_data_path = os.path.join(data_path, "stockdata")
 print(raw_data_path)
 stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
 print(stock_data_path)
-os.makedirs(os.path.join(data_path, "data_train_predict_oldway"), exist_ok=True)
-os.makedirs(os.path.join(data_path, "daily_stock_oldway"), exist_ok=True)
+data_train_predict_path = os.path.join(data_path, "data_train_predict_oldway")
+os.makedirs(data_train_predict_path, exist_ok=True)
+daily_stock_path = os.path.join(data_path, "daily_stock_oldway")
+os.makedirs(daily_stock_path, exist_ok=True)
 
 
 # Functie om de CSV-bestanden in te lezen en om te zetten naar een DataFrame
@@ -284,10 +286,10 @@ def fun(iend, enddt, stock_data, pdn, min_neighbors):
         'mask': [True] * len(labels)  # Alle samples zijn geldig
     }
 
-    with open(os.path.join(data_path, "data_train_predict", f"{enddt}.pkl"), 'wb') as f:
+    with open(os.path.join(data_train_predict_path, f"{enddt}.pkl"), 'wb') as f:
         pickle.dump(output, f)
     df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
-    df.to_csv(os.path.join(data_path, "daily_stock", f"{enddt}.csv"), header=True, index=False, encoding='utf_8_sig')
+    df.to_csv(os.path.join(daily_stock_path, f"{enddt}.csv"), header=True, index=False, encoding='utf_8_sig')
 
 # Voorbeeld van hoe je de functie kunt aanroepen
 # fun('2022-11-30', '2022-11-01', '2022-11-30', stock_data)
