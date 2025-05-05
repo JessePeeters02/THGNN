@@ -25,8 +25,8 @@ raw_data_path = os.path.join(data_path, "stockdata")
 print(raw_data_path)
 stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
 print(stock_data_path)
-os.makedirs(os.path.join(data_path, "data_train_predict"), exist_ok=True)
-os.makedirs(os.path.join(data_path, "daily_stock"), exist_ok=True)
+os.makedirs(os.path.join(data_path, "data_train_predict_oldway"), exist_ok=True)
+os.makedirs(os.path.join(data_path, "daily_stock_oldway"), exist_ok=True)
 
 
 # Functie om de CSV-bestanden in te lezen en om te zetten naar een DataFrame

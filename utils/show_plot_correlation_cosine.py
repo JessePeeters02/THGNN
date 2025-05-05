@@ -22,7 +22,8 @@ raw_data_path = os.path.join(data_path, "stockdata")
 
 # Hyperparameters
 feature_cols = ['Open', 'High', 'Low', 'Close']#, 'Volume']
-restrict_last_n_days= 20 # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
+window = 20
+restrict_last_n_days= 107 # None voor alles of 20 voor 20-day window
 
 
 def cosine_similarity(vec1, vec2):
@@ -44,14 +45,15 @@ def load_all_stocks(stock_data_path):
     for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
         if file.endswith('.csv'):
             df = pd.read_csv(os.path.join(stock_data_path, file))
-            all_stock_data.append(df[['Date', 'Stock', 'Open', 'High', 'Low', 'Close', 'Volume']])
+            all_stock_data.append(df[['Date', 'Stock', 'Open', 'High', 'Low', 'Close']])
     all_stock_data = pd.concat(all_stock_data, ignore_index=True)
     print(all_stock_data.head()) # kleine test om te zien of data deftig is ingeladen
 
         # Enkel laatste X dagen
     if restrict_last_n_days is not None:
         all_dates = sorted(all_stock_data['Date'].unique())
-        last_dates = all_dates[-restrict_last_n_days:]
+        last_dates = all_dates[-restrict_last_n_days:-(restrict_last_n_days-window)]
+        print(last_dates)
         all_stock_data = all_stock_data[all_stock_data['Date'].isin(last_dates)]
 
     print(all_stock_data.head())  # test of data deftig is
@@ -66,9 +68,10 @@ def load_raw_stocks(raw_stock_path):
         df = pd.read_csv(os.path.join(raw_stock_path, file), parse_dates=['Date'])
         if restrict_last_n_days is not None:
             all_dates = sorted(df['Date'].unique())
-            last_dates = all_dates[-restrict_last_n_days:]
+            last_dates = all_dates[-restrict_last_n_days:-(restrict_last_n_days-window)]
             df = df[df['Date'].isin(last_dates)]
         raw_data[stock_name] = df
+    print(last_dates)
     return raw_data
 
 
@@ -83,10 +86,13 @@ close_prices_log = []
 close_prices_raw = []
 close_prices_raw_norm = []
 
+feature_vectors_all = []
+feature_vectors = {feat: [] for feat in feature_cols}
+
 for stock in unique_stocks:
     df_nor = stock_data[stock_data['Stock'] == stock].sort_values('Date')
     close_prices_nor.append(df_nor['Close'].values)
-
+    
     df_log = stock_log_data[stock_log_data['Stock'] == stock].sort_values('Date')
     close_prices_log.append(df_log['Close'].values)
 
@@ -96,6 +102,10 @@ for stock in unique_stocks:
     else:
         print(f"Warning: {stock} not found in raw_data dict.")
         continue
+
+    for feat in feature_cols:
+        feature_vectors[feat].append(df_nor[feat].values)
+    feature_vectors_all.append(np.concatenate([df_nor[feat].values for feat in feature_cols]))
 
 for stock in unique_stocks:
     if stock in raw_data:
@@ -118,57 +128,90 @@ print(f"Genormaliseerde shape zonder rolling window: {close_prices_raw_norm.shap
 
 # Verzamel cosine similarities en correlaties
 cos_raws, cor_raws = [], []
-cos_nors, cor_nors = [], []
-cos_logs, cor_logs = [], []
-dtw_logs = []
-cos_raw_norms, cor_raw_norms = [], []
+# cos_nors, cor_nors = [], []
+# cos_logs, cor_logs = [], []
+# dtw_logs = []
+# cos_raw_norms, cor_raw_norms = [], []
 
 for i in range(close_prices_raw.shape[0]):
     for j in range(i+1, close_prices_raw.shape[0]):
-        vec_raw_i, vec_raw_j = close_prices_raw[i], close_prices_raw[j]
-        vec_nor_i, vec_nor_j = close_prices_nor[i], close_prices_nor[j]
-        vec_log_i, vec_log_j = close_prices_log[i], close_prices_log[j]
-        vec_raw_norm_i, vec_raw_norm_j = close_prices_raw_norm[i], close_prices_raw_norm[j]
+        # vec_raw_i, vec_raw_j = close_prices_raw[i], close_prices_raw[j]
+#         vec_nor_i, vec_nor_j = close_prices_nor[i], close_prices_nor[j]
+#         vec_log_i, vec_log_j = close_prices_log[i], close_prices_log[j]
+#         vec_raw_norm_i, vec_raw_norm_j = close_prices_raw_norm[i], close_prices_raw_norm[j]
         
-        if (len(vec_raw_i) != len(vec_raw_j)) or (len(vec_nor_i) != len(vec_nor_j)) or (len(vec_raw_norm_i) != len(vec_raw_norm_j)) or (len(vec_log_i) != len(vec_log_j)):
-            print("dees is zware error")
-            continue
+#         if (len(vec_raw_i) != len(vec_raw_j)) or (len(vec_nor_i) != len(vec_nor_j)) or (len(vec_raw_norm_i) != len(vec_raw_norm_j)) or (len(vec_log_i) != len(vec_log_j)):
+#             print("dees is zware error")
+#             continue
         
-        # Bereken alle metrics
-        # cos_raw = cosine_similarity(vec_raw_i, vec_raw_j)
-        cos_raw = sklearn_cosine_similarity(vec_raw_i.reshape(1, -1), vec_raw_j.reshape(1, -1))[0,0]
-        cor_raw = pearson_correlation(vec_raw_i, vec_raw_j)
-        # cos_nor = cosine_similarity(vec_nor_i, vec_nor_j)
-        cos_nor = sklearn_cosine_similarity(vec_nor_i.reshape(1, -1), vec_nor_j.reshape(1, -1))[0,0]
-        cor_nor = pearson_correlation(vec_nor_i, vec_nor_j)
-        # cos_log = cosine_similarity(vec_log_i, vec_log_j)
-        cos_log = sklearn_cosine_similarity(vec_log_i.reshape(1, -1), vec_log_j.reshape(1, -1))[0,0]
-        cor_log = pearson_correlation(vec_log_i, vec_log_j)
-        # cos_raw_norm = cosine_similarity(vec_raw_norm_i, vec_raw_norm_j)
-        cos_raw_nor = sklearn_cosine_similarity(vec_raw_norm_i.reshape(1, -1), vec_raw_norm_j.reshape(1, -1))[0,0]
-        cor_raw_nor = pearson_correlation(vec_raw_norm_i, vec_raw_norm_j)
-        dtw_log = dtw_similarity(vec_log_i, vec_log_j)
-        if any(np.isnan(x) for x in [cos_raw, cor_raw, cos_nor, cor_nor, cos_raw_nor, cor_raw_nor, cos_log, cor_log, dtw_log]):
-            print("zware error dit hier mag niet!")
-            continue
+#         # Bereken alle metrics
+#         cos_raw = cosine_similarity(vec_raw_i, vec_raw_j)
+#         cos_raw = sklearn_cosine_similarity(vec_raw_i.reshape(1, -1), vec_raw_j.reshape(1, -1))[0,0]
+        # cor_raw = pearson_correlation(vec_raw_i, vec_raw_j)
+#         # cos_nor = cosine_similarity(vec_nor_i, vec_nor_j)
+#         cos_nor = sklearn_cosine_similarity(vec_nor_i.reshape(1, -1), vec_nor_j.reshape(1, -1))[0,0]
+#         cor_nor = pearson_correlation(vec_nor_i, vec_nor_j)
+#         # cos_log = cosine_similarity(vec_log_i, vec_log_j)
+#         cos_log = sklearn_cosine_similarity(vec_log_i.reshape(1, -1), vec_log_j.reshape(1, -1))[0,0]
+#         cor_log = pearson_correlation(vec_log_i, vec_log_j)
+#         # cos_raw_norm = cosine_similarity(vec_raw_norm_i, vec_raw_norm_j)
+#         cos_raw_nor = sklearn_cosine_similarity(vec_raw_norm_i.reshape(1, -1), vec_raw_norm_j.reshape(1, -1))[0,0]
+#         cor_raw_nor = pearson_correlation(vec_raw_norm_i, vec_raw_norm_j)
+#         dtw_log = dtw_similarity(vec_log_i, vec_log_j)
+#         if any(np.isnan(x) for x in [cos_raw, cor_raw, cos_nor, cor_nor, cos_raw_nor, cor_raw_nor, cos_log, cor_log, dtw_log]):
+#             print("zware error dit hier mag niet!")
+#             continue
 
-        cos_raws.append(cos_raw)
-        cor_raws.append(cor_raw)
-        cos_nors.append(cos_nor)
-        cor_nors.append(cor_nor)
-        cos_logs.append(cos_log)
-        cor_logs.append(cor_log)
-        cos_raw_norms.append(cos_raw_nor)
-        cor_raw_norms.append(cor_raw_nor)
-        dtw_logs.append(dtw_log)
+#         cos_raws.append(cos_raw)
+        # cor_raws.append(cor_raw)
+#         cos_nors.append(cos_nor)
+#         cor_nors.append(cor_nor)
+#         cos_logs.append(cos_log)
+#         cor_logs.append(cor_log)
+#         cos_raw_norms.append(cos_raw_nor)
+#         cor_raw_norms.append(cor_raw_nor)
+#         dtw_logs.append(dtw_log)
+        correlations = []
+        for feat in feature_cols:
+            vec_i = feature_vectors[feat][i]
+            vec_j = feature_vectors[feat][j]
+            if len(vec_i) != len(vec_j):
+                continue  # of raise error
+            correlations.append(pearson_correlation(vec_i, vec_j))
+            
+        if correlations:  # check voor lege lijst
+            mean_correlation = np.mean(correlations)
+            cor_raws.append(mean_correlation)
+
+cos_all_features = []
+cosine_per_feature = {feat: [] for feat in feature_cols}
+
+for i in tqdm(range(len(unique_stocks)), desc='calculating everything'):
+    for j in range(i + 1, len(unique_stocks)):
+        # print(f" i: j: {i,j}, {len(feature_vectors_all)}")
+        v_all_i = feature_vectors_all[i]
+        v_all_j = feature_vectors_all[j]
+
+        cos_all = sklearn_cosine_similarity(v_all_i.reshape(1, -1), v_all_j.reshape(1, -1))[0, 0]
+
+        cos_all_features.append(cos_all)
+
+        for feat in feature_cols:
+            vec_feat_i, vec_feat_j = feature_vectors[feat][i], feature_vectors[feat][j]
+            if len(vec_feat_i) != len(vec_feat_j):
+                continue
+            cos_feat = sklearn_cosine_similarity(vec_feat_i.reshape(1, -1), vec_feat_j.reshape(1, -1))[0, 0]
+            cosine_per_feature[feat].append(cos_feat)
+
 
 # Plotten
-fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+fig, axes = plt.subplots(2, 4, figsize=(14, 12))
 plots = [
-    (cor_logs, cor_raws, 'correlatie (logreturns)', 'Correlation (raw)'),
-    (cos_raws, cor_raws, 'Cosine (raw)', 'Correlation (raw)'),
-    (cos_raws, cor_nors, 'Cosine (raw)', 'Correlation (normalized)'),
-    (cos_nors, cor_raws, 'Cosine (normalized)', 'Correlation (raw)'),
+    # (cor_raws, cos_all_features, 'Correlation (raw)', 'Cosine (4 features)'),
+    # (cor_logs, cor_raws, 'correlatie (logreturns)', 'Correlation (raw)'),
+    # (cos_raws, cor_raws, 'Cosine (raw)', 'Correlation (raw)'),
+    # (cos_raws, cor_nors, 'Cosine (raw)', 'Correlation (normalized)'),
+    # (cos_nors, cor_raws, 'Cosine (normalized)', 'Correlation (raw)'),
     # (cos_nors, cor_nors, 'Cosine (normalized)', 'Correlation (normalized)'),
     # (cos_logs, cor_raws, 'Cosine (logreturns)', 'Correlation (raw)'),
     # (cos_logs, cor_nors, 'Cosine (logreturns)', 'Correlation (normalized)'),
@@ -177,6 +220,20 @@ plots = [
     # (cos_raw_norms, cor_raws, 'Cosine (raw normalized)', 'Correlation (raw)'),
     # (cos_raw_norms, cor_nors, 'Cosine (raw normalized)', 'Correlation (normalized)'),
 ]
+for feat in feature_cols:
+    plots.append((
+        cos_all_features, 
+        cosine_per_feature[feat], 
+        "Cosine (Open+High+Low+Close)",
+        f"Cosine ({feat})"
+    ))
+for feat in feature_cols:
+    plots.append((
+        cor_raws, 
+        cosine_per_feature[feat], 
+        "Correlation (raw)",
+        f"Cosine ({feat})"     
+    ))
 
 for ax, (x, y, xlabel, ylabel) in zip(axes.flatten(), plots):
     ax.scatter(x, y, alpha=0.6)

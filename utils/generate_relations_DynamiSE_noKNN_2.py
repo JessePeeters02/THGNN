@@ -12,6 +12,7 @@ from collections import defaultdict
 import torch.nn.functional as F
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cpu') 
 print(f"Device: {device}")
 
 # alle paden relatief aanmaken
@@ -129,9 +130,6 @@ def cosine_similarity(vec1, vec2):
         sim = F.cosine_similarity(vec1[i].unsqueeze(0), vec2[i].unsqueeze(0)).item()
         cos.append(sim)
     return np.mean(cos)
-
-def pearson_correlation(vec1, vec2):
-    return np.corrcoef(vec1, vec2)[0, 1]
 
 def load_all_stocks(stock_data_path):
     all_stock_data = []
@@ -714,9 +712,9 @@ def prepare_dynamic_data(stock_data, window_size=20):
             price_df = []
             for stock in unique_stocks:
                 stockdf = window_data[window_data['Stock'] == stock]
-                price_df.append(stockdf[feature_cols1].values)
+                price_df.append(stockdf[feature_cols1].values.T)
             price_df = torch.FloatTensor(np.array(price_df))
-
+            
             aging_manager.prune_edges(edge_info_pos, current_date, price_df)
             aging_manager.prune_edges(edge_info_neg, current_date, price_df)
 

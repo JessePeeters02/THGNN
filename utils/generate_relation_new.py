@@ -9,7 +9,7 @@ warnings.filterwarnings('ignore')
 
 # Configuration
 # feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
-feature_cols = ['Open', 'High', 'Low', 'Close', 'Turnover']
+feature_cols = ['Open', 'High', 'Low', 'Close']
 window_size = 20  # Window size for correlation calculation
 n_jobs = -1  # Use all available cores (-1)
 
@@ -19,7 +19,7 @@ print(base_path)
 # data_path = os.path.join(base_path, "data")
 data_path = os.path.join(base_path, "data", "testbatch2")
 print(data_path)
-relation_path = os.path.join(data_path, "relations")
+relation_path = os.path.join(data_path, "relations_test")
 os.makedirs(relation_path, exist_ok=True)  # Create the directory if it doesn't exist
 print(relation_path)
 # stock_data_path = os.path.join(data_path, "NASDAQ_per_dag")
