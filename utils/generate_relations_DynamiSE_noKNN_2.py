@@ -150,16 +150,16 @@ def load_all_stocks(stock_data_path):
 
     return all_stock_data
 
-def load_raw_stocks(raw_stock_path):
+def load_raw_stocks(raw_stock_path, all_dates):
     raw_files = [f for f in os.listdir(raw_stock_path) if f.endswith('.csv')]
     raw_data = {}
     for file in tqdm(raw_files, desc="Loading raw data for label creation"):
         stock_name = file.split('.')[0]
         df = pd.read_csv(os.path.join(raw_stock_path, file), parse_dates=['Date'])
         if restrict_last_n_days is not None:
-            all_dates = sorted(df['Date'].unique())
-            last_dates = all_dates[-restrict_last_n_days:]
-            df = df[df['Date'].isin(last_dates)]
+            # all_dates = sorted(df['Date'].unique())
+            # last_dates = all_dates[-restrict_last_n_days:]
+            df = df[df['Date'].isin(all_dates)]
         df = df.reset_index(drop=True)
         raw_data[stock_name] = df[['Date', 'Stock'] + feature_cols1]
     return raw_data
@@ -885,10 +885,10 @@ def main1_load():
 
 # eenmalig inladen van alle data
 stock_data = load_all_stocks(daily_data_path)
-raw_data = load_raw_stocks(raw_data_path)
 all_dates = sorted(stock_data['Date'].unique())
-unique_stocks = sorted(stock_data['Stock'].unique())
 date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
+raw_data = load_raw_stocks(raw_data_path, all_dates)
+unique_stocks = sorted(stock_data['Stock'].unique())
 stock_data = stock_data.sort_values(['Stock', 'Date'])
 snapshots = prepare_dynamic_data(stock_data)
 
