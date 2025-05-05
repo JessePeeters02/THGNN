@@ -644,7 +644,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
         current_date = all_dates[i]
         if current_date in already_done:
             with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'rb') as f:
-                snapshots.append(torch.load(f, map_location=device))
+                snapshots.append(pickle.load(f))
             continue
 
         window_dates = all_dates[i-window_size:i]
