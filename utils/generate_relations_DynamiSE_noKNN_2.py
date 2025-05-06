@@ -10,6 +10,7 @@ import os
 import itertools
 from collections import defaultdict
 import torch.nn.functional as F
+import time
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu') 
@@ -29,7 +30,7 @@ data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu")
 os.makedirs(data_train_predict_path, exist_ok=True)
 daily_stock_path = os.path.join(data_path, "daily_stock_gpu")
 os.makedirs(daily_stock_path, exist_ok=True)
-log_path = os.path.join(data_path, "snapshot_log_gpu.csv")
+log_path = os.path.join(data_path, "snapshot_log_gpu_full.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Hyperparameters
@@ -123,12 +124,17 @@ def warn_nodes_without_neighbors(adj_pos, adj_neg, num_nodes, snapshot_date=None
     if isolated_nodes:
         print(f"[WARN] Snapshot {date_str}: {len(isolated_nodes)} nodes hebben GEEN buren (positief noch negatief)")
 
+    # return (nodes_without_neg|nodes_without_pos)
+    return isolated_nodes
+
 
 def cosine_similarity(vec1, vec2):
     cos = []
     for i in range(vec1.shape[0]):
         sim = F.cosine_similarity(vec1[i].unsqueeze(0), vec2[i].unsqueeze(0)).item()
         cos.append(sim)
+    if len(cos) != 4:
+        print("[Warn] lengte van cos is verschillend van 4")
     return np.mean(cos)
 
 def load_all_stocks(stock_data_path):
@@ -514,14 +520,17 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, pr
         for src, dst in prev_neg_edges.T.tolist():
             adj_neg[src].add(dst)
 
-    warn_nodes_without_neighbors(adj_pos, adj_neg, num_nodes, snapshot_date=current_date)
-
+    # start_isolated_nodes = time.time()
+    isolated_nodes = warn_nodes_without_neighbors(adj_pos, adj_neg, num_nodes, snapshot_date=current_date)
+    # end_isolated_nodes = time.time()
+    # print(f" isolated nodes duurde {end_isolated_nodes-start_isolated_nodes:.4f} seconden")
     pos_edges_set = set()
     neg_edges_set = set()
     triangle_count = 0
     confirmed_edges = set()
     attempted_edges = defaultdict(set)
 
+    # start_triangles = time.time()
     # for j in tqdm(range(num_nodes), desc="triangles"):
     for j in range(num_nodes):
         neighbors = adj_pos[j] | adj_neg[j]
@@ -569,7 +578,36 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, pr
                 elif signature == 'negative' and sim < sim_threshold_neg:
                     neg_edges_set.add((i, k))
                     neg_edges_set.add((k, i))
-                    confirmed_edges.add(edge_key) 
+                    confirmed_edges.add(edge_key)
+
+    # end_triangles = time.time()
+    # print(f" triangles duurde {end_triangles-start_triangles:.4f} seconden")
+
+    # start_isolated_new = time.time()
+    if isolated_nodes:
+        print(f"Adding fallback connections for {len(isolated_nodes)} isolated nodes")
+        edges_added = 0
+        for i in isolated_nodes:
+            vec_i = price_data[i]
+            simmilarities = []
+            for j in range(num_nodes):
+                if j == i:
+                    continue
+                vec_j = price_data[j]
+                sim = cosine_similarity(vec_i, vec_j)
+                simmilarities.append(sim)
+                if sim > sim_threshold_pos:
+                    pos_edges_set.add((i, j))
+                    pos_edges_set.add((j, i))
+                    edges_added += 1
+                elif sim < sim_threshold_neg:
+                    neg_edges_set.add((i, j))
+                    neg_edges_set.add((j, i))
+                    edges_added += 1
+            print(f"    For node {i}, {edges_added} edges where added.")
+    #         print(f"     sim min: {min(simmilarities)}, sim max: {max(simmilarities)}")
+    # end_isolated_new = time.time()
+    # print(f" fallback duurde {end_isolated_new-start_isolated_new:.4f} seconden")
 
     # Converteer naar tensors
     pos_edges = torch.LongTensor(list(zip(*pos_edges_set))) if pos_edges_set else torch.empty((2, 0), dtype=torch.long)
