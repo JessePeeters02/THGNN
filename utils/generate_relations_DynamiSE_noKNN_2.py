@@ -30,7 +30,7 @@ data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu")
 os.makedirs(data_train_predict_path, exist_ok=True)
 daily_stock_path = os.path.join(data_path, "daily_stock_gpu")
 os.makedirs(daily_stock_path, exist_ok=True)
-log_path = os.path.join(data_path, "snapshot_log_gpu_full.csv")
+log_path = os.path.join(data_path, "snapshot_log_gpu.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Hyperparameters
@@ -192,7 +192,7 @@ class DynamiSE(nn.Module):
             nn.ReLU()
         ).to(device)
 
-        self.ode_func = ODEFunc(hidden_dim, self.pos_conv, self.neg_conv, self.psi).to(device)
+        self.ode_func = ODEFunc(hidden_dim, self.pos_conv, self.neg_conv).to(device)
 
         self.predictor = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
@@ -289,17 +289,30 @@ class DynamiSE(nn.Module):
         return recon.mean() + log_term.mean()
 
 class ODEFunc(nn.Module):
-    def __init__(self, hidden_dim, pos_conv, neg_conv, psi):
+    # def __init__(self, hidden_dim, pos_conv, neg_conv, psi):
+    #     super(ODEFunc, self).__init__()
+    #     self.pos_conv = pos_conv
+    #     self.neg_conv = neg_conv
+    #     self.psi = psi
+    #     self.edge_index_pos = None
+    #     self.edge_index_neg = None
+
+    #     # Stabilisatielagen
+    #     self.layer_norm = nn.LayerNorm(hidden_dim)
+    #     self.dropout = nn.Dropout(0.1)
+    def __init__(self, hidden_dim, pos_conv, neg_conv, damping = 0.1):
         super(ODEFunc, self).__init__()
         self.pos_conv = pos_conv
         self.neg_conv = neg_conv
-        self.psi = psi
+        self.psi = nn.Sequential(
+        nn.Linear(hidden_dim*2, hidden_dim, bias=False),
+        nn.Tanh()
+        )
         self.edge_index_pos = None
         self.edge_index_neg = None
 
-        # Stabilisatielagen
         self.layer_norm = nn.LayerNorm(hidden_dim)
-        self.dropout = nn.Dropout(0.1)
+        self.damping = damping
 
     def set_graph(self, edge_index_pos, edge_index_neg):
         self.edge_index_pos = edge_index_pos.long()
@@ -314,11 +327,11 @@ class ODEFunc(nn.Module):
         h_neg = self.neg_conv(h, self.edge_index_neg.long())
         
         # Dropout voor regularisatie
-        h_pos = self.dropout(h_pos)
-        h_neg = self.dropout(h_neg)
-
+        # h_pos = self.dropout(h_pos)
+        # h_neg = self.dropout(h_neg)
+        delta = self.psi(torch.cat([h_pos, h_neg], dim=1))
         # Lineaire combinatie (paper Eq.5)
-        delta_h = self.psi(torch.cat([h_pos, h_neg], dim=1))
+        delta_h = delta - self.damping * h
         # print(f"ODE delta_h range: [{delta_h.min():.2f}, {delta_h.max():.2f}]")
         return delta_h.clamp(-50, 50)
 
@@ -819,7 +832,7 @@ def main1_generate():
     print(f"Gemiddelde edges per snapshot: {np.mean([len(s['pos_edges_info']) + len(s['neg_edges_info']) for s in snapshots]):.0f}")
 
     model = DynamiSE(num_features=len(feature_cols1), hidden_dim=hidden_dim).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
     best_loss = float('inf')
     training_results = []
@@ -855,6 +868,7 @@ def main1_generate():
                         print(f"NaN in gradients of {name}")
                 raise ValueError("NaN in loss")
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
             epoch_losses.append(loss.item())
