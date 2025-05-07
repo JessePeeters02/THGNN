@@ -23,7 +23,7 @@ data_path = os.path.join(base_path, "data", "testbatch2")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "epochplottest", "relation_dynamiSE_noknn2_gpu")
+relation_path = os.path.join(data_path, "epochplottest_Jlaptop", "relation_dynamiSE_noknn2_gpu")
 os.makedirs(relation_path, exist_ok=True)
 snapshot_path = os.path.join(data_path, "intermediate_snapshots_gpu")
 os.makedirs(snapshot_path, exist_ok=True)
@@ -47,6 +47,7 @@ min_neighbors = 5
 restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 relevance_threshold = 0
 max_age = 5
+learning_rate = 0.00001
 
 
 stats_per_epoch = []
@@ -671,7 +672,7 @@ def main1_generate():
     print(f"Gemiddelde edges per snapshot: {np.mean([len(s['pos_edges_info']) + len(s['neg_edges_info']) for s in snapshots]):.0f}")
 
     model = DynamiSE(num_features=len(feature_cols1), hidden_dim=hidden_dim).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     best_loss = float('inf')
     training_results = []
