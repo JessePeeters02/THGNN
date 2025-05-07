@@ -11,6 +11,7 @@ import itertools
 from collections import defaultdict
 import torch.nn.functional as F
 import time
+import matplotlib.pyplot as plt
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu') 
@@ -18,19 +19,19 @@ print(f"Device: {device}")
 
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(base_path, "data", "testbatch2")
-daily_data_path = os.path.join(data_path, "normaliseddailydata_stabletimes")
+data_path = os.path.join(base_path, "data", "testbatch2", "epochplottest")
+daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2_stabletimes")
+relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2_gpu")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots_stabletimes")
+snapshot_path = os.path.join(data_path, "intermediate_snapshots_gpu")
 os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_stabletimes")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_stabletimes")
+daily_stock_path = os.path.join(data_path, "daily_stock_gpu")
 os.makedirs(daily_stock_path, exist_ok=True)
-log_path = os.path.join(data_path, "snapshot_log_stabletimes.csv")
+log_path = os.path.join(data_path, "snapshot_log_gpu.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Hyperparameters
@@ -46,6 +47,52 @@ min_neighbors = 5
 restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 relevance_threshold = 0
 max_age = 5
+
+
+stats_per_epoch = []
+
+def log_h_stats(stage, h_tensor, epoch, snapshot_date, container):
+    if not isinstance(h_tensor, torch.Tensor):
+        print(f"[WARN] Geen tensor bij {stage}")
+        return
+
+    h_det = h_tensor.detach().cpu()
+    if torch.isnan(h_det).any() or torch.isinf(h_det).any():
+        print(f"[NaN WARNING] {stage} bevat NaN of Inf (epoch {epoch}, date {snapshot_date})")
+
+    container.append({
+        "epoch": epoch,
+        "snapshot_date": snapshot_date,
+        "stage": stage,
+        "h_min": h_det.min().item(),
+        "h_max": h_det.max().item(),
+        "h_mean": h_det.mean().item(),
+        "h_std": h_det.std().item()
+    })
+
+def plot_h_stats(stats_per_epoch):
+
+    if not stats_per_epoch:
+        print("[WARN] Geen h-stats om te plotten.")
+        return
+
+    df_stats = pd.DataFrame(stats_per_epoch)
+    stages = df_stats["stage"].unique()
+
+    plt.figure(figsize=(14, 6))
+    for stage in stages:
+        subset = df_stats[df_stats["stage"] == stage]
+        grouped = subset.groupby("epoch").mean(numeric_only=True)
+        plt.plot(grouped.index, grouped["h_max"], label=f"{stage} - max(h)", linestyle="--")
+        plt.plot(grouped.index, grouped["h_mean"], label=f"{stage} - mean(h)")
+        plt.plot(grouped.index, grouped["h_std"], label=f"{stage} - std(h)", alpha=0.7)
+    plt.xlabel("Epoch")
+    plt.ylabel("Value")
+    plt.legend()
+    plt.title("h-statistieken per stage (gemiddeld over snapshots)")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 
 class EdgeAgingManager:
@@ -205,6 +252,9 @@ class DynamiSE(nn.Module):
         # print(x.shape)
         x = x.to(device)
         h = self.feature_norm(self.feature_encoder(x))
+        if hasattr(self, "log_h_stats") and hasattr(self, "epoch") and hasattr(self, "snapshot_date"):
+            self.log_h_stats("feature_encoded", h, self.epoch, self.snapshot_date, self.stats_container)
+
         # print(f"\nFeature encoder out - mean: {h.mean().item():.4f}, std: {h.std().item():.4f}")
         # print(h.shape)
         if torch.isnan(h).any() or torch.isinf(h).any():
@@ -220,6 +270,8 @@ class DynamiSE(nn.Module):
                rtol=1e-3,
                atol=1e-4,
                options={'max_num_steps': 100})[1]
+        if hasattr(self, "log_h_stats") and hasattr(self, "epoch") and hasattr(self, "snapshot_date"):
+            self.log_h_stats("after_ODE", h, self.epoch, self.snapshot_date, self.stats_container)
         # print(f"ODE out - mean: {h.mean().item():.4f}, std: {h.std().item():.4f}")
         return h
 
@@ -400,127 +452,6 @@ def build_initial_edges_via_correlation(window_data, threshold):
 
     return pos_edges, neg_edges
 
-""" # build_initial_edges_via_correlation maar dan met de vele tests
-def build_initial_edges_via_correlation(window_data, threshold, window_data_raw, close_data, close_data_raw):
-    # Groepeer per stock en bereken correlaties per feature
-    grouped = window_data.groupby('Stock')[feature_cols1]
-    # rawgrouped = window_data_raw.groupby('Stock')[feature_cols1]
-    # Maak een 3D array van features (stocks x features x time)
-    stock_arrays = np.array([group.values.T for name, group in grouped])
-    n_stocks = stock_arrays.shape[0]
-    # rawstock_arrays = np.array([group.values.T for name, group in rawgrouped])
-    # rawn_stocks = rawstock_arrays.shape[0]
-    # print(f"aantal stocks: {n_stocks}")
-    # Initialiseer correlatiematrix
-    corr_matrix = np.zeros((n_stocks, n_stocks))
-    # print(f"corr_matrix shape: {corr_matrix.shape}")
-    # Bereken correlaties tussen alle paren van stocks
-    for i in tqdm(range(n_stocks), desc="Calculating correlations"):
-        for j in range(i+1, n_stocks):
-            
-            # Bereken correlatie voor elke feature apart - normalized data
-            feature_correlations = []
-            for f in range(len(feature_cols1)):
-                corr = np.corrcoef(stock_arrays[i,f,:], stock_arrays[j,f,:])[0,1]
-                feature_correlations.append(corr)           
-            avg_corr = np.nanmean(feature_correlations)
-            corr_matrix[i,j] = avg_corr
-            corr_matrix[j,i] = avg_corr
-
-            # # Bereken correlatie voor elke feature apart - raw data
-            # rawfeature_correlations = []
-            # for f in range(len(feature_cols1)):
-            #     rawcorr = np.corrcoef(rawstock_arrays[i,f,:], rawstock_arrays[j,f,:])[0,1]
-            #     rawfeature_correlations.append(rawcorr)
-            # rawavg_corr = np.nanmean(rawfeature_correlations)
-
-            # Gemiddelde cosine similarity over features
-            # feature_cosines = []
-            # feature_cosines_raw = []
-            # for f in range(len(feature_cols1)):
-            #     vec1 = stock_arrays[i, f, :]
-            #     vec2 = stock_arrays[j, f, :]
-            #     cos_sim = cosine_similarity(vec1, vec2)
-            #     feature_cosines.append(cos_sim)
-
-            #     vec1_raw = rawstock_arrays[i, f, :]
-            #     vec2_raw = rawstock_arrays[j, f, :]
-            #     cos_sim_raw = cosine_similarity(vec1_raw, vec2_raw)
-            #     feature_cosines_raw.append(cos_sim_raw)
-            # avg_cos_sim = np.nanmean(feature_cosines)
-            # avg_cos_sim_raw = np.nanmean(feature_cosines_raw)
-
-
-            # vec_i = close_data[i]
-            # vec_k = close_data[j]
-            # vec_i_raw = close_data_raw[i]
-            # vec_k_raw = close_data_raw[j]
-            # sim = cosine_similarity(vec_i, vec_k)
-            # sim_raw = cosine_similarity(vec_i_raw, vec_k_raw)
-            # cor_raw = pearson_correlation(vec_i_raw, vec_k_raw)
-            # cor_nor = pearson_correlation(vec_i, vec_k)
-            # print(
-            #     # "\nover de vijf features",
-            #     # "\n correlation normalized: ", feature_correlations, avg_corr,
-            #     "\n correlation raw: ", rawavg_corr,
-            #     "\n cosine similarity normalised: ", avg_cos_sim
-            #     # "\n cosine similarity raw: ", feature_cosines_raw, avg_cos_sim_raw,
-            #     # "\nover close feature",
-            #     # "\n correlation normalized: ", cor_nor,
-            #     # "\n correlation raw: ", cor_raw,
-            #     # "\n cosine similarity normalised: ", sim,
-            #     # "\n cosine similarity raw: ", sim_raw
-            # )
-    
-    # Bouw edges op basis van drempelwaarde
-    pos_edges = []
-    neg_edges = []
-    np.fill_diagonal(corr_matrix, 0)
-
-    # Garandeer minimum aantal buren
-    for i in range(n_stocks):
-        # Positieve edges
-        strong_pos = np.where(corr_matrix[i] > threshold)[0]
-        if len(strong_pos) < min_neighbors:
-            # Voeg extra buren toe als er te weinig zijn
-            corrs = corr_matrix[i].copy()
-            top_pos = np.argsort(-corrs)[:min_neighbors]
-            for j in top_pos:
-                if corr_matrix[i,j] > 0:  # Alleen positieve correlaties toevoegen
-                    pos_edges.append((i, j))
-                    pos_edges.append((j, i))
-        else:
-            # Gebruik alleen de sterke correlaties
-            for j in strong_pos:
-                pos_edges.append((i, j))
-                pos_edges.append((j, i))
-        
-        # Negatieve edges
-        strong_neg = np.where(corr_matrix[i] < -threshold)[0]
-        if len(strong_neg) < min_neighbors:
-            # Voeg extra buren toe als er te weinig zijn
-            corrs = corr_matrix[i].copy()
-            top_neg = np.argsort(corrs)[:min_neighbors]
-            for j in top_neg:
-                if corr_matrix[i,j] < 0:  # Alleen negatieve correlaties toevoegen
-                    neg_edges.append((i, j))
-                    neg_edges.append((j, i))
-        else:
-            # Gebruik alleen de sterke correlaties
-            for j in strong_neg:
-                neg_edges.append((i, j))
-                neg_edges.append((j, i))
-    # print(f"Pos edges: {len(pos_edges)/2}, Neg edges: {len(neg_edges)/2}")
-
-    # Converteer naar torch Tensors
-    pos_edges = list(set(pos_edges))
-    neg_edges = list(set(neg_edges))
-    pos_edges = torch.LongTensor(list(zip(*pos_edges))) if pos_edges else torch.empty((2, 0), dtype=torch.long)
-    neg_edges = torch.LongTensor(list(zip(*neg_edges))) if neg_edges else torch.empty((2, 0), dtype=torch.long)
-
-    return pos_edges, neg_edges
-"""
-
 def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, price_data, current_date):#, close_data_raw):
     adj_pos = defaultdict(set)
     adj_neg = defaultdict(set)
@@ -626,98 +557,6 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, pr
     pos_edges = torch.LongTensor(list(zip(*pos_edges_set))) if pos_edges_set else torch.empty((2, 0), dtype=torch.long)
     neg_edges = torch.LongTensor(list(zip(*neg_edges_set))) if neg_edges_set else torch.empty((2, 0), dtype=torch.long)    
     return pos_edges, neg_edges
-
-""" build_edges_via_balance_theory maar dan met de tests
-def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, close_data, close_data_raw):
-    # Debug: Print input edges
-    # print(f"\nInput pos edges: {prev_pos_edges.shape}, neg edges: {prev_neg_edges.shape}")
-    adj_pos = defaultdict(set)
-    adj_neg = defaultdict(set)
-
-    # Bouw adjacency lists
-    if prev_pos_edges.numel() > 0:
-        for src, dst in prev_pos_edges.T.tolist():
-            adj_pos[src].add(dst)
-    if prev_neg_edges.numel() > 0:
-        for src, dst in prev_neg_edges.T.tolist():
-            adj_neg[src].add(dst)
-
-    # Debug: Tel nodes met neighbors
-    # nodes_with_neighbors = sum(1 for j in range(num_nodes) if adj_pos[j] or adj_neg[j])
-    # print(f"Nodes with neighbors: {nodes_with_neighbors}/{num_nodes}")
-
-    pos_edges_set = set()
-    neg_edges_set = set()
-    triangle_count = 0
-
-    for j in tqdm(range(num_nodes), desc="triangles"):
-        neighbors = set(adj_pos[j]) | set(adj_neg[j])
-        for i, k in itertools.combinations(neighbors, 2):
-            if i == k:
-                continue
-                            
-            # Check bestaande edges
-            if (k in adj_pos[i]) or (k in adj_neg[i]):
-                continue
-
-            # Debug: Tel triadische checks
-            triangle_count += 1
-
-            # Triadische check  
-            signs = []
-            for u, v in [(i, j), (j, k)]:
-                if v in adj_pos[u]:
-                    signs.append('+')
-                elif v in adj_neg[u]:
-                    signs.append('-')
-                else:
-                    break
-            else:
-                neg_count = signs.count('-')
-                # print(f"Signs for ({i}, {j}, {k}): {signs} → neg_count={neg_count}")
-
-                vec_i = close_data[i]
-                vec_k = close_data[k]
-                # vec_i_raw = close_data_raw[i]
-                # vec_k_raw = close_data_raw[k]
-                # waarom close data gebruiken? cosine_similarity moet nog verder worden uitgezocht
-                # close data omdat: time_window zit erin, close is de recentste dus reprecentatieve
-                # (hoe wordt de closing price gezet, is deze redenering logisch?)
-                # werken met genormaliseerde data of rauwe data?
-                sim = cosine_similarity(vec_i, vec_k)
-                # sim_raw = cosine_similarity(vec_i_raw, vec_k_raw)
-                # cor_raw = pearson_correlation(vec_i_raw, vec_k_raw)
-                # cor_nor = pearson_correlation(vec_i, vec_k)
-                # print(
-                #     "\n correlation raw: ", cor_raw,
-                #     "\n correlation normalized: ", cor_nor,
-                #     # "\n cosine similarity raw: ", sim_raw,
-                #     "\n cosine similarity normalised: ", sim
-                # )
-                # Balance theory toepassen
-                if neg_count % 2 == 0:
-                    if sim > sim_threshold_pos:
-                        pos_edges_set.add((i, k))
-                        pos_edges_set.add((k, i))
-                    # else:
-                        # print(f"Rejected POS Edge({i}, {k}) - cosine similarity: {sim:.2f} < pos threshold {sim_threshold_pos}")  
-                else:
-                    if sim < sim_threshold_neg:
-                        neg_edges_set.add((i, k))
-                        neg_edges_set.add((k, i)) 
-                    # else:
-                        # print(f"Rejected NEG Edge({i}, {k}) - cosine similarity: {sim:.2f} > neg threshold {sim_threshold_neg}")
-
-    # Debug prints
-    # print(f"Triangles checked: {triangle_count}")
-    # print(f"New pos edges: {len(pos_edges_set)//2}, New neg edges: {len(neg_edges_set)//2}")
-
-    # Converteer naar tensors
-    pos_edges = torch.LongTensor(list(zip(*pos_edges_set))) if pos_edges_set else torch.empty((2, 0), dtype=torch.long)
-    neg_edges = torch.LongTensor(list(zip(*neg_edges_set))) if neg_edges_set else torch.empty((2, 0), dtype=torch.long)    
-    return pos_edges, neg_edges
-"""
-
 
 def prepare_dynamic_data(stock_data, window_size=20):
     snapshots = []
@@ -837,11 +676,17 @@ def main1_generate():
     best_loss = float('inf')
     training_results = []
 
+    # Zorg dat model logging kan uitvoeren
+    model.log_h_stats = log_h_stats
+    model.stats_container = stats_per_epoch
+
     for epoch in range(num_epochs):
         model.train()
         epoch_losses = []
+        model.epoch = epoch
 
         for snapshot in tqdm(snapshots, desc=f"Epoch {epoch+1} van de {num_epochs}"):
+            model.snapshot_date = snapshot['date']
             optimizer.zero_grad()
 
             features = snapshot['features'].float().to(device)
@@ -860,6 +705,8 @@ def main1_generate():
                 neg_edges_tensor,
                 t
             )
+            log_h_stats("post_ODE", embeddings, epoch, snapshot['date'], stats_per_epoch)
+
             loss = model.full_loss(embeddings, pos_edges_tensor, neg_edges_tensor)
             if torch.isnan(loss):
                 print("NaN loss detected!")
@@ -868,6 +715,8 @@ def main1_generate():
                         print(f"NaN in gradients of {name}")
                 raise ValueError("NaN in loss")
             loss.backward()
+            log_h_stats("post_loss", embeddings, epoch, snapshot['date'], stats_per_epoch)
+
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
@@ -945,5 +794,18 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 snapshots = prepare_dynamic_data(stock_data)
 
 # start model
-main1_generate()
+
+
+try:
+    main1_generate()
+except Exception as e:
+    print(f"\n[ERROR] Training gestopt door exception: {e}")
+    import traceback
+    traceback.print_exc()
+finally:
+    print("\n[INFO] Training beëindigd. h-stats worden geplot...")
+    plot_h_stats(stats_per_epoch)
+    pd.DataFrame(stats_per_epoch).to_csv(os.path.join(relation_path, "h_stats_debug.csv"), index=False)
+    print(f"[INFO] h-statistieken opgeslagen als CSV in {relation_path}")
+
 main1_load()
