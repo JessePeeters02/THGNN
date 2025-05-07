@@ -44,7 +44,7 @@ def create_labels_csv(raw_data, all_dates, output_path):
                 current_date = pd.to_datetime(date_str)
                 # Controleer of de datum bestaat in de raw data
                 if current_date in raw_df['Date'].values:
-                    label = calculate_label(raw_df, current_date)
+                    label = round(calculate_label(raw_df, current_date),6)
                     labels_df.at[stock_name, date_str] = label
             except:
                 # Als er een fout optreedt (bv. eerste dag heeft geen vorige dag), laat dan NaN staan
