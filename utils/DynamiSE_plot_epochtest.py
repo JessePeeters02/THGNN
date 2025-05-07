@@ -17,22 +17,26 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu') 
 print(f"Device: {device}")
 
+learning_rate = 0.001
+
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data", "testbatch2")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "epochplottest_Jlaptop", "relation_dynamiSE_noknn2_gpu")
+mapnaam = f"epochtest_lr{learning_rate}_{device}"
+relation_path = os.path.join(data_path, mapnaam, "relation_dynamiSE_noknn2_gpu")
 os.makedirs(relation_path, exist_ok=True)
 snapshot_path = os.path.join(data_path, "intermediate_snapshots_gpu")
 os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "epochplottest", "data_train_predict_gpu")
+data_train_predict_path = os.path.join(data_path, mapnaam, "data_train_predict_gpu")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "epochplottest", "daily_stock_gpu")
+daily_stock_path = os.path.join(data_path, mapnaam, "daily_stock_gpu")
 os.makedirs(daily_stock_path, exist_ok=True)
-log_path = os.path.join(data_path, "epochplottest", "snapshot_log_gpu.csv")
+log_path = os.path.join(data_path, mapnaam, "snapshot_log_gpu.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
+debug_path = os.path.join(data_path, mapnaam)
 
 # Hyperparameters
 prev_date_num = 20
@@ -47,7 +51,7 @@ min_neighbors = 5
 restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 relevance_threshold = 0
 max_age = 5
-learning_rate = 0.00001
+
 
 
 stats_per_epoch = []
@@ -806,7 +810,7 @@ except Exception as e:
 finally:
     print("\n[INFO] Training beëindigd. h-stats worden geplot...")
     plot_h_stats(stats_per_epoch)
-    pd.DataFrame(stats_per_epoch).to_csv(os.path.join(relation_path, "h_stats_debug.csv"), index=False)
-    print(f"[INFO] h-statistieken opgeslagen als CSV in {relation_path}")
+    pd.DataFrame(stats_per_epoch).to_csv(os.path.join(debug_path, "h_stats_debug.csv"), index=False)
+    print(f"[INFO] h-statistieken opgeslagen als CSV in {debug_path}")
 
 main1_load()
