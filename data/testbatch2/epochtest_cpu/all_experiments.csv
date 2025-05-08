@@ -1,0 +1,4 @@
+,learning_rate,hidden_dim,best_loss,parameter_count,nan_occurred,succesfull epochs,total_time
+0,0.1,64,inf,30081,True,0,1.632699728012085
+1,0.01,64,inf,30081,True,0,113.4838273525238
+2,0.001,64,0.7249109437891604,30081,True,2,2208.105374097824
