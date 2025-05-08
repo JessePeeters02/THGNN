@@ -1,0 +1,14 @@
+,learning_rate,hidden_dim,best_loss,parameter_count,nan_occurred,succesfull epochs,total_time,error
+0,0.1,64,inf,30081.0,True,0.0,1.079805612564087,
+1,0.01,64,inf,30081.0,True,0.0,16.42401933670044,
+2,0.001,64,,,,,,All arrays must be of the same length
+3,0.0004,64,,,,,,All arrays must be of the same length
+4,0.0001,64,,,,,,All arrays must be of the same length
+5,4e-05,64,,,,,,All arrays must be of the same length
+6,1e-05,64,,,,,,All arrays must be of the same length
+7,0.1,32,inf,7873.0,True,0.0,5.3376991748809814,
+8,0.01,32,inf,7873.0,True,0.0,47.43162727355957,
+9,0.001,32,,,,,,All arrays must be of the same length
+10,0.0004,32,,,,,,All arrays must be of the same length
+11,0.0001,32,,,,,,All arrays must be of the same length
+12,4e-05,32,,,,,,All arrays must be of the same length

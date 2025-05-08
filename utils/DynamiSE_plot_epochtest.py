@@ -746,7 +746,7 @@ def main1_generate(learning_rate, hidden_dim):
 
         if avg_loss < best_loss:
             best_loss = avg_loss
-            torch.save(model.state_dict(), os.path.join(relation_path, "best_model.pth"))
+            torch.save(model.state_dict(), os.path.join(run_dir, "best_model.pth"))
             print(f"Beste model opgeslagen in {relation_path} met loss {best_loss}")
 
         epoch_results = {
