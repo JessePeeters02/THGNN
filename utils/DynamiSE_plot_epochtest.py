@@ -51,6 +51,43 @@ max_age = 5
 
 stats_per_epoch = []
 
+def write_crash_report(model, snapshot_date, run_dir, epoch, extra_info=None):
+    report = []
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            grad = param.grad.detach().cpu()
+            report.append({
+                'param': name,
+                'epoch': epoch,
+                'snapshot': snapshot_date,
+                'grad_mean': grad.mean().item(),
+                'grad_std': grad.std().item(),
+                'grad_min': grad.min().item(),
+                'grad_max': grad.max().item(),
+                'nan_count': torch.isnan(grad).sum().item(),
+                'inf_count': torch.isinf(grad).sum().item()
+            })
+        else:
+            report.append({
+                'param': name,
+                'epoch': epoch,
+                'snapshot': snapshot_date,
+                'grad_mean': None,
+                'grad_std': None,
+                'grad_min': None,
+                'grad_max': None,
+                'nan_count': 'no_grad',
+                'inf_count': 'no_grad'
+            })
+
+    crash_df = pd.DataFrame(report)
+    crash_df.to_csv(os.path.join(run_dir, f"crash_report_epoch{epoch}_snap{snapshot_date}.csv"), index=False)
+    print(f"[CRASH] Gradient crashreport geschreven naar {run_dir}")
+    
+    if extra_info:
+        with open(os.path.join(run_dir, f"extra_info_epoch{epoch}_snap{snapshot_date}.txt"), 'w') as f:
+            f.write(extra_info)
+
 def log_h_stats(stage, h_tensor, epoch, snapshot_date, container):
     if not isinstance(h_tensor, torch.Tensor):
         print(f"[WARN] Geen tensor bij {stage}")
@@ -686,6 +723,7 @@ def main1_generate(learning_rate, hidden_dim):
     nan_occurred = False
     epoch_times = []
     model_start = time.time()
+    grad_history = []
 
     for epoch in range(num_epochs):
         model.train()
@@ -719,8 +757,25 @@ def main1_generate(learning_rate, hidden_dim):
                 for name, param in model.named_parameters():
                     if torch.isnan(param.grad).any():
                         print(f"NaN in gradients of {name}")
+                write_crash_report(model, snapshot['date'], run_dir, epoch, extra_info=f"Loss NaN in epoch {epoch}, snapshot {snapshot['date']}")
                 raise ValueError("NaN in loss")
             loss.backward()
+            snapshot_grad_info = []
+            for name, param in model.named_parameters():
+                if param.grad is not None:
+                    grad = param.grad.detach()
+                    snapshot_grad_info.append({
+                        'epoch': epoch,
+                        'snapshot': snapshot['date'],
+                        'param': name,
+                        'grad_mean': grad.mean().item() if not torch.isnan(grad).any() else 'NaN',
+                        'grad_std': grad.std(unbiased=False).item() if grad.numel() > 1 and not torch.isnan(grad).any() else 0.0,
+                        'grad_min': grad.min().item() if not torch.isnan(grad).any() else 'NaN',
+                        'grad_max': grad.max().item() if not torch.isnan(grad).any() else 'NaN',
+                        'nan_count': torch.isnan(grad).sum().item(),
+                        'inf_count': torch.isinf(grad).sum().item()
+                    })
+            grad_history.extend(snapshot_grad_info)
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
@@ -732,6 +787,9 @@ def main1_generate(learning_rate, hidden_dim):
             if torch.isnan(total_norm):
                 nan_occurred = True
                 print("NaN in gradients detected!")
+                pd.DataFrame(grad_history).to_csv(os.path.join(run_dir, f"grad_history.csv"), index=False)
+                print(f"[INFO] Volledige gradienttijdslijn opgeslagen in grad_history.csv")
+                write_crash_report(model, snapshot['date'], run_dir, epoch, extra_info="NaN in total gradient norm")
                 break
 
         if nan_occurred:
@@ -759,6 +817,8 @@ def main1_generate(learning_rate, hidden_dim):
             'total_time': time.time() - model_start,
             'grad_norm': np.mean(gradient_norms[-len(snapshots):]),
             'grad_norm_std': np.std(gradient_norms[-len(snapshots):]),
+            'grad_min': np.min(gradient_norms[-len(snapshots):]),
+            'grad_max': np.max(gradient_norms[-len(snapshots):]),
             'completed': True,
             'memory_usage': torch.cuda.memory_allocated()/1024**3 if torch.cuda.is_available() else 0,
             'memory_peak': torch.cuda.max_memory_allocated()/1024**3 if torch.cuda.is_available() else 0
@@ -771,7 +831,6 @@ def main1_generate(learning_rate, hidden_dim):
         'epoch': range(1, len(training_results)+1),
         'loss': training_results,
         'epoch times': epoch_times,
-        'grad_norm': gradient_norms[:len(training_results)*len(snapshots)]
     })
     results.to_csv(os.path.join(run_dir, "training_results.csv"), index=False)
     print(f"Trainingsresultaten opgeslagen.")
