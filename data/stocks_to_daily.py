@@ -10,7 +10,8 @@ FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data")
 daily_data_path = os.path.join(data_path, "S&P500", "dailydata")
-stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "S&P500", "S&P500_data_wTO")  # Map waar de CSV-bestanden staan
+# stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "S&P500", "S&P500_data_wTO")  # Map waar de CSV-bestanden staan
+stock_data_path = os.path.join(data_path, "S&P500", "stockdata")
 os.makedirs(daily_data_path, exist_ok=True)  # Zorg dat de output map bestaat
 
 def transform_to_daily_structure(stock_data_path, filter_non_trading):
@@ -42,6 +43,7 @@ def transform_to_daily_structure(stock_data_path, filter_non_trading):
     if filter_non_trading:
         print(f"Aantal aandelen totaal: {len(stock_files)}")
         print(f"Aantal aandelen met niet-handelsdagen: {len(non_trading_stocks)}")
+        print(f"Aantal aandelen met niet-handelsdagen: {non_trading_stocks}")
         print(f"Aantal aandelen in de huidige dataset: {len(stock_data)}")
 
     # Sla op per dag
