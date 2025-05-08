@@ -12,6 +12,7 @@ from torch.optim.lr_scheduler import StepLR
 import pandas as pd
 from pandas.core.frame import DataFrame
 from tqdm import tqdm
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 warnings.filterwarnings("ignore")
 t_float = torch.float64
@@ -48,10 +49,11 @@ class Args:
         self.data_end = data_end
         self.pre_data = pre_data
         # epoch settings
-        self.max_epochs = 60
+        self.max_epochs = 10
         self.epochs_eval = 10
         # learning rate settings
-        self.lr = 0.001
+        self.lr = 0.01  # Hogere initiële learning rate
+        self.weight_decay = 1e-4  # L2 regularisatie
         self.gamma = 0.3
         # model settings
         self.hidden_dim = 128
@@ -67,7 +69,7 @@ class Args:
         self.save_name = self.model_name + "_hidden_" + str(self.hidden_dim) + "_head_" + str(self.num_heads) + \
                          "_outfeat_" + str(self.out_features) + "_batchsize_" + str(self.batch_size) + "_adjth_" + \
                          str(self.adj_str)
-        self.epochs_save_by = 60
+        self.epochs_save_by = self.max_epochs
         self.sub_task = subtask
         eval("self.{}".format(self.sub_task))()
 
@@ -108,21 +110,29 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     # print(f"Aantal samples in dataset: {len(dataset)}")
     val_dataset = AllGraphDataSampler(base_dir=data_train_predict_path, mode="val", data_start=data_start,
                                   data_middle=data_middle, data_end=data_end)
+    label_mean, label_std = dataset.label_mean, dataset.label_std
+    print(f"Globale normalisatieparameters -> mean: {label_mean:.4f}, std: {label_std:.4f}")
     dataset_loader = DataLoader(dataset, batch_size=args.batch_size, pin_memory=True, collate_fn=lambda x: x)
-    val_dataset_loader = DataLoader(val_dataset, batch_size=1, pin_memory=True)
+    val_dataset_loader = DataLoader(val_dataset, batch_size=1, pin_memory=True, collate_fn=lambda x: x[0])
     model = eval(args.model_name)(hidden_dim=args.hidden_dim, num_heads=args.num_heads,
                                   out_features=args.out_features).to(args.device)
 
     # train
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    cold_scheduler = StepLR(optimizer=optimizer, step_size=5000, gamma=0.9, last_epoch=-1)
-    default_scheduler = cold_scheduler
+    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
+    # cold_scheduler = StepLR(optimizer=optimizer, step_size=5000, gamma=0.9, last_epoch=-1)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
+
+    default_scheduler = scheduler
     print('start training')
     for epoch in range(args.max_epochs):
+        print(f"Current LR: {optimizer.param_groups[0]['lr']:.2e}")
         train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
-                                 optimizer=optimizer, scheduler=default_scheduler, loss_fcn=mse_loss)
+                                 optimizer=optimizer, scheduler=default_scheduler, loss_fcn=mse_loss,
+                                 label_mean=label_mean, label_std=label_std)
         if (epoch+1) % args.epochs_eval == 0:
-            eval_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader, loss_fcn=mse_loss)
+            eval_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader,
+                                      loss_fcn=mse_loss, label_mean=label_mean, label_std=label_std)
+            scheduler.step(eval_loss)
             print('Epoch: {}/{}, train loss: {:.6f}, val loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss,
                                                                               eval_loss))
         else:
@@ -139,6 +149,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     data_code = sorted(os.listdir(data_files))
     data_code_last = data_code[data_middle:data_end]
     df_score=pd.DataFrame()
+
     for i in tqdm(range(len(val_dataset))):
         file_path = os.path.join(daily_stock_path, data_code_last[i])
         if os.path.exists(file_path):
@@ -147,9 +158,11 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
             print(f"File {file_path} not found!")
         df = pd.read_csv(os.path.join(daily_stock_path, data_code_last[i]), dtype=object)
         tmp_data = val_dataset[i]
-        pos_adj, neg_adj, features, labels, mask = extract_data(tmp_data, args.device)
-        model.train()
-        logits = model(features, pos_adj, neg_adj)
+        pos_adj, neg_adj, features, _, mask = extract_data(tmp_data, args.device, label_mean, label_std)
+        model.eval()
+        with torch.no_grad():
+            logits_norm = model(features, pos_adj, neg_adj)
+            logits = logits_norm * label_std + label_mean
         result = logits.data.cpu().numpy().tolist()
         result_new = []
         for j in range(len(result)):
@@ -166,8 +179,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
 if __name__ == "__main__":
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
-    data_start = 0
-    data_middle = total_data_points-13
+    data_start = total_data_points-20
+    data_middle = total_data_points-2
     data_end = total_data_points
     pre_data = '2025-03-07'
     fun_train_predict(data_start, data_middle, data_end, pre_data)

@@ -70,7 +70,7 @@ def check_pickles(nr, path, start):
 def check_labelsvsprediction(nr, path, start):
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat """
     bestandspad = os.path.join(data_path, path)
-    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_on_corr", "pred.csv"))
+    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_stabletimes", "pred.csv"))
     predictions = predictionsdf["score"].values
     print("Bestandspad:", bestandspad)
     labels = []
@@ -202,9 +202,9 @@ def gpu_info():
 """ aanroepen van alle testfuncties"""
 # check_pickles(3, "data_train_predict_DSE_noknn2", 7)
 # check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
-# check_labelsvsprediction(1, "data_train_predict_DSE_noknn2", 9)
+check_labelsvsprediction(2, "data_train_predict_stabletimes", 397)
 # check_pickles(30, "data_train_predict", 20)
 # check_csi300()
-memory_info()
-cpu_info()
-gpu_info()
+# memory_info()
+# cpu_info()
+# gpu_info()

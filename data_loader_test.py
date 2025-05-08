@@ -2,6 +2,7 @@ import os
 import sys
 from torch.utils import data
 import pickle
+import numpy as np
 
 class AllGraphDataSampler(data.Dataset):
 
@@ -23,6 +24,8 @@ class AllGraphDataSampler(data.Dataset):
             self.gnames_all = self.gnames_all[self.data_middle:self.data_end]
         self.data_all = self.load_state()
 
+        self.label_mean, self.label_std = self._calculate_label_stats()
+
     def __len__(self):
         return len(self.data_all)
 
@@ -35,6 +38,14 @@ class AllGraphDataSampler(data.Dataset):
             data_all.append(pickle.load(open(os.path.join(self.data_dir, self.gnames_all[i]), "rb")))
         print('{} data loaded!'.format(self.mode))
         return data_all
+
+    def _calculate_label_stats(self):
+        all_labels = []
+        for data_file in self.gnames_all[:self.data_middle]:  # Alleen trainingset!
+            data = pickle.load(open(os.path.join(self.data_dir, data_file), "rb"))
+            labels = data['labels'][data['mask']]  # Alleen gemaskerde labels
+            all_labels.extend(labels.flatten().tolist())
+        return np.mean(all_labels), np.std(all_labels) + 1e-6
 
     def __getitem__(self, idx):
         sample = self.data_all[idx]  # Hier kan de fout zitten
