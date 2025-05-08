@@ -17,15 +17,13 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu') 
 print(f"Device: {device}")
 
-learning_rate = 0.001
-
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data", "testbatch2")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-mapnaam = f"epochtest_lr{learning_rate}_{device}"
+mapnaam = f"epochtest"
 relation_path = os.path.join(data_path, mapnaam, "relation_dynamiSE_noknn2_gpu")
 os.makedirs(relation_path, exist_ok=True)
 snapshot_path = os.path.join(data_path, "intermediate_snapshots_gpu")
@@ -42,7 +40,6 @@ debug_path = os.path.join(data_path, mapnaam)
 prev_date_num = 20
 feature_cols1 = ['Open', 'High', 'Low', 'Close']
 feature_cols2 = ['Open', 'High', 'Low', 'Close', 'Volume']
-hidden_dim = 64
 num_epochs = 30
 threshold = 0.6
 sim_threshold_pos = 0.6
@@ -51,8 +48,6 @@ min_neighbors = 5
 restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 relevance_threshold = 0
 max_age = 5
-
-
 
 stats_per_epoch = []
 
@@ -669,26 +664,33 @@ def calculate_label(raw_df, current_date):
     close_yesterday = raw_df.iloc[date_idx-1]['Close']
     return (close_yesterday / close_today) - 1
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def main1_generate():
-    print(f"Aantal snapshots: {len(snapshots)}")
-    print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
-    print(f"Gemiddelde edges per snapshot: {np.mean([len(s['pos_edges_info']) + len(s['neg_edges_info']) for s in snapshots]):.0f}")
+def main1_generate(learning_rate, hidden_dim):
+    # print(f"Aantal snapshots: {len(snapshots)}")
+    # print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
+    # print(f"Gemiddelde edges per snapshot: {np.mean([len(s['pos_edges_info']) + len(s['neg_edges_info']) for s in snapshots]):.0f}")
+
+    run_dir = os.path.join(relation_path, f"lr{learning_rate}_hd{hidden_dim}")
+    os.makedirs(run_dir, exist_ok=True)
 
     model = DynamiSE(num_features=len(feature_cols1), hidden_dim=hidden_dim).to(device)
+    print(f"\n=== Training met LR={learning_rate}, HD={hidden_dim} ===")
+    print(f"Aantal parameters: {count_parameters(model):,}")
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     best_loss = float('inf')
     training_results = []
-
-    # Zorg dat model logging kan uitvoeren
-    model.log_h_stats = log_h_stats
-    model.stats_container = stats_per_epoch
+    gradient_norms = []
+    nan_occurred = False
+    epoch_times = []
+    model_start = time.time()
 
     for epoch in range(num_epochs):
         model.train()
         epoch_losses = []
-        model.epoch = epoch
+        epoch_start = time.time()
 
         for snapshot in tqdm(snapshots, desc=f"Epoch {epoch+1} van de {num_epochs}"):
             model.snapshot_date = snapshot['date']
@@ -710,7 +712,6 @@ def main1_generate():
                 neg_edges_tensor,
                 t
             )
-            log_h_stats("post_ODE", embeddings, epoch, snapshot['date'], stats_per_epoch)
 
             loss = model.full_loss(embeddings, pos_edges_tensor, neg_edges_tensor)
             if torch.isnan(loss):
@@ -720,26 +721,70 @@ def main1_generate():
                         print(f"NaN in gradients of {name}")
                 raise ValueError("NaN in loss")
             loss.backward()
-            log_h_stats("post_loss", embeddings, epoch, snapshot['date'], stats_per_epoch)
-
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
             epoch_losses.append(loss.item())
+            # Gradient norm tracking
+            total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            gradient_norms.append(total_norm.item())
+            
+            if torch.isnan(total_norm):
+                nan_occurred = True
+                print("NaN in gradients detected!")
+                break
 
+        if nan_occurred:
+            break
+            
+        # Epoch logging
+        epoch_time = time.time() - epoch_start
+        epoch_times.append(epoch_time)
         avg_loss = np.average(epoch_losses, weights=np.arange(1, len(epoch_losses)+1))
         print(f"Epoch {epoch+1}, Avg Loss: {avg_loss}")
         training_results.append(avg_loss)
 
         if avg_loss < best_loss:
             best_loss = avg_loss
-            torch.save(model.state_dict(), os.path.join(relation_path, "best_model.pth"))
+            torch.save(model.state_dict(), os.path.join(run_dir, "best_model.pth"))
             print(f"Beste model opgeslagen in {relation_path} met loss {best_loss}")
 
-    results_df = pd.DataFrame({'epoch': range(1, len(training_results)+1), 'loss': training_results})
-    results_df.to_csv(os.path.join(relation_path, "training_results.csv"), index=False)
+        epoch_results = {
+            'learning_rate': learning_rate,
+            'hidden_dim': hidden_dim,
+            'epoch': epoch+1,
+            'loss': avg_loss,
+            'best_loss': best_loss,
+            'epoch_time': epoch_time,
+            'total_time': time.time() - model_start,
+            'grad_norm': np.mean(gradient_norms[-len(snapshots):]),
+            'grad_norm_std': np.std(gradient_norms[-len(snapshots):]),
+            'completed': True,
+            'memory_usage': torch.cuda.memory_allocated()/1024**3 if torch.cuda.is_available() else 0,
+            'memory_peak': torch.cuda.max_memory_allocated()/1024**3 if torch.cuda.is_available() else 0
+        }
+        with open(os.path.join(debug_path, "live_log.csv"), 'a') as f:
+            pd.DataFrame([epoch_results]).to_csv(f, header=f.tell()==0)
+            f.flush() 
+
+    results = pd.DataFrame({
+        'epoch': range(1, len(training_results)+1),
+        'loss': training_results,
+        'epoch times': epoch_times,
+        'grad_norm': gradient_norms[:len(training_results)*len(snapshots)]
+    })
+    results.to_csv(os.path.join(run_dir, "training_results.csv"), index=False)
     print(f"Trainingsresultaten opgeslagen.")
 
+    return {
+        'learning_rate': learning_rate,
+        'hidden_dim': hidden_dim,
+        'best_loss': best_loss,
+        'parameter_count': count_parameters(model),
+        'nan_occurred': nan_occurred,
+        'succesfull epochs': len(epoch_times),
+        'total_time': time.time() - model_start
+    }
             
 def main1_load():
     model = DynamiSE(num_features=len(feature_cols1), hidden_dim=hidden_dim)
@@ -799,18 +844,32 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 snapshots = prepare_dynamic_data(stock_data)
 
 # start model
+learning_rates = [0.1, 0.01, 0.001, 0.0004, 0.0001, 0.00004, 0.00001]
+hidden_dims = [64, 32, 128, 16, 256]
+
+import traceback
+all_results = []
+for hd in hidden_dims:
+    for lr in learning_rates:
+        try:
+            result = main1_generate(lr, hd)
+            all_results.append(result)
+        except Exception as e:
+            print(f"\n[ERROR] in LR={lr}, HD={hd}: {str(e)}")
+            traceback.print_exc()
+            all_results.append({
+                'learning_rate': lr,
+                'hidden_dim': hd,
+                'error': str(e)
+            })
+        finally:
+            # Opslaan tussentijdse resultaten
+            pd.DataFrame(all_results).to_csv(os.path.join(debug_path, "all_experiments.csv"))
+
+# Samenvatting
+print("\n=== Experiment Samenvatting ===")
+summary = pd.DataFrame(all_results)
+print(summary.sort_values('best_loss'))
 
 
-try:
-    main1_generate()
-except Exception as e:
-    print(f"\n[ERROR] Training gestopt door exception: {e}")
-    import traceback
-    traceback.print_exc()
-finally:
-    print("\n[INFO] Training beëindigd. h-stats worden geplot...")
-    plot_h_stats(stats_per_epoch)
-    pd.DataFrame(stats_per_epoch).to_csv(os.path.join(debug_path, "h_stats_debug.csv"), index=False)
-    print(f"[INFO] h-statistieken opgeslagen als CSV in {debug_path}")
-
-main1_load()
+# main1_load()
