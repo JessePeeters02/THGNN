@@ -35,7 +35,7 @@ def check_pickles(nr, path, start):
             data = pickle.load(f)
 
         # Print de keys van het opgeslagen dict
-        # print("Keys in het bestand:", data.keys())
+        print("Keys in het bestand:", data.keys())
 
         # Voor een idee van de inhoud:
         # print("\nVoorbeeldshape features:", data['features'].shape)

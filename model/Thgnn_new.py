@@ -46,6 +46,13 @@ class GraphAttnMultiHead(Module):
         attn_weights = torch.sparse.softmax(masked_weight, dim=2).to_dense()
         support = torch.matmul(attn_weights, support)
         support = support.permute(dims=(1, 0, 2)).reshape(-1, self.num_heads * self.out_features)
+        print("\nConnectiviteit stats:")
+        print(f"Pos adj: {adj_mat.sum().item()} edges (dichtheid: {adj_mat.mean().item():.4f})")
+        
+        # Check of buren bestaan voor 3 willekeurige nodes
+        for node_id in [0, 5, 10]:  # Pas aan op basis van je data
+            print(f"\nNode {node_id}:")
+            print(f"Pos buren: {torch.where(adj_mat[node_id] > 0)[0].tolist()}")
         if self.bias is not None:
             support = support + self.bias
         if self.residual:
@@ -139,13 +146,27 @@ class StockHeteGAT(nn.Module):
                 nn.init.xavier_uniform_(m.weight, gain=0.02)
 
     def forward(self, inputs, pos_adj, neg_adj, requires_weight=False):
+        # print("\n=== Input Adjacency Matrices ===")
+        # print(f"Positive adj shape: {pos_adj.shape}, density: {pos_adj.mean().item():.4f}")
+        # print(f"Negative adj shape: {neg_adj.shape}, density: {neg_adj.mean().item():.4f}")
+        # sample_nodes = [0, 5, 10]  # Pas aan naar relevante node indices
+        # for node in sample_nodes:
+        #     print(f"\nNode {node} connectivity:")
+        #     print(f"Pos neighbors: {torch.where(pos_adj[node] > 0)[0].tolist()}")
+        #     print(f"Neg neighbors: {torch.where(neg_adj[node] > 0)[0].tolist()}")
         x = self.input_layer(inputs)
         x = x.transpose(0, 1)              
         support = self.encoding(x, mask=None)         
         support = support[-1] 
         support = support.squeeze()
+        print("\n=== Pre-GAT Features ===")
+        print(f"Feature stats - Mean: {support.mean().item():.4f}, Std: {support.std().item():.4f}")
         pos_support, pos_attn_weights = self.pos_gat(support, pos_adj, requires_weight)
         neg_support, neg_attn_weights = self.neg_gat(support, neg_adj, requires_weight)
+        if requires_weight:
+            print("\nAttention Weights Samples:")
+            print("Pos attention:", pos_attn_weights[:3, :3])  # Eerste 3 nodes
+            print("Neg attention:", neg_attn_weights[:3, :3])
         support = self.mlp_self(support)
         pos_support = self.mlp_pos(pos_support)
         neg_support = self.mlp_neg(neg_support)

@@ -22,27 +22,31 @@ base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
 print(f"base_path: {base_path}")
 data_path = os.path.join(base_path, "data", "testbatch2")
 print(f"data_path: {data_path}")
-data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_stabletimes")
 print(f"data_train_predict_path: {data_train_predict_path}")
-daily_stock_path = os.path.join(data_path, "daily_stock_gpu")
+daily_stock_path = os.path.join(data_path, "daily_stock_stabletimes")
 print(f"daily_stock_path: {daily_stock_path}")
-save_path = os.path.join(data_path, "model_saved_test_gpu")
+save_path = os.path.join(data_path, "model_saved_stabletimes_10epoch_normlabel")
 os.makedirs(save_path, exist_ok=True)
-prediction_path = os.path.join(data_path, "prediction_test_gpu")
+print(save_path)
+prediction_path = os.path.join(data_path, "prediction_stabletimes_10epoch_lr0.001_normlabel")
 os.makedirs(prediction_path, exist_ok=True)
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    print(device)
 
 class Args:
-    def __init__(self, gpu=0, subtask="regression"):
+    def __init__(self, subtask="regression"):
         # device
-        self.gpu = str(gpu)
-        self.device = 'cpu'
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {self.device}")
         # data settings
-        adj_threshold = 0.4
-        self.adj_str = str(int(100*adj_threshold))
-        self.pos_adj_dir = "pos_adj_" + self.adj_str
-        self.neg_adj_dir = "neg_adj_" + self.adj_str
+        # adj_threshold = 0.6
+        # self.adj_str = str(int(100*adj_threshold))
+        self.pos_adj_dir = "pos_adj" #+ self.adj_str
+        self.neg_adj_dir = "neg_adj" #+ self.adj_str
         self.feat_dir = "features"
-        self.label_dir = "label"
+        self.label_dir = "labels"
         self.mask_dir = "mask"
         self.data_start = data_start
         self.data_middle = data_middle
@@ -67,8 +71,7 @@ class Args:
         self.save_path = save_path
         self.load_path = self.save_path
         self.save_name = self.model_name + "_hidden_" + str(self.hidden_dim) + "_head_" + str(self.num_heads) + \
-                         "_outfeat_" + str(self.out_features) + "_batchsize_" + str(self.batch_size) + "_adjth_" + \
-                         str(self.adj_str)
+                         "_outfeat_" + str(self.out_features) + "_batchsize_" + str(self.batch_size)
         self.epochs_save_by = self.max_epochs
         self.sub_task = subtask
         eval("self.{}".format(self.sub_task))()
@@ -100,7 +103,6 @@ class Args:
 
 def fun_train_predict(data_start, data_middle, data_end, pre_data):
     args = Args()
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     #dataset = AllGraphDataSampler(base_dir="/home/THGNN-main/data/data_train_predict/", data_start=data_start,
     #                              data_middle=data_middle, data_end=data_end)
     #val_dataset = AllGraphDataSampler(base_dir="/home/THGNN-main/data/data_train_predict/", mode="val", data_start=data_start,

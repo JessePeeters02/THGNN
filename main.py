@@ -32,18 +32,19 @@ os.makedirs(prediction_path, exist_ok=True)
 if torch.cuda.is_available():
     device = torch.device("cuda")
     print(device)
+
 class Args:
     def __init__(self, gpu=0, subtask="regression"):
         # device
         self.gpu = str(1)
         self.device = 'cuda'
         # data settings
-        adj_threshold = 0.4
-        self.adj_str = str(int(100*adj_threshold))
-        self.pos_adj_dir = "pos_adj_" + self.adj_str
-        self.neg_adj_dir = "neg_adj_" + self.adj_str
+        # adj_threshold = 0.4
+        # self.adj_str = str(int(100*adj_threshold))
+        self.pos_adj_dir = "pos_adj_" #+ self.adj_str
+        self.neg_adj_dir = "neg_adj_" #+ self.adj_str
         self.feat_dir = "features"
-        self.label_dir = "label"
+        self.label_dir = "labels"
         self.mask_dir = "mask"
         self.data_start = data_start
         self.data_middle = data_middle
@@ -67,8 +68,7 @@ class Args:
         self.save_path = save_path
         self.load_path = self.save_path
         self.save_name = self.model_name + "_hidden_" + str(self.hidden_dim) + "_head_" + str(self.num_heads) + \
-                         "_outfeat_" + str(self.out_features) + "_batchsize_" + str(self.batch_size) + "_adjth_" + \
-                         str(self.adj_str)
+                         "_outfeat_" + str(self.out_features) + "_batchsize_" + str(self.batch_size)
         self.epochs_save_by = self.max_epochs
         self.sub_task = subtask
         eval("self.{}".format(self.sub_task))()
