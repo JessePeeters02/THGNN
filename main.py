@@ -29,12 +29,14 @@ save_path = os.path.join(data_path, "model_saved_stabletimes_10epoch_nonormlabel
 os.makedirs(save_path, exist_ok=True)
 prediction_path = os.path.join(data_path, "prediction_stabletimes_10epoch_lr0.001_nonormlabel")
 os.makedirs(prediction_path, exist_ok=True)
-
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    print(device)
 class Args:
     def __init__(self, gpu=0, subtask="regression"):
         # device
-        self.gpu = str(gpu)
-        self.device = 'cpu'
+        self.gpu = str(1)
+        self.device = 'cuda'
         # data settings
         adj_threshold = 0.4
         self.adj_str = str(int(100*adj_threshold))
@@ -48,7 +50,7 @@ class Args:
         self.data_end = data_end
         self.pre_data = pre_data
         # epoch settings
-        self.max_epochs = 60
+        self.max_epochs = 10
         self.epochs_eval = 10
         # learning rate settings
         self.lr = 0.001
@@ -67,7 +69,7 @@ class Args:
         self.save_name = self.model_name + "_hidden_" + str(self.hidden_dim) + "_head_" + str(self.num_heads) + \
                          "_outfeat_" + str(self.out_features) + "_batchsize_" + str(self.batch_size) + "_adjth_" + \
                          str(self.adj_str)
-        self.epochs_save_by = 60
+        self.epochs_save_by = self.max_epochs
         self.sub_task = subtask
         eval("self.{}".format(self.sub_task))()
 

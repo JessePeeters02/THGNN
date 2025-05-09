@@ -49,10 +49,10 @@ class Args:
         self.data_end = data_end
         self.pre_data = pre_data
         # epoch settings
-        self.max_epochs = 60
+        self.max_epochs = 10
         self.epochs_eval = 10
         # learning rate settings
-        self.lr = 0.01  # Hogere initiële learning rate
+        self.lr = 0.001  # Hogere initiële learning rate
         self.weight_decay = 1e-4  # L2 regularisatie
         self.gamma = 0.3
         # model settings
