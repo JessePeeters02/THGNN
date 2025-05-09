@@ -121,6 +121,6 @@ def main(asc):
             print(f"No data available for date range {start_date} to {end_date}. Skipping...")
             
 if __name__ == "__main__":
-    ascending = True #voor Jesse
-    # ascending = False #voor Lawrence
+    # ascending = True #voor Jesse
+    ascending = False #voor Lawrence
     main(ascending)

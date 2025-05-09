@@ -22,13 +22,13 @@ base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
 print(f"base_path: {base_path}")
 data_path = os.path.join(base_path, "data", "testbatch2")
 print(f"data_path: {data_path}")
-data_train_predict_path = os.path.join(data_path, "data_train_predict_stabletimes")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu")
 print(f"data_train_predict_path: {data_train_predict_path}")
-daily_stock_path = os.path.join(data_path, "daily_stock_stabletimes")
+daily_stock_path = os.path.join(data_path, "daily_stock_gpu")
 print(f"daily_stock_path: {daily_stock_path}")
-save_path = os.path.join(data_path, "model_saved_stabletimes")
+save_path = os.path.join(data_path, "model_saved_test_gpu")
 os.makedirs(save_path, exist_ok=True)
-prediction_path = os.path.join(data_path, "prediction_stabletimes")
+prediction_path = os.path.join(data_path, "prediction_test_gpu")
 os.makedirs(prediction_path, exist_ok=True)
 
 class Args:
@@ -49,7 +49,7 @@ class Args:
         self.data_end = data_end
         self.pre_data = pre_data
         # epoch settings
-        self.max_epochs = 10
+        self.max_epochs = 60
         self.epochs_eval = 10
         # learning rate settings
         self.lr = 0.01  # Hogere initiële learning rate
@@ -111,7 +111,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     val_dataset = AllGraphDataSampler(base_dir=data_train_predict_path, mode="val", data_start=data_start,
                                   data_middle=data_middle, data_end=data_end)
     label_mean, label_std = dataset.label_mean, dataset.label_std
-    print(f"Globale normalisatieparameters -> mean: {label_mean:.4f}, std: {label_std:.4f}")
+    # print(f"Globale normalisatieparameters -> mean: {label_mean:.4f}, std: {label_std:.4f}")
     dataset_loader = DataLoader(dataset, batch_size=args.batch_size, pin_memory=True, collate_fn=lambda x: x)
     val_dataset_loader = DataLoader(val_dataset, batch_size=1, pin_memory=True, collate_fn=lambda x: x[0])
     model = eval(args.model_name)(hidden_dim=args.hidden_dim, num_heads=args.num_heads,
@@ -125,7 +125,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     default_scheduler = scheduler
     print('start training')
     for epoch in range(args.max_epochs):
-        print(f"Current LR: {optimizer.param_groups[0]['lr']:.2e}")
+        # print(f"Current LR: {optimizer.param_groups[0]['lr']:.2e}")
         train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
                                  optimizer=optimizer, scheduler=default_scheduler, loss_fcn=mse_loss,
                                  label_mean=label_mean, label_std=label_std)
@@ -179,8 +179,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
 if __name__ == "__main__":
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
-    data_start = total_data_points-20
-    data_middle = total_data_points-2
+    data_start = 0
+    data_middle = total_data_points-20
     data_end = total_data_points
     pre_data = '2025-03-07'
     fun_train_predict(data_start, data_middle, data_end, pre_data)

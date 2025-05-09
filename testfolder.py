@@ -67,18 +67,36 @@ def check_pickles(nr, path, start):
         # print("\features:")
         # print(data['features'])
 
+def evaluate_predictions(predictions, labels):
+    mae = np.mean(np.abs(predictions - labels))
+    mse = np.mean((predictions - labels) ** 2)
+    return mae, mse
+
+def direction_accuracy(predictions, labels, threshold=0.00000000):
+    if threshold == 'mean':
+        thresh_val = np.mean(labels)
+    else:
+        thresh_val = threshold
+
+    pred_up = predictions > thresh_val
+    label_up = labels > thresh_val
+
+    acc = np.mean(pred_up == label_up)
+    return acc
+
 def check_labelsvsprediction(nr, path, start):
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat """
     bestandspad = os.path.join(data_path, path)
-    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_stabletimes", "pred.csv"))
+    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_on_corr", "pred.csv"))
     predictions = predictionsdf["score"].values
     print("Bestandspad:", bestandspad)
     labels = []
-    for file in os.listdir(bestandspad)[start:start+nr]:
+    for file in os.listdir(bestandspad)[-1:]:
         print("Bestand:", file)
         file = os.path.join(bestandspad, file)
         with open(file, 'rb') as f:
             data = pickle.load(f)
+        print("labels keys: ",data.keys())
         labels.append(data['labels'].numpy())
     labels = np.concatenate(labels)
 
@@ -89,6 +107,13 @@ def check_labelsvsprediction(nr, path, start):
     
     print(label_stats)
     print(pred_stats)
+
+    mae, mse = evaluate_predictions(predictions, labels)
+    acc = direction_accuracy(predictions, labels)
+
+    print(f"MAE: {mae:.6f}")
+    print(f"MSE: {mse:.6f}")
+    print(f"Accuracy op richting: {acc:.2%}")
 
     # Plot optimalisaties
     bins = 50
@@ -202,7 +227,7 @@ def gpu_info():
 """ aanroepen van alle testfuncties"""
 # check_pickles(3, "data_train_predict_DSE_noknn2", 7)
 # check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
-check_labelsvsprediction(2, "data_train_predict_stabletimes", 397)
+check_labelsvsprediction(2, "data_train_predict_oldway", 20)
 # check_pickles(30, "data_train_predict", 20)
 # check_csi300()
 # memory_info()
