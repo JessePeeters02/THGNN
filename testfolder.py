@@ -72,7 +72,7 @@ def evaluate_predictions(predictions, labels):
     mse = np.mean((predictions - labels) ** 2)
     return mae, mse
 
-def direction_accuracy(predictions, labels, threshold=0.00000000):
+def direction_accuracy(predictions, labels, threshold='mean'):
     if threshold == 'mean':
         thresh_val = np.mean(labels)
     else:
@@ -87,11 +87,13 @@ def direction_accuracy(predictions, labels, threshold=0.00000000):
 def check_labelsvsprediction(nr, path, start):
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat """
     bestandspad = os.path.join(data_path, path)
-    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_on_corr", "pred.csv"))
+    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_stabletimes_10epoch_lr0.001_nonormlabel", "pred.csv"))
     predictions = predictionsdf["score"].values
+    predictions = predictions[:200]
     print("Bestandspad:", bestandspad)
     labels = []
-    for file in os.listdir(bestandspad)[-1:]:
+    startind = 1130
+    for file in os.listdir(bestandspad)[startind:startind+1]:
         print("Bestand:", file)
         file = os.path.join(bestandspad, file)
         with open(file, 'rb') as f:
@@ -227,7 +229,7 @@ def gpu_info():
 """ aanroepen van alle testfuncties"""
 # check_pickles(3, "data_train_predict_DSE_noknn2", 7)
 # check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
-check_labelsvsprediction(2, "data_train_predict_oldway", 20)
+check_labelsvsprediction(2, "data_train_predict", 20)
 # check_pickles(30, "data_train_predict", 20)
 # check_csi300()
 # memory_info()
