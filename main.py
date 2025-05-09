@@ -25,9 +25,9 @@ data_train_predict_path = os.path.join(data_path, "data_train_predict_stabletime
 print(f"data_train_predict_path: {data_train_predict_path}")
 daily_stock_path = os.path.join(data_path, "daily_stock_stabletimes")
 print(f"daily_stock_path: {daily_stock_path}")
-save_path = os.path.join(data_path, "model_saved_stabletimes")
+save_path = os.path.join(data_path, "model_saved_stabletimes_10epoch_nonormlabel")
 os.makedirs(save_path, exist_ok=True)
-prediction_path = os.path.join(data_path, "prediction_stabletimes")
+prediction_path = os.path.join(data_path, "prediction_stabletimes_10epoch_lr0.001_nonormlabel")
 os.makedirs(prediction_path, exist_ok=True)
 
 class Args:
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
     data_start = 0
-    data_middle = total_data_points-13
+    data_middle = total_data_points-20
     data_end = total_data_points
     pre_data = '2025-03-07'
     fun_train_predict(data_start, data_middle, data_end, pre_data)
