@@ -38,4 +38,6 @@ class AllGraphDataSampler(data.Dataset):
 
     def __getitem__(self, idx):
         sample = self.data_all[idx]  # Hier kan de fout zitten
+        # print("Beschikbare keys:", sample.keys())  # Check of 'features' bestaat
+        # print("Features shape:", sample['features'].shape)
         return sample

@@ -1,8 +1,8 @@
 # Leugen! het is 18:19 tegen dat ik hier gevonden heb hoe het moet
 from trainer.trainer import *
 from data_loader import *
-# from model.Thgnn import *
-from model.Thgnn_new import *
+from model.Thgnn import *
+# from model.Thgnn_new import *
 import warnings
 import torch
 import os
@@ -21,28 +21,29 @@ base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
 print(f"base_path: {base_path}")
 data_path = os.path.join(base_path, "data", "testbatch2")
 print(f"data_path: {data_path}")
-data_train_predict_path = os.path.join(data_path, "data_train_predict_stabletimes")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu")
 print(f"data_train_predict_path: {data_train_predict_path}")
-daily_stock_path = os.path.join(data_path, "daily_stock_stabletimes")
+daily_stock_path = os.path.join(data_path, "daily_stock_gpu")
 print(f"daily_stock_path: {daily_stock_path}")
-save_path = os.path.join(data_path, "model_saved_stabletimes_10epoch_nonormlabel")
+save_path = os.path.join(data_path, "model_saved_full_10epoch_lr0.001_nonormlabel_bin")
 os.makedirs(save_path, exist_ok=True)
-prediction_path = os.path.join(data_path, "prediction_stabletimes_10epoch_lr0.001_nonormlabel")
+prediction_path = os.path.join(data_path, "prediction_full_10epoch_lr0.001_nonormlabel_bin")
 os.makedirs(prediction_path, exist_ok=True)
+
 if torch.cuda.is_available():
     device = torch.device("cuda")
     print(device)
 
 class Args:
-    def __init__(self, gpu=0, subtask="regression"):
+    def __init__(self, gpu=0, subtask="classification_binary"):
         # device
         self.gpu = str(1)
         self.device = 'cuda'
         # data settings
         # adj_threshold = 0.4
         # self.adj_str = str(int(100*adj_threshold))
-        self.pos_adj_dir = "pos_adj_" #+ self.adj_str
-        self.neg_adj_dir = "neg_adj_" #+ self.adj_str
+        self.pos_adj_dir = "pos_adj" #+ self.adj_str
+        self.neg_adj_dir = "neg_adj" #+ self.adj_str
         self.feat_dir = "features"
         self.label_dir = "labels"
         self.mask_dir = "mask"
@@ -150,8 +151,9 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         df = pd.read_csv(os.path.join(daily_stock_path, data_code_last[i]), dtype=object)
         tmp_data = val_dataset[i]
         pos_adj, neg_adj, features, labels, mask = extract_data(tmp_data, args.device)
-        model.train()
-        logits = model(features, pos_adj, neg_adj)
+        model.eval()
+        with torch.no_grad():
+            logits = model(features, pos_adj, neg_adj)
         result = logits.data.cpu().numpy().tolist()
         result_new = []
         for j in range(len(result)):

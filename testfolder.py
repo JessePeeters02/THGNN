@@ -11,6 +11,8 @@ from torch.utils.data import DataLoader
 import torch
 import psutil
 import seaborn as sns
+import torch.nn as nn
+
 
 # Pad configuratie
 base_path = os.path.dirname(os.path.abspath(__file__))
@@ -70,29 +72,41 @@ def check_pickles(nr, path, start):
 def evaluate_predictions(predictions, labels):
     mae = np.mean(np.abs(predictions - labels))
     mse = np.mean((predictions - labels) ** 2)
-    return mae, mse
+    label_up = (labels >= 0).astype(int)
+    tpredictions = torch.tensor(predictions, dtype=torch.float32)
+    tlabels = torch.tensor(label_up, dtype=torch.float32)
+    print(tlabels)
+    print(tpredictions)
+    print(type(tpredictions), type(tlabels))
+    BCE = nn.BCELoss(reduction='mean')
+    bce = BCE(tpredictions, tlabels)
+    return mae, mse, bce
 
-def direction_accuracy(predictions, labels, threshold='mean'):
+def direction_accuracy(predictions, labels, threshold=0.00000):
     if threshold == 'mean':
         thresh_val = np.mean(labels)
     else:
         thresh_val = threshold
 
-    pred_up = predictions > thresh_val
-    label_up = labels > thresh_val
-
+    pred_up = predictions > 0.50
+    label_up = labels > 0
+    print(pred_up)
+    print(label_up)
     acc = np.mean(pred_up == label_up)
     return acc
 
 def check_labelsvsprediction(nr, path, start):
-    """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat """
+    """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat"""
     bestandspad = os.path.join(data_path, path)
-    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_stabletimes_10epoch_lr0.001_nonormlabel", "pred.csv"))
+    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_full_10epoch_lr0.001_nonormlabel_bin", "pred.csv"))
     predictions = predictionsdf["score"].values
+    predictiondates = set(predictionsdf["dt"].values)
     predictions = predictions[:200]
+    print(f"predictions: {predictions}")
+    print(f"predictiondates: {predictiondates}")
     print("Bestandspad:", bestandspad)
     labels = []
-    startind = 1130
+    startind = 1194
     for file in os.listdir(bestandspad)[startind:startind+1]:
         print("Bestand:", file)
         file = os.path.join(bestandspad, file)
@@ -101,6 +115,8 @@ def check_labelsvsprediction(nr, path, start):
         print("labels keys: ",data.keys())
         labels.append(data['labels'].numpy())
     labels = np.concatenate(labels)
+    print(f"labels: {labels}")
+    label_up = (labels >= 0).astype(int)
 
     print(len(labels), len(predictions))
 
@@ -110,17 +126,18 @@ def check_labelsvsprediction(nr, path, start):
     print(label_stats)
     print(pred_stats)
 
-    mae, mse = evaluate_predictions(predictions, labels)
+    mae, mse, bce = evaluate_predictions(predictions, label_up)
     acc = direction_accuracy(predictions, labels)
 
     print(f"MAE: {mae:.6f}")
     print(f"MSE: {mse:.6f}")
+    print(f"BCE: {bce:.6f}")
     print(f"Accuracy op richting: {acc:.2%}")
 
     # Plot optimalisaties
     bins = 50
-    min_val = min(np.min(labels), np.min(predictions))
-    max_val = max(np.max(labels), np.max(predictions))
+    min_val = min(np.min(label_up), np.min(predictions))
+    max_val = max(np.max(label_up), np.max(predictions))
     
     # Maak figuren parallel
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
@@ -128,7 +145,7 @@ def check_labelsvsprediction(nr, path, start):
     # Histogram
     ax1.hist(predictions, bins=bins, range=(min_val, max_val), 
             alpha=0.5, label="Voorspellingen", density=True)
-    ax1.hist(labels, bins=bins, range=(min_val, max_val),
+    ax1.hist(label_up, bins=bins, range=(min_val, max_val),
             alpha=0.5, label="Echte labels", density=True)
     ax1.legend()
     ax1.set_title("Verdeling van returns")

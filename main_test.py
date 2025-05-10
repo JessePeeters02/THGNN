@@ -1,8 +1,8 @@
 # Leugen! het is 18:19 tegen dat ik hier gevonden heb hoe het moet
 from trainer.trainer_test import *
 from data_loader_test import *
-# from model.Thgnn import *
-from model.Thgnn_new_test import *
+from model.Thgnn import *
+# from model.Thgnn_new_test import *
 import warnings
 import torch
 import os
@@ -26,10 +26,10 @@ data_train_predict_path = os.path.join(data_path, "data_train_predict_stabletime
 print(f"data_train_predict_path: {data_train_predict_path}")
 daily_stock_path = os.path.join(data_path, "daily_stock_stabletimes")
 print(f"daily_stock_path: {daily_stock_path}")
-save_path = os.path.join(data_path, "model_saved_stabletimes_10epoch_normlabel")
+save_path = os.path.join(data_path, "model_saved_stabletimes_10epoch_normlabel_GRU")
 os.makedirs(save_path, exist_ok=True)
 print(save_path)
-prediction_path = os.path.join(data_path, "prediction_stabletimes_10epoch_lr0.001_normlabel")
+prediction_path = os.path.join(data_path, "prediction_stabletimes_10epoch_lr0.001_normlabel_GRU")
 os.makedirs(prediction_path, exist_ok=True)
 if torch.cuda.is_available():
     device = torch.device("cuda")

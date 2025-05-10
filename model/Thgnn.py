@@ -96,7 +96,7 @@ class GraphAttnSemIndividual(Module):
 
 
 class StockHeteGAT(nn.Module):
-    def __init__(self, in_features=6, out_features=8, num_heads=8, hidden_dim=64, num_layers=1):
+    def __init__(self, in_features=4, out_features=8, num_heads=8, hidden_dim=64, num_layers=1):
         super(StockHeteGAT, self).__init__()
         self.encoding = nn.GRU(
             input_size=in_features,
@@ -125,6 +125,7 @@ class StockHeteGAT(nn.Module):
                                               act=nn.Tanh())
         self.predictor = nn.Sequential(
             nn.Linear(hidden_dim, 1),
+            # nn.Tanh()  
             nn.Sigmoid()
         )
 
@@ -134,7 +135,9 @@ class StockHeteGAT(nn.Module):
 
     def forward(self, inputs, pos_adj, neg_adj, requires_weight=False):
         _, support = self.encoding(inputs)
+        # print(f" support shape: {support.shape}")
         support = support.squeeze()
+        # print(f" support shape: {support.shape}")
         pos_support, pos_attn_weights = self.pos_gat(support, pos_adj, requires_weight)
         neg_support, neg_attn_weights = self.neg_gat(support, neg_adj, requires_weight)
         support = self.mlp_self(support)

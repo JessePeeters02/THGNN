@@ -26,6 +26,7 @@ def extract_data(data_dict, device, label_mean=None, label_std=None):
     pos_adj = data_dict['pos_adj'].to(device).squeeze()
     neg_adj = data_dict['neg_adj'].to(device).squeeze()
     features = data_dict['features'].to(device).squeeze()
+    # print("features shape:", features.shape)
     labels = data_dict['labels'].to(device).squeeze()
     mask = data_dict['mask']
     

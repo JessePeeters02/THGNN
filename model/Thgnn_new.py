@@ -1,10 +1,9 @@
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
 import torch.nn as nn
-from transformer_encoder import TransformerEncoder
-from transformer_encoder.utils import PositionalEncoding
 import torch
 import math
+import torch.nn.functional as F
 
 class GraphAttnMultiHead(Module):
     def __init__(self, in_features, out_features, negative_slope=0.2, num_heads=4, bias=True, residual=True):
@@ -37,7 +36,7 @@ class GraphAttnMultiHead(Module):
 
     def forward(self, inputs, adj_mat, requires_weight=False):
         support = torch.mm(inputs, self.weight)
-        support = support.reshape(-1, self.num_heads, self.out_features).permute(dims=(1, 0, 2))
+        support = support.reshape(-1, self.num_heads, self.out_features).permute(1, 0, 2)
         f_1 = torch.matmul(support, self.weight_u).reshape(self.num_heads, 1, -1)
         f_2 = torch.matmul(support, self.weight_v).reshape(self.num_heads, -1, 1)
         logits = f_1 + f_2
@@ -45,14 +44,7 @@ class GraphAttnMultiHead(Module):
         masked_weight = torch.mul(weight, adj_mat).to_sparse()
         attn_weights = torch.sparse.softmax(masked_weight, dim=2).to_dense()
         support = torch.matmul(attn_weights, support)
-        support = support.permute(dims=(1, 0, 2)).reshape(-1, self.num_heads * self.out_features)
-        print("\nConnectiviteit stats:")
-        print(f"Pos adj: {adj_mat.sum().item()} edges (dichtheid: {adj_mat.mean().item():.4f})")
-        
-        # Check of buren bestaan voor 3 willekeurige nodes
-        for node_id in [0, 5, 10]:  # Pas aan op basis van je data
-            print(f"\nNode {node_id}:")
-            print(f"Pos buren: {torch.where(adj_mat[node_id] > 0)[0].tolist()}")
+        support = support.permute(1, 0, 2).reshape(-1, self.num_heads * self.out_features)
         if self.bias is not None:
             support = support + self.bias
         if self.residual:
@@ -102,22 +94,74 @@ class GraphAttnSemIndividual(Module):
             return (beta * inputs).sum(1), beta
         else:
             return (beta * inputs).sum(1), None
+        
+
+class TransformerEncoder(nn.Module):
+    def __init__(self, d_model, d_ff, n_heads, n_layers, dropout):
+        super().__init__()
+        self.layers = nn.ModuleList([
+            TransformerEncoderLayer(d_model, d_ff, n_heads, dropout)
+            for _ in range(n_layers)
+        ])
+        
+    def forward(self, x, mask=None):
+        for layer in self.layers:
+            x = layer(x, mask)
+        return x
+
+
+class TransformerEncoderLayer(nn.Module):
+    def __init__(self, d_model, d_ff, n_heads, dropout):
+        super().__init__()
+        self.self_attn = nn.MultiheadAttention(d_model, n_heads, dropout=dropout)
+        self.linear1 = nn.Linear(d_model, d_ff)
+        self.linear2 = nn.Linear(d_ff, d_model)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+        
+    def forward(self, x, mask=None):
+        # Self attention
+        attn_out, _ = self.self_attn(x, x, x, attn_mask=mask)
+        x = x + self.dropout(attn_out)
+        x = self.norm1(x)
+        
+        # Feed forward
+        ff_out = self.linear2(self.dropout(F.relu(self.linear1(x))))
+        x = x + self.dropout(ff_out)
+        x = self.norm2(x)
+        return x
+    
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super().__init__()
+        self.dropout = nn.Dropout(p=dropout)
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(max_len, 1, d_model)
+        pe[:, 0, 0::2] = torch.sin(position * div_term)
+        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0)]
+        return self.dropout(x)
 
 
 class StockHeteGAT(nn.Module):
     def __init__(self, in_features=4, out_features=8, num_heads=8, hidden_dim=64, num_layers=1):
         super(StockHeteGAT, self).__init__()
-        self.input_layer = nn.Sequential(
-            nn.Linear(in_features, hidden_dim),
-            PositionalEncoding(d_model=hidden_dim, dropout=0.1, max_len=5000)
-        )
-
-        self.encoding = TransformerEncoder(
+        # Basis input projectie
+        self.input_proj = nn.Linear(in_features, hidden_dim)
+        
+        # Transformer encoder
+        self.pos_encoder = PositionalEncoding(hidden_dim)
+        self.transformer = TransformerEncoder(
             d_model=hidden_dim,
-            d_ff=hidden_dim * 4,
-            n_heads=4,
-            n_layers=2,
-            dropout=0.1
+            d_ff=hidden_dim*4,
+            n_heads=num_heads//2,
+            n_layers=num_layers
         )
         self.pos_gat = GraphAttnMultiHead(
             in_features=hidden_dim,
@@ -137,7 +181,8 @@ class StockHeteGAT(nn.Module):
                                               hidden_size=hidden_dim,
                                               act=nn.Tanh())
         self.predictor = nn.Sequential(
-            nn.Linear(hidden_dim, 1)#,
+            nn.Linear(hidden_dim, 1),
+            nn.Tanh()#,
             #nn.Sigmoid()
         )
 
@@ -146,27 +191,27 @@ class StockHeteGAT(nn.Module):
                 nn.init.xavier_uniform_(m.weight, gain=0.02)
 
     def forward(self, inputs, pos_adj, neg_adj, requires_weight=False):
-        # print("\n=== Input Adjacency Matrices ===")
-        # print(f"Positive adj shape: {pos_adj.shape}, density: {pos_adj.mean().item():.4f}")
-        # print(f"Negative adj shape: {neg_adj.shape}, density: {neg_adj.mean().item():.4f}")
-        # sample_nodes = [0, 5, 10]  # Pas aan naar relevante node indices
-        # for node in sample_nodes:
-        #     print(f"\nNode {node} connectivity:")
-        #     print(f"Pos neighbors: {torch.where(pos_adj[node] > 0)[0].tolist()}")
-        #     print(f"Neg neighbors: {torch.where(neg_adj[node] > 0)[0].tolist()}")
-        x = self.input_layer(inputs)
-        x = x.transpose(0, 1)              
-        support = self.encoding(x, mask=None)         
-        support = support[-1] 
-        support = support.squeeze()
-        print("\n=== Pre-GAT Features ===")
-        print(f"Feature stats - Mean: {support.mean().item():.4f}, Std: {support.std().item():.4f}")
+        print("\n=== Features Debug ===")
+        print("Shape:", inputs.shape)  # Verwacht [num_nodes, num_features]
+        print("Stats - Mean: {:.4f}, Std: {:.4f}, Min: {:.4f}, Max: {:.4f}".format(
+            inputs.mean(), inputs.std(), inputs.min(), inputs.max()))
+        print("Voorbeeld (eerste node):", inputs[0, :5])  # Eerste 5 features van node 0
+        # Input shape transformeren
+        inputs = self.input_norm(inputs.float())
+        print("Normed Shape:", inputs.shape)  # Verwacht [num_nodes, window, num_features]
+        batch_size, seq_len, num_features = inputs.shape
+        
+        # Eerst door input layer
+        x = inputs.reshape(-1, num_features)  # [200*20, 4]
+        x = self.feature_proj(x).reshape(batch_size, seq_len, -1)  # [200, 20, hidden_dim]
+        
+        # Transformer verwacht [seq_len, batch_size, features]
+        x = x.transpose(0, 1)  # [20, 200, hidden_dim]
+        x = self.pos_encoder(x)
+        x = self.transformer(x)        
+        support = x[-1]
         pos_support, pos_attn_weights = self.pos_gat(support, pos_adj, requires_weight)
         neg_support, neg_attn_weights = self.neg_gat(support, neg_adj, requires_weight)
-        if requires_weight:
-            print("\nAttention Weights Samples:")
-            print("Pos attention:", pos_attn_weights[:3, :3])  # Eerste 3 nodes
-            print("Neg attention:", neg_attn_weights[:3, :3])
         support = self.mlp_self(support)
         pos_support = self.mlp_pos(pos_support)
         neg_support = self.mlp_neg(neg_support)
@@ -176,4 +221,6 @@ class StockHeteGAT(nn.Module):
         if requires_weight:
             return self.predictor(all_embedding), (pos_attn_weights, neg_attn_weights, sem_attn_weights)
         else:
-            return self.predictor(all_embedding)
+            output = self.predictor(all_embedding)
+            print(f"Output range: [{output.min().item():.4f}, {output.max().item():.4f}]")
+            return output
