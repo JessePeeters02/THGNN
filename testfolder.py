@@ -72,14 +72,14 @@ def check_pickles(nr, path, start):
 def evaluate_predictions(predictions, labels):
     mae = np.mean(np.abs(predictions - labels))
     mse = np.mean((predictions - labels) ** 2)
-    tpredictions = torch.tensor(predictions, dtype=torch.float32)
-    tlabels = torch.tensor(labels, dtype=torch.float32)
-    print('tlabels: ', tlabels)
-    print('tpredictions: ', tpredictions)
-    print(type(tpredictions), type(tlabels))
-    BCE = nn.BCELoss(reduction='mean')
-    bce = BCE(tpredictions, tlabels)
-    return mae, mse, bce
+    # tpredictions = torch.tensor(predictions, dtype=torch.float32)
+    # tlabels = torch.tensor(labels, dtype=torch.float32)
+    # print('tlabels: ', tlabels)
+    # print('tpredictions: ', tpredictions)
+    # print(type(tpredictions), type(tlabels))
+    # BCE = nn.BCELoss(reduction='mean')
+    # bce = BCE(tpredictions, tlabels)
+    return mae, mse#, bce
 
 def direction_accuracy(predictions, labels, threshold=0.00000):
     if threshold == 'mean':
@@ -87,7 +87,7 @@ def direction_accuracy(predictions, labels, threshold=0.00000):
     else:
         thresh_val = threshold
 
-    pred_up = predictions > 0.50000000
+    pred_up = predictions > thresh_val
     label_up = labels > 0
     print(pred_up)
     print(label_up)
@@ -97,7 +97,7 @@ def direction_accuracy(predictions, labels, threshold=0.00000):
 def check_labelsvsprediction(nr, path, start):
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat"""
     bestandspad = os.path.join(data_path, path)
-    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_full_10epoch_lr0.001_nonormlabel_bin", "pred.csv"))
+    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_full_10epoch_lr0.001_nonormlabel_reg_wvt", "pred.csv"))
     predictions = predictionsdf["score"].values
     predictiondates = set(predictionsdf["dt"].values)
     predictions = predictions[:200]
@@ -125,12 +125,13 @@ def check_labelsvsprediction(nr, path, start):
     print(label_stats)
     print(pred_stats)
 
-    mae, mse, bce = evaluate_predictions(predictions, label_up)
+    # mae, mse , bce = evaluate_predictions(predictions, labels)
+    mae, mse = evaluate_predictions(predictions, labels)
     acc = direction_accuracy(predictions, labels)
 
     print(f"MAE: {mae:.6f}")
     print(f"MSE: {mse:.6f}")
-    print(f"BCE: {bce:.6f}")
+    # print(f"BCE: {bce:.6f}")
     print(f"Accuracy op richting: {acc:.2%}")
 
     # Plot optimalisaties
@@ -144,7 +145,7 @@ def check_labelsvsprediction(nr, path, start):
     # Histogram
     ax1.hist(predictions, bins=bins, range=(min_val, max_val), 
             alpha=0.5, label="Voorspellingen", density=True)
-    ax1.hist(label_up, bins=bins, range=(min_val, max_val),
+    ax1.hist(labels, bins=bins, range=(min_val, max_val),
             alpha=0.5, label="Echte labels", density=True)
     ax1.legend()
     ax1.set_title("Verdeling van returns")
@@ -245,7 +246,7 @@ def gpu_info():
 """ aanroepen van alle testfuncties"""
 # check_pickles(3, "data_train_predict_DSE_noknn2", 7)
 # check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
-check_labelsvsprediction(2, "data_train_predict", 20)
+check_labelsvsprediction(2, "data_train_predict_gpu_wvt", 20)
 # check_pickles(30, "data_train_predict", 20)
 # check_csi300()
 # memory_info()

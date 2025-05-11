@@ -730,9 +730,9 @@ def prepare_dynamic_data(stock_data, window_size=20):
     edge_info_neg = {}
 
     for i in tqdm(range(window_size-1, len(date_to_idx)), desc="Preparing snapshots"):
-        print('dit is i:', i)
+        # print('dit is i:', i)
         current_date = all_dates[i]
-        print('current date: ', current_date)
+        # print('current date: ', current_date)
         if current_date in already_done:
             bool_eerste = False
             with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'rb') as f:
@@ -743,7 +743,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             continue
 
         window_dates = all_dates[i-window_size+1:i+1]
-        print('dit is windowdates', len(window_dates), window_dates)
+        # print('dit is windowdates', len(window_dates), window_dates)
         window_data = stock_data[stock_data['Date'].isin(window_dates)]
         current_date_data = stock_data[stock_data['Date'] == current_date]
 
@@ -826,7 +826,7 @@ def calculate_label(raw_df, current_date):
     date_idx = raw_df[raw_df['Date'] == current_date].index[0]
     close_today = raw_df.iloc[date_idx]['Close']
     close_yesterday = raw_df.iloc[date_idx-1]['Close']
-    return (close_yesterday / close_today) - 1
+    return (close_today / close_yesterday) - 1
 
 
 def main1_generate():
@@ -834,7 +834,7 @@ def main1_generate():
     print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
     print(f"Gemiddelde edges per snapshot: {np.mean([len(s['pos_edges_info']) + len(s['neg_edges_info']) for s in snapshots]):.0f}")
 
-    model = DynamiSE(num_features=len(feature_cols1), hidden_dim=hidden_dim).to(device)
+    model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
     best_loss = float('inf')
@@ -891,7 +891,7 @@ def main1_generate():
 
             
 def main1_load():
-    model = DynamiSE(num_features=len(feature_cols1), hidden_dim=hidden_dim)
+    model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim)
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth"), map_location=device))
     model.eval()
 
@@ -948,7 +948,7 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 snapshots = prepare_dynamic_data(stock_data)
 
 # start model
-try:
-    main1_generate()
-finally:
-    main1_load()
+# try:
+#     main1_generate()
+# finally:
+main1_load()

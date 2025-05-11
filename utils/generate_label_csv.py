@@ -27,7 +27,7 @@ def calculate_label(raw_df, current_date):
     # print(date_idx)
     close_today = raw_df.iloc[date_idx]['Close']
     close_yesterday = raw_df.iloc[date_idx-1]['Close']
-    return (close_yesterday / close_today) - 1
+    return (close_today / close_yesterday) - 1
 
 def create_labels_csv(raw_data, all_dates, output_path):
     # Maak een lijst van alle aandelen

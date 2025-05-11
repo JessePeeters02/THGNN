@@ -21,13 +21,13 @@ base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
 print(f"base_path: {base_path}")
 data_path = os.path.join(base_path, "data", "testbatch2")
 print(f"data_path: {data_path}")
-data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu") #gpu, oldway, gpu_wvt
+data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu_wvt") #gpu_wvt, oldway_0.6, gpu_wvt
 print(f"data_train_predict_path: {data_train_predict_path}")
-daily_stock_path = os.path.join(data_path, "daily_stock_gpu") #gpu, oldway, gpu_wvt
+daily_stock_path = os.path.join(data_path, "daily_stock_gpu_wvt") #gpu_wvt, oldway, gpu_wvt
 print(f"daily_stock_path: {daily_stock_path}")
-save_path = os.path.join(data_path, "model_saved_full_10epoch_lr0.001_nonormlabel_bin")
+save_path = os.path.join(data_path, "model_saved_full_10epoch_lr0.001_nonormlabel_reg_wvt")
 os.makedirs(save_path, exist_ok=True)
-prediction_path = os.path.join(data_path, "prediction_full_10epoch_lr0.001_nonormlabel_bin")
+prediction_path = os.path.join(data_path, "prediction_full_10epoch_lr0.001_nonormlabel_reg_wvt")
 os.makedirs(prediction_path, exist_ok=True)
 
 if torch.cuda.is_available():
@@ -35,7 +35,7 @@ if torch.cuda.is_available():
     print(device)
 
 class Args:
-    def __init__(self, gpu=0, subtask="classification_binary"):
+    def __init__(self, gpu=0, subtask="regression"):
         # device
         self.gpu = str(1)
         self.device = 'cuda'
@@ -111,8 +111,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     # print(f"Aantal samples in dataset: {len(dataset)}")
     val_dataset = AllGraphDataSampler(base_dir=data_train_predict_path, mode="val", data_start=data_start,
                                   data_middle=data_middle, data_end=data_end)
-    dataset_loader = DataLoader(dataset, batch_size=args.batch_size, pin_memory=True, collate_fn=lambda x: x)
-    val_dataset_loader = DataLoader(val_dataset, batch_size=1, pin_memory=True)
+    dataset_loader = DataLoader(dataset, batch_size=args.batch_size, pin_memory=False, collate_fn=lambda x: x)
+    val_dataset_loader = DataLoader(val_dataset, batch_size=1, pin_memory=False)
     model = eval(args.model_name)(hidden_dim=args.hidden_dim, num_heads=args.num_heads,
                                   out_features=args.out_features).to(args.device)
 
@@ -123,9 +123,9 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     print('start training')
     for epoch in range(args.max_epochs):
         train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
-                                 optimizer=optimizer, scheduler=default_scheduler, loss_fcn=mse_loss)
+                                 optimizer=optimizer, scheduler=default_scheduler, loss_fcn=args.loss_fcn)
         if (epoch+1) % args.epochs_eval == 0:
-            eval_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader, loss_fcn=mse_loss)
+            eval_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader, loss_fcn=args.loss_fcn)
             print('Epoch: {}/{}, train loss: {:.6f}, val loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss, eval_loss))
         else:
             print('Epoch: {}/{}, train loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss))

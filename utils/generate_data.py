@@ -11,7 +11,7 @@ from torch.autograd import Variable
 # feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 prev_date_num = 20
-threshold = 0.4  # Drempelwaarde voor de correlatie
+threshold = 0.6  # Drempelwaarde voor de correlatie
 min_neighbors = 3
 
 # Basis pad naar de data-map
@@ -25,9 +25,9 @@ raw_data_path = os.path.join(data_path, "stockdata")
 print(raw_data_path)
 stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
 print(stock_data_path)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_oldway")
+data_train_predict_path = os.path.join(data_path, f"data_train_predict_oldway_{threshold}")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_oldway")
+daily_stock_path = os.path.join(data_path, f"daily_stock_oldway_{threshold}")
 os.makedirs(daily_stock_path, exist_ok=True)
 
 
@@ -56,7 +56,7 @@ def calculate_label(raw_df, current_date):
     # print(date_idx)
     close_today = raw_df.iloc[date_idx]['Close']
     close_yesterday = raw_df.iloc[date_idx-1]['Close']
-    return (close_yesterday / close_today) - 1
+    return (close_today / close_yesterday) - 1
 
 # Laad de stock data
 raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
