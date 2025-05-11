@@ -72,11 +72,10 @@ def check_pickles(nr, path, start):
 def evaluate_predictions(predictions, labels):
     mae = np.mean(np.abs(predictions - labels))
     mse = np.mean((predictions - labels) ** 2)
-    label_up = (labels >= 0).astype(int)
     tpredictions = torch.tensor(predictions, dtype=torch.float32)
-    tlabels = torch.tensor(label_up, dtype=torch.float32)
-    print(tlabels)
-    print(tpredictions)
+    tlabels = torch.tensor(labels, dtype=torch.float32)
+    print('tlabels: ', tlabels)
+    print('tpredictions: ', tpredictions)
     print(type(tpredictions), type(tlabels))
     BCE = nn.BCELoss(reduction='mean')
     bce = BCE(tpredictions, tlabels)
@@ -88,7 +87,7 @@ def direction_accuracy(predictions, labels, threshold=0.00000):
     else:
         thresh_val = threshold
 
-    pred_up = predictions > 0.50
+    pred_up = predictions > 0.50000000
     label_up = labels > 0
     print(pred_up)
     print(label_up)

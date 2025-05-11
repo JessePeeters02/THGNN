@@ -21,9 +21,9 @@ base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
 print(f"base_path: {base_path}")
 data_path = os.path.join(base_path, "data", "testbatch2")
 print(f"data_path: {data_path}")
-data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu") #gpu, oldway, gpu_wvt
 print(f"data_train_predict_path: {data_train_predict_path}")
-daily_stock_path = os.path.join(data_path, "daily_stock_gpu")
+daily_stock_path = os.path.join(data_path, "daily_stock_gpu") #gpu, oldway, gpu_wvt
 print(f"daily_stock_path: {daily_stock_path}")
 save_path = os.path.join(data_path, "model_saved_full_10epoch_lr0.001_nonormlabel_bin")
 os.makedirs(save_path, exist_ok=True)
@@ -126,8 +126,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
                                  optimizer=optimizer, scheduler=default_scheduler, loss_fcn=mse_loss)
         if (epoch+1) % args.epochs_eval == 0:
             eval_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader, loss_fcn=mse_loss)
-            print('Epoch: {}/{}, train loss: {:.6f}, val loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss,
-                                                                              eval_loss))
+            print('Epoch: {}/{}, train loss: {:.6f}, val loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss, eval_loss))
         else:
             print('Epoch: {}/{}, train loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss))
         if (epoch + 1) % args.epochs_save_by == 0:

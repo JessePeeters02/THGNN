@@ -22,21 +22,21 @@ data_path = os.path.join(base_path, "data", "testbatch2")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2_gpu")
+relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2_gpu_wvt")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots_gpu")
+snapshot_path = os.path.join(data_path, "intermediate_snapshots_gpu_wvt")
 os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu_wvt")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_gpu")
+daily_stock_path = os.path.join(data_path, "daily_stock_gpu_wvt")
 os.makedirs(daily_stock_path, exist_ok=True)
-log_path = os.path.join(data_path, "snapshot_log_gpu.csv")
+log_path = os.path.join(data_path, "snapshot_log_gpu_wvt.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Hyperparameters
 prev_date_num = 20
 feature_cols1 = ['Open', 'High', 'Low', 'Close']
-feature_cols2 = ['Open', 'High', 'Low', 'Close', 'Volume']
+feature_cols2 = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 hidden_dim = 64
 num_epochs = 30
 threshold = 0.6
@@ -116,13 +116,13 @@ def warn_nodes_without_neighbors(adj_pos, adj_neg, num_nodes, snapshot_date=None
 
     date_str = snapshot_date if snapshot_date else "unknown"
 
-    if nodes_without_pos:
-        print(f"[WARN] Snapshot {date_str}: {len(nodes_without_pos)} nodes hebben GEEN positieve buren (bv. {list(nodes_without_pos)[:5]})")
-    if nodes_without_neg:
-        print(f"[WARN] Snapshot {date_str}: {len(nodes_without_neg)} nodes hebben GEEN negatieve buren (bv. {list(nodes_without_neg)[:5]})")
+    # if nodes_without_pos:
+    #     print(f"[WARN] Snapshot {date_str}: {len(nodes_without_pos)} nodes hebben GEEN positieve buren (bv. {list(nodes_without_pos)[:5]})")
+    # if nodes_without_neg:
+    #     print(f"[WARN] Snapshot {date_str}: {len(nodes_without_neg)} nodes hebben GEEN negatieve buren (bv. {list(nodes_without_neg)[:5]})")
     isolated_nodes = all_nodes - (nodes_with_pos | nodes_with_neg)
-    if isolated_nodes:
-        print(f"[WARN] Snapshot {date_str}: {len(isolated_nodes)} nodes hebben GEEN buren (positief noch negatief)")
+    # if isolated_nodes:
+    #     print(f"[WARN] Snapshot {date_str}: {len(isolated_nodes)} nodes hebben GEEN buren (positief noch negatief)")
 
     # return (nodes_without_neg|nodes_without_pos)
     return isolated_nodes
@@ -142,7 +142,7 @@ def load_all_stocks(stock_data_path):
     for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
         if file.endswith('.csv'):
             df = pd.read_csv(os.path.join(stock_data_path, file))
-            all_stock_data.append(df[['Date', 'Stock'] + feature_cols1])
+            all_stock_data.append(df[['Date', 'Stock'] + feature_cols2])
     all_stock_data = pd.concat(all_stock_data, ignore_index=True)
     print(all_stock_data.head()) # kleine test om te zien of data deftig is ingeladen
 
@@ -749,7 +749,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             stock_data_current = current_date_data[current_date_data['Stock'] == stock]
             if len(stock_data_current) != 1:
                 print(f"Fout bij feature matrix van {stock} op {current_date}")
-            feature_matrix.append(stock_data_current[feature_cols1].values[0])
+            feature_matrix.append(stock_data_current[feature_cols2].values[0])
         feature_matrix = torch.FloatTensor(np.array(feature_matrix)).to(device)
 
         if bool_eerste:
@@ -915,7 +915,7 @@ def main1_load():
             for stock_name in snapshot['tickers']:
                 stock_data = stock_groups.get(stock_name)
                 if len(stock_data) == prev_date_num:
-                    features.append(stock_data[feature_cols1].values)
+                    features.append(stock_data[feature_cols2].values)
                     raw_df = raw_data[stock_name]
                     labels.append(calculate_label(raw_df, snapshot['date']))
                     stock_info.append([stock_name, end_date])
@@ -945,5 +945,7 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 snapshots = prepare_dynamic_data(stock_data)
 
 # start model
-main1_generate()
-main1_load()
+try:
+    main1_generate()
+finally:
+    main1_load()
