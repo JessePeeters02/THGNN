@@ -81,7 +81,7 @@ def evaluate_predictions(predictions, labels):
     # bce = BCE(tpredictions, tlabels)
     return mae, mse#, bce
 
-def direction_accuracy(predictions, labels, threshold=0.00000):
+def direction_accuracy(predictions, labels, threshold=0.0000000):
     if threshold == 'mean':
         thresh_val = np.mean(labels)
     else:
@@ -89,8 +89,18 @@ def direction_accuracy(predictions, labels, threshold=0.00000):
 
     pred_up = predictions > thresh_val
     label_up = labels > 0
-    print(pred_up)
-    print(label_up)
+    # print(pred_up)
+    # print(label_up)
+    print(f"Threshold: {thresh_val}")
+    print("  === positieve ===")
+    print(" positieve labels: ", np.sum(label_up))
+    print(" positieve voorspellingen: ", np.sum(pred_up))
+    print(" aantal positieve voorspellingen die ook positief zijn: ", np.sum(pred_up[label_up]))
+    print("  === negatieve ===")
+    print(" negatieve labels: ", np.sum(~label_up))
+    print(" negatieve voorspellingen: ", np.sum(~pred_up))
+    print(" aantal negatieve voorspellingen die ook negatief zijn: ", np.sum(~pred_up[~label_up]))
+          
     acc = np.mean(pred_up == label_up)
     return acc
 
@@ -114,7 +124,7 @@ def check_labelsvsprediction(nr, path, start):
         print("labels keys: ",data.keys())
         labels.append(data['labels'].numpy())
     labels = np.concatenate(labels)
-    print(f"labels: {labels}")
+    # print(f"labels: {labels}")
     label_up = (labels >= 0).astype(int)
 
     print(len(labels), len(predictions))
