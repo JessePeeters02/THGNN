@@ -729,8 +729,10 @@ def prepare_dynamic_data(stock_data, window_size=20):
     edge_info_pos = {}
     edge_info_neg = {}
 
-    for i in tqdm(range(window_size, len(date_to_idx)), desc="Preparing snapshots"):
+    for i in tqdm(range(window_size-1, len(date_to_idx)), desc="Preparing snapshots"):
+        print('dit is i:', i)
         current_date = all_dates[i]
+        print('current date: ', current_date)
         if current_date in already_done:
             bool_eerste = False
             with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'rb') as f:
@@ -740,7 +742,8 @@ def prepare_dynamic_data(stock_data, window_size=20):
                 edge_info_neg = dict(loaded_snapshot['neg_edges_info'])
             continue
 
-        window_dates = all_dates[i-window_size:i]
+        window_dates = all_dates[i-window_size+1:i+1]
+        print('dit is windowdates', len(window_dates), window_dates)
         window_data = stock_data[stock_data['Date'].isin(window_dates)]
         current_date_data = stock_data[stock_data['Date'] == current_date]
 
