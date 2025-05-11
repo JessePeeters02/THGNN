@@ -22,16 +22,14 @@ data_path = os.path.join(base_path, "data", "testbatch2")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_noknn2_gpu_wvt")
+relation_path = os.path.join(data_path, "relation_dynamiSE_overnight")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots_gpu_wvt")
+snapshot_path = os.path.join(data_path, "intermediate_snapshots_overnight")
 os.makedirs(snapshot_path, exist_ok=True)
 data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu_wvt")
 os.makedirs(data_train_predict_path, exist_ok=True)
 daily_stock_path = os.path.join(data_path, "daily_stock_gpu_wvt")
 os.makedirs(daily_stock_path, exist_ok=True)
-log_path = os.path.join(data_path, "snapshot_log_gpu_wvt.csv")
-os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Hyperparameters
 prev_date_num = 20
@@ -39,10 +37,6 @@ feature_cols1 = ['Open', 'High', 'Low', 'Close']
 feature_cols2 = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 hidden_dim = 64
 num_epochs = 30
-threshold = 0.6
-sim_threshold_pos = 0.6
-sim_threshold_neg = -0.4
-min_neighbors = 5
 restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 relevance_threshold = 0
 max_age = 5
@@ -794,7 +788,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             'full_window_data': window_data
         })
 
-        with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'wb') as f:
+        with open(os.path.join(snapshot_path, f"{sthp}_{sthn}", f"{current_date}.pkl"), 'wb') as f:
             pickle.dump(snapshots[-1], f)
 
         write_header = not os.path.exists(log_path) or os.path.getsize(log_path) == 0
@@ -945,10 +939,24 @@ date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
 raw_data = load_raw_stocks(raw_data_path, all_dates)
 unique_stocks = sorted(stock_data['Stock'].unique())
 stock_data = stock_data.sort_values(['Stock', 'Date'])
-snapshots = prepare_dynamic_data(stock_data)
+
+# overnacht training
+threshold = 0.6
+min_neighbors = 5
+
+sim_threshold_pos = [0.4,0.5,0.6]
+sim_threshold_neg = [-0.4,-0.5,-0.6]
+
+for sthp in sim_threshold_pos:
+    for sthn in sim_threshold_neg:
+        sim_threshold_pos = sthp
+        sim_threshold_neg = sthn
+        log_path = os.path.join(data_path, "snapshot_log_overnight", f"{sthp}_{sthn}.csv")
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        snapshots = prepare_dynamic_data(stock_data)
 
 # start model
 # try:
 #     main1_generate()
 # finally:
-main1_load()
+#     main1_load()
