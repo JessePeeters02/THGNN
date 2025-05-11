@@ -788,7 +788,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             'full_window_data': window_data
         })
 
-        with open(os.path.join(snapshot_path, f"{sthp}_{sthn}", f"{current_date}.pkl"), 'wb') as f:
+        with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'wb') as f:
             pickle.dump(snapshots[-1], f)
 
         write_header = not os.path.exists(log_path) or os.path.getsize(log_path) == 0
@@ -949,6 +949,8 @@ sim_threshold_neg = [-0.4,-0.5,-0.6]
 
 for sthp in sim_threshold_pos:
     for sthn in sim_threshold_neg:
+        snapshot_path = os.path.join(data_path, "intermediate_snapshots_overnight", f"{sthp}_{sthn}")
+        os.makedirs(snapshot_path, exist_ok=True)
         sim_threshold_pos = sthp
         sim_threshold_neg = sthn
         log_path = os.path.join(data_path, "snapshot_log_overnight", f"{sthp}_{sthn}.csv")

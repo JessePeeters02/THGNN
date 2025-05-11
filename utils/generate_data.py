@@ -292,10 +292,11 @@ def fun(iend, enddt, stock_data, pdn, tr, mn):
 # fun('2022-11-30', '2022-11-01', '2022-11-30', stock_data)
 # fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
 
-for i in tqdm(range(prev_date_num-1, len(all_dates)), desc="Processing dates"):
-    end_date = all_dates[i]
-    for tr in threshold:
-        for mn in min_neighbors:
+
+for tr in threshold:
+    for mn in min_neighbors:
+        for i in tqdm(range(prev_date_num-1, len(all_dates)), desc=f"Processing dates: {tr} {mn}"):
+            end_date = all_dates[i]
             data_train_predict_path = os.path.join(data_path, "data_train_predict_corr", f"{tr}_{mn}")
             os.makedirs(data_train_predict_path, exist_ok=True)
             daily_stock_path = os.path.join(data_path, "daily_stock_corr", f"{tr}_{mn}")
