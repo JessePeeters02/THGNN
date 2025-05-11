@@ -11,8 +11,9 @@ from torch.autograd import Variable
 # feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 prev_date_num = 20
-threshold = 0.6  # Drempelwaarde voor de correlatie
-min_neighbors = 3
+
+threshold = [0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1]
+min_neighbors = [0,1,3,5,7]
 
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
@@ -25,10 +26,6 @@ raw_data_path = os.path.join(data_path, "stockdata")
 print(raw_data_path)
 stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
 print(stock_data_path)
-data_train_predict_path = os.path.join(data_path, f"data_train_predict_oldway_{threshold}")
-os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, f"daily_stock_oldway_{threshold}")
-os.makedirs(daily_stock_path, exist_ok=True)
 
 
 # Functie om de CSV-bestanden in te lezen en om te zetten naar een DataFrame
@@ -97,7 +94,7 @@ all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for 
 
 #     return pos_adj, neg_adj
 
-def prepare_adjacencymatrix(enddt, min_neighbors=min_neighbors):
+def prepare_adjacencymatrix(enddt, threshold, min_neighbors):
     relation_file = os.path.join(relation_path, f"{enddt}.csv")
     adj_all = pd.read_csv(relation_file, index_col=0)
     stock_names = adj_all.index.tolist()
@@ -250,12 +247,12 @@ def prepare_adjacencymatrix(enddt, min_neighbors=min_neighbors):
 #     return pos_adj, neg_adj
 
 # Functie om de relatiegrafieken te verwerken
-def fun(iend, enddt, stock_data, pdn, min_neighbors):
+def fun(iend, enddt, stock_data, pdn, tr, mn):
     istart = iend - pdn + 1
     startdt = all_dates[istart]
     # print(f"calculating window: {startdt} to {enddt}")
     
-    pos_adj, neg_adj = prepare_adjacencymatrix(enddt, min_neighbors)
+    pos_adj, neg_adj = prepare_adjacencymatrix(enddt, tr, mn)
 
     dts = all_dates[istart:iend+1]
     # print("Processing dates:", len(dts), dts)
@@ -297,7 +294,13 @@ def fun(iend, enddt, stock_data, pdn, min_neighbors):
 
 for i in tqdm(range(prev_date_num-1, len(all_dates)), desc="Processing dates"):
     end_date = all_dates[i]
-    fun(i, end_date, stock_data, prev_date_num, min_neighbors)
+    for tr in threshold:
+        for mn in min_neighbors:
+            data_train_predict_path = os.path.join(data_path, "data_train_predict_corr", f"{tr}_{mn}")
+            os.makedirs(data_train_predict_path, exist_ok=True)
+            daily_stock_path = os.path.join(data_path, "daily_stock_corr", f"{tr}_{mn}")
+            os.makedirs(daily_stock_path, exist_ok=True)
+            fun(i, end_date, stock_data, prev_date_num, tr, mn)
 
 
 
