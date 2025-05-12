@@ -944,7 +944,7 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 threshold = 0.6
 min_neighbors = 5
 
-sim_threshold_pos = [0.5,0.6]
+sim_threshold_pos = [0.6]
 sim_threshold_neg = [-0.4,-0.5,-0.6]
 
 for sthp in sim_threshold_pos:
