@@ -22,14 +22,14 @@ data_path = os.path.join(base_path, "data", "testbatch2")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_overnight")
-os.makedirs(relation_path, exist_ok=True)
-# snapshot_path = os.path.join(data_path, "intermediate_snapshots_overnight")
-# os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu_wvt")
-os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_gpu_wvt")
-os.makedirs(daily_stock_path, exist_ok=True)
+relation_map = os.path.join(data_path, "relation_dynamiSE_overnight")
+os.makedirs(relation_map, exist_ok=True)
+snapshot_map= os.path.join(data_path, "intermediate_snapshots_overnight")
+os.makedirs(snapshot_map, exist_ok=True)
+data_train_predict_map = os.path.join(data_path, "data_train_predict_gpu_wvt")
+os.makedirs(data_train_predict_map, exist_ok=True)
+daily_stock_map = os.path.join(data_path, "daily_stock_gpu_wvt")
+os.makedirs(daily_stock_map, exist_ok=True)
 
 # Hyperparameters
 prev_date_num = 20
@@ -40,6 +40,7 @@ num_epochs = 30
 restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 relevance_threshold = 0
 max_age = 5
+learning_rate = 0.0001
 
 
 class EdgeAgingManager:
@@ -829,7 +830,7 @@ def main1_generate():
     print(f"Gemiddelde edges per snapshot: {np.mean([len(s['pos_edges_info']) + len(s['neg_edges_info']) for s in snapshots]):.0f}")
 
     model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     best_loss = float('inf')
     training_results = []
@@ -944,11 +945,11 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 threshold = 0.6
 min_neighbors = 5
 
-sim_threshold_pos = [0.6]
-sim_threshold_neg = [-0.4,-0.5,-0.6]
+sim_threshold_pos_list = [0.4,0.5,0.6]
+sim_threshold_neg_list = [-0.4,-0.5,-0.6]
 
-for sthp in sim_threshold_pos:
-    for sthn in sim_threshold_neg:
+for sthp in sim_threshold_pos_list:
+    for sthn in sim_threshold_neg_list:
         print(sthp, sthn)
         snapshot_path = os.path.join(data_path, "intermediate_snapshots_overnight", f"{sthp}_{sthn}")
         os.makedirs(snapshot_path, exist_ok=True)
@@ -959,7 +960,24 @@ for sthp in sim_threshold_pos:
         snapshots = prepare_dynamic_data(stock_data)
 
 # start model
-# try:
-#     main1_generate()
-# finally:
-#     main1_load()
+for filemap in os.listdir(snapshot_map):
+    sthp, sthn = map.split("_")
+    sthp = float(sthp)
+    sthn = int(sthn)
+    print(sthp, sthn)
+
+    relation_path = os.path.join(relation_map, f"{sthp}_{sthn}")
+    os.makedirs(relation_path, exist_ok=True)
+    snapshot_path= os.path.join(snapshot_map, f"{sthp}_{sthn}")
+    os.makedirs(snapshot_path, exist_ok=True)
+    data_train_predict_path = os.path.join(data_train_predict_map, f"{sthp}_{sthn}")
+    os.makedirs(data_train_predict_path, exist_ok=True)
+    daily_stock_path = os.path.join(daily_stock_map, f"{sthp}_{sthn}")
+    os.makedirs(daily_stock_path, exist_ok=True)
+
+    snapshots = prepare_dynamic_data(stock_data)
+
+    try:
+        main1_generate()
+    finally:
+        main1_load()
