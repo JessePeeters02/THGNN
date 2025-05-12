@@ -107,15 +107,15 @@ def direction_accuracy(predictions, labels, threshold=0.0000000):
 def check_labelsvsprediction(nr, path, start):
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat"""
     bestandspad = os.path.join(data_path, path)
-    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_full_10epoch_lr0.001_nonormlabel_reg_wvt", "pred.csv"))
+    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_corr", "0.1_0", "pred.csv"))
     predictions = predictionsdf["score"].values
     predictiondates = set(predictionsdf["dt"].values)
     predictions = predictions[:200]
-    print(f"predictions: {predictions}")
+    # print(f"predictions: {predictions}")
     print(f"predictiondates: {predictiondates}")
     print("Bestandspad:", bestandspad)
     labels = []
-    startind = 1194
+    startind = 1193
     for file in os.listdir(bestandspad)[startind:startind+1]:
         print("Bestand:", file)
         file = os.path.join(bestandspad, file)
@@ -256,7 +256,7 @@ def gpu_info():
 """ aanroepen van alle testfuncties"""
 # check_pickles(3, "data_train_predict_DSE_noknn2", 7)
 # check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
-check_labelsvsprediction(2, "data_train_predict_gpu_wvt", 20)
+check_labelsvsprediction(2, os.path.join("data_train_predict_corr", "0.1_0"), 20)
 # check_pickles(30, "data_train_predict", 20)
 # check_csi300()
 # memory_info()
