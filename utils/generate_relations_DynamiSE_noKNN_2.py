@@ -24,8 +24,8 @@ raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_overnight")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path = os.path.join(data_path, "intermediate_snapshots_overnight")
-os.makedirs(snapshot_path, exist_ok=True)
+# snapshot_path = os.path.join(data_path, "intermediate_snapshots_overnight")
+# os.makedirs(snapshot_path, exist_ok=True)
 data_train_predict_path = os.path.join(data_path, "data_train_predict_gpu_wvt")
 os.makedirs(data_train_predict_path, exist_ok=True)
 daily_stock_path = os.path.join(data_path, "daily_stock_gpu_wvt")
@@ -944,11 +944,12 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 threshold = 0.6
 min_neighbors = 5
 
-sim_threshold_pos = [0.4,0.5,0.6]
+sim_threshold_pos = [0.5,0.6]
 sim_threshold_neg = [-0.4,-0.5,-0.6]
 
 for sthp in sim_threshold_pos:
     for sthn in sim_threshold_neg:
+        print(sthp, sthn)
         snapshot_path = os.path.join(data_path, "intermediate_snapshots_overnight", f"{sthp}_{sthn}")
         os.makedirs(snapshot_path, exist_ok=True)
         sim_threshold_pos = sthp
