@@ -1,3 +1,5 @@
+import time
+time_start = time.time()
 import os
 import numpy as np
 import pandas as pd
@@ -17,7 +19,7 @@ n_jobs = -1  # Use all available cores (-1)
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print(base_path)
 # data_path = os.path.join(base_path, "data")
-data_path = os.path.join(base_path, "data", "S&P500")
+data_path = os.path.join(base_path, "data", "CSI300")
 print(data_path)
 relation_path = os.path.join(data_path, "correlations")
 os.makedirs(relation_path, exist_ok=True)  # Create the directory if it doesn't exist
@@ -121,6 +123,8 @@ def main(asc):
             print(f"No data available for date range {start_date} to {end_date}. Skipping...")
             
 if __name__ == "__main__":
-    # ascending = True #voor Jesse
-    ascending = False #voor Lawrence
+    ascending = True #voor Jesse
+    # ascending = False #voor Lawrence
     main(ascending)
+    time_end = time.time()
+    print(f"time: {time_end - time_start}")
