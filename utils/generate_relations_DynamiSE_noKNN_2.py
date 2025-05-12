@@ -26,17 +26,17 @@ relation_map = os.path.join(data_path, "relation_dynamiSE_overnight")
 os.makedirs(relation_map, exist_ok=True)
 snapshot_map= os.path.join(data_path, "intermediate_snapshots_overnight")
 os.makedirs(snapshot_map, exist_ok=True)
-data_train_predict_map = os.path.join(data_path, "data_train_predict_gpu_wvt")
+data_train_predict_map = os.path.join(data_path, "data_train_predict_overnight")
 os.makedirs(data_train_predict_map, exist_ok=True)
-daily_stock_map = os.path.join(data_path, "daily_stock_gpu_wvt")
+daily_stock_map = os.path.join(data_path, "daily_stock_overnight")
 os.makedirs(daily_stock_map, exist_ok=True)
 
 # Hyperparameters
 prev_date_num = 20
 feature_cols1 = ['Open', 'High', 'Low', 'Close']
 feature_cols2 = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
-hidden_dim = 64
-num_epochs = 30
+hidden_dim = 32
+num_epochs = 15
 restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 relevance_threshold = 0
 max_age = 5
@@ -945,27 +945,28 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 threshold = 0.6
 min_neighbors = 5
 
-sim_threshold_pos_list = [0.4,0.5,0.6]
-sim_threshold_neg_list = [-0.4,-0.5,-0.6]
+# sim_threshold_pos_list = [0.4,0.5,0.6]
+# sim_threshold_neg_list = [-0.4,-0.5,-0.6]
 
-for sthp in sim_threshold_pos_list:
-    for sthn in sim_threshold_neg_list:
-        print(sthp, sthn)
-        snapshot_path = os.path.join(data_path, "intermediate_snapshots_overnight", f"{sthp}_{sthn}")
-        os.makedirs(snapshot_path, exist_ok=True)
-        sim_threshold_pos = sthp
-        sim_threshold_neg = sthn
-        log_path = os.path.join(data_path, "snapshot_log_overnight", f"{sthp}_{sthn}.csv")
-        os.makedirs(os.path.dirname(log_path), exist_ok=True)
-        snapshots = prepare_dynamic_data(stock_data)
+# for sthp in sim_threshold_pos_list:
+#     for sthn in sim_threshold_neg_list:
+#         print(sthp, sthn)
+#         snapshot_path = os.path.join(data_path, "intermediate_snapshots_overnight", f"{sthp}_{sthn}")
+#         os.makedirs(snapshot_path, exist_ok=True)
+#         sim_threshold_pos = sthp
+#         sim_threshold_neg = sthn
+#         log_path = os.path.join(data_path, "snapshot_log_overnight", f"{sthp}_{sthn}.csv")
+#         os.makedirs(os.path.dirname(log_path), exist_ok=True)
+#         snapshots = prepare_dynamic_data(stock_data)
 
 # start model
 for filemap in os.listdir(snapshot_map):
-    sthp, sthn = map.split("_")
+    sthp, sthn = filemap.split("_")
     sthp = float(sthp)
-    sthn = int(sthn)
+    sthn = float(sthn)
     print(sthp, sthn)
-
+    sim_threshold_pos = sthp
+    sim_threshold_neg = sthn
     relation_path = os.path.join(relation_map, f"{sthp}_{sthn}")
     os.makedirs(relation_path, exist_ok=True)
     snapshot_path= os.path.join(snapshot_map, f"{sthp}_{sthn}")
@@ -974,7 +975,8 @@ for filemap in os.listdir(snapshot_map):
     os.makedirs(data_train_predict_path, exist_ok=True)
     daily_stock_path = os.path.join(daily_stock_map, f"{sthp}_{sthn}")
     os.makedirs(daily_stock_path, exist_ok=True)
-
+    log_path = os.path.join(data_path, "snapshot_log_overnight", f"{sthp}_{sthn}.csv")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
     snapshots = prepare_dynamic_data(stock_data)
 
     try:
