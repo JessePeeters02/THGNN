@@ -168,25 +168,47 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     
 if __name__ == "__main__":
 
+    # data_train_predict_path = os.path.join(data_train_predict_map, "0.6_5") #gpu_wvt, oldway_0.6, gpu_wvt
+    # print(f"data_train_predict_path: {data_train_predict_path}")
+    # daily_stock_path = os.path.join(daily_stock_map, "0.6_5") #gpu_wvt, oldway, gpu_wvt
+    # print(f"daily_stock_path: {daily_stock_path}")
+    # save_path = os.path.join(save_map, "0.6_5")
+    # os.makedirs(save_path, exist_ok=True)
+    # prediction_path = os.path.join(prediction_map, "0.6_5")
+    # os.makedirs(prediction_path, exist_ok=True)
+
+    # total_data_points = len(os.listdir(data_train_predict_path))
+    # print(f"Total data points: {total_data_points}")
+    # data_start = 0
+    # data_middle = total_data_points-20
+    # data_end = total_data_points
+    # pre_data = '2025-03-07'
+    # fun_train_predict(data_start, data_middle, data_end, pre_data)
+
     for map in os.listdir(data_train_predict_map):
         tr_str, mn_str = map.split("_")
         tr = float(tr_str)
         mn = int(mn_str)
         print(tr, mn)
 
-        data_train_predict_path = os.path.join(data_path, "data_train_predict_corr", f"{tr}_{mn}") #gpu_wvt, oldway_0.6, gpu_wvt
+        data_train_predict_path = os.path.join(data_train_predict_map, f"{tr}_{mn}") #gpu_wvt, oldway_0.6, gpu_wvt
         print(f"data_train_predict_path: {data_train_predict_path}")
-        daily_stock_path = os.path.join(data_path, "daily_stock_corr", f"{tr}_{mn}") #gpu_wvt, oldway, gpu_wvt
+        daily_stock_path = os.path.join(daily_stock_map, f"{tr}_{mn}") #gpu_wvt, oldway, gpu_wvt
         print(f"daily_stock_path: {daily_stock_path}")
-        save_path = os.path.join(data_path, "model_saved_corr", f"{tr}_{mn}")
+        save_path = os.path.join(save_map, f"{tr}_{mn}")
         os.makedirs(save_path, exist_ok=True)
-        prediction_path = os.path.join(data_path, "prediction_corr", f"{tr}_{mn}")
+        prediction_path = os.path.join(prediction_map, f"{tr}_{mn}")
         os.makedirs(prediction_path, exist_ok=True)
+
+        predict_file = os.path.join(prediction_path, "pred.csv")
+        if os.path.exists(predict_file):
+            print(f"Model {tr}_{mn} al getraind (bestand bestaat). Overslaan.")
+            continue
 
         total_data_points = len(os.listdir(data_train_predict_path))
         print(f"Total data points: {total_data_points}")
         data_start = 0
-        data_middle = total_data_points-21
-        data_end = total_data_points-1
+        data_middle = total_data_points-20
+        data_end = total_data_points
         pre_data = '2025-03-06'
         fun_train_predict(data_start, data_middle, data_end, pre_data)
