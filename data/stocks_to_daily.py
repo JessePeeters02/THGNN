@@ -3,15 +3,15 @@ import pandas as pd
 from tqdm import tqdm
 
 # Configuratie
-FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume']
+# FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume']
 FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 
 # Pad configuratie
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_path = os.path.join(base_path, "data")
-daily_data_path = os.path.join(data_path, "S&P500", "dailydata")
+daily_data_path = os.path.join(data_path, "CSI300", "dailydata")
 # stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "S&P500", "S&P500_data_wTO")  # Map waar de CSV-bestanden staan
-stock_data_path = os.path.join(data_path, "S&P500", "stockdata")
+stock_data_path = os.path.join(data_path, "CSI300", "stockdata")
 os.makedirs(daily_data_path, exist_ok=True)  # Zorg dat de output map bestaat
 
 def transform_to_daily_structure(stock_data_path, filter_non_trading):
