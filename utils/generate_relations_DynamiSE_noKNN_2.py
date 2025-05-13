@@ -942,7 +942,7 @@ unique_stocks = sorted(stock_data['Stock'].unique())
 stock_data = stock_data.sort_values(['Stock', 'Date'])
 
 # overnacht training
-threshold = 0.6
+threshold = 0.5
 min_neighbors = 5
 
 # sim_threshold_pos_list = [0.4,0.5,0.6]
@@ -962,6 +962,8 @@ min_neighbors = 5
 # start model
 for filemap in os.listdir(snapshot_map):
     sthp, sthn = filemap.split("_")
+    if sthp != "0.5":
+        continue
     sthp = float(sthp)
     sthn = float(sthn)
     print(sthp, sthn)
@@ -981,5 +983,11 @@ for filemap in os.listdir(snapshot_map):
 
     try:
         main1_generate()
-    finally:
+    except Exception as e:
+        print(f"[{sthp}_{sthn}] main1_generate() faalde: {e}")
+        # geen return, geen raise — gewoon doorgaan
+ 
+    try:
         main1_load()
+    except Exception as e:
+        print(f"[{sthp}_{sthn}] main1_load() faalde: {e}")
