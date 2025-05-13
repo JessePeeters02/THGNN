@@ -23,7 +23,7 @@ raw_data_path = os.path.join(data_path, "stockdata")
 # Hyperparameters
 feature_cols = ['Open', 'High', 'Low', 'Close']#, 'Volume']
 window = 20
-restrict_last_n_days= 107 # None voor alles of 20 voor 20-day window
+restrict_last_n_days= 20 # None voor alles of 20 voor 20-day window
 
 
 def cosine_similarity(vec1, vec2):
@@ -135,10 +135,10 @@ cos_raws, cor_raws = [], []
 
 for i in range(close_prices_raw.shape[0]):
     for j in range(i+1, close_prices_raw.shape[0]):
-        # vec_raw_i, vec_raw_j = close_prices_raw[i], close_prices_raw[j]
+        vec_raw_i, vec_raw_j = close_prices_raw[i], close_prices_raw[j]
 #         vec_nor_i, vec_nor_j = close_prices_nor[i], close_prices_nor[j]
 #         vec_log_i, vec_log_j = close_prices_log[i], close_prices_log[j]
-#         vec_raw_norm_i, vec_raw_norm_j = close_prices_raw_norm[i], close_prices_raw_norm[j]
+        # vec_raw_norm_i, vec_raw_norm_j = close_prices_raw_norm[i], close_prices_raw_norm[j]
         
 #         if (len(vec_raw_i) != len(vec_raw_j)) or (len(vec_nor_i) != len(vec_nor_j)) or (len(vec_raw_norm_i) != len(vec_raw_norm_j)) or (len(vec_log_i) != len(vec_log_j)):
 #             print("dees is zware error")
@@ -146,8 +146,8 @@ for i in range(close_prices_raw.shape[0]):
         
 #         # Bereken alle metrics
 #         cos_raw = cosine_similarity(vec_raw_i, vec_raw_j)
-#         cos_raw = sklearn_cosine_similarity(vec_raw_i.reshape(1, -1), vec_raw_j.reshape(1, -1))[0,0]
-        # cor_raw = pearson_correlation(vec_raw_i, vec_raw_j)
+        cos_raw = sklearn_cosine_similarity(vec_raw_i.reshape(1, -1), vec_raw_j.reshape(1, -1))[0,0]
+        cor_raw = pearson_correlation(vec_raw_i, vec_raw_j)
 #         # cos_nor = cosine_similarity(vec_nor_i, vec_nor_j)
 #         cos_nor = sklearn_cosine_similarity(vec_nor_i.reshape(1, -1), vec_nor_j.reshape(1, -1))[0,0]
 #         cor_nor = pearson_correlation(vec_nor_i, vec_nor_j)
@@ -155,15 +155,15 @@ for i in range(close_prices_raw.shape[0]):
 #         cos_log = sklearn_cosine_similarity(vec_log_i.reshape(1, -1), vec_log_j.reshape(1, -1))[0,0]
 #         cor_log = pearson_correlation(vec_log_i, vec_log_j)
 #         # cos_raw_norm = cosine_similarity(vec_raw_norm_i, vec_raw_norm_j)
-#         cos_raw_nor = sklearn_cosine_similarity(vec_raw_norm_i.reshape(1, -1), vec_raw_norm_j.reshape(1, -1))[0,0]
+        # cos_raw_nor = sklearn_cosine_similarity(vec_raw_norm_i.reshape(1, -1), vec_raw_norm_j.reshape(1, -1))[0,0]
 #         cor_raw_nor = pearson_correlation(vec_raw_norm_i, vec_raw_norm_j)
 #         dtw_log = dtw_similarity(vec_log_i, vec_log_j)
 #         if any(np.isnan(x) for x in [cos_raw, cor_raw, cos_nor, cor_nor, cos_raw_nor, cor_raw_nor, cos_log, cor_log, dtw_log]):
 #             print("zware error dit hier mag niet!")
 #             continue
 
-#         cos_raws.append(cos_raw)
-        # cor_raws.append(cor_raw)
+        cos_raws.append(cos_raw)
+        cor_raws.append(cor_raw)
 #         cos_nors.append(cos_nor)
 #         cor_nors.append(cor_nor)
 #         cos_logs.append(cos_log)
@@ -205,11 +205,11 @@ for i in tqdm(range(len(unique_stocks)), desc='calculating everything'):
 
 
 # Plotten
-fig, axes = plt.subplots(2, 4, figsize=(14, 12))
+fig, axes = plt.subplots(1, 2, figsize=(14, 12))
 plots = [
-    # (cor_raws, cos_all_features, 'Correlation (raw)', 'Cosine (4 features)'),
+    (cor_raws, cos_all_features, 'Correlation (raw)', 'Cosine (4 features)'),
     # (cor_logs, cor_raws, 'correlatie (logreturns)', 'Correlation (raw)'),
-    # (cos_raws, cor_raws, 'Cosine (raw)', 'Correlation (raw)'),
+    (cos_raws, cor_raws, 'Cosine (raw)', 'Correlation (raw)'),
     # (cos_raws, cor_nors, 'Cosine (raw)', 'Correlation (normalized)'),
     # (cos_nors, cor_raws, 'Cosine (normalized)', 'Correlation (raw)'),
     # (cos_nors, cor_nors, 'Cosine (normalized)', 'Correlation (normalized)'),
@@ -220,22 +220,21 @@ plots = [
     # (cos_raw_norms, cor_raws, 'Cosine (raw normalized)', 'Correlation (raw)'),
     # (cos_raw_norms, cor_nors, 'Cosine (raw normalized)', 'Correlation (normalized)'),
 ]
-for feat in feature_cols:
-    plots.append((
-        cos_all_features, 
-        cosine_per_feature[feat], 
-        "Cosine (Open+High+Low+Close)",
-        f"Cosine ({feat})"
-    ))
-for feat in feature_cols:
-    plots.append((
-        cor_raws, 
-        cosine_per_feature[feat], 
-        "Correlation (raw)",
-        f"Cosine ({feat})"     
-    ))
-
-for ax, (x, y, xlabel, ylabel) in zip(axes.flatten(), plots):
+# for feat in feature_cols:
+#     plots.append((
+#         cos_all_features, 
+#         cosine_per_feature[feat], 
+#         "Cosine (Open+High+Low+Close)",
+#         f"Cosine ({feat})"
+#     ))
+# for feat in feature_cols:
+#     plots.append((
+#         cor_raws, 
+#         cosine_per_feature[feat], 
+#         "Correlation (raw)",
+#         f"Cosine ({feat})"     
+#     ))
+for ax, (x, y, xlabel, ylabel) in zip(axes, plots):
     ax.scatter(x, y, alpha=0.6)
     x_fit = np.array(x).reshape(-1, 1)
     y_fit = np.array(y)

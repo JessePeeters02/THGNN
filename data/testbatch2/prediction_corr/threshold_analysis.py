@@ -15,7 +15,7 @@ from sklearn.metrics import r2_score
 # Pad configuratie
 label_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "stock_labels.csv")
 print(label_path)
-prediction_map = os.path.dirname(os.path.abspath(__file__))
+prediction_map = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prediction_overnight")
 print(prediction_map)
 
 def evaluate_predictions(predictions, labels):
@@ -41,15 +41,15 @@ def direction_accuracy(predictions, labels, threshold=0.0000000):
     label_up = labels > 0
     # print(pred_up)
     # print(label_up)
-    print(f"Threshold: {thresh_val}")
-    print("  === positieve ===")
-    print(" positieve labels: ", np.sum(label_up))
-    print(" positieve voorspellingen: ", np.sum(pred_up))
-    print(" aantal positieve voorspellingen die ook positief zijn: ", np.sum(pred_up[label_up]))
-    print("  === negatieve ===")
-    print(" negatieve labels: ", np.sum(~label_up))
-    print(" negatieve voorspellingen: ", np.sum(~pred_up))
-    print(" aantal negatieve voorspellingen die ook negatief zijn: ", np.sum(~pred_up[~label_up]))
+    # print(f"Threshold: {thresh_val}")
+    # print("  === positieve ===")
+    # print(" positieve labels: ", np.sum(label_up))
+    # print(" positieve voorspellingen: ", np.sum(pred_up))
+    # print(" aantal positieve voorspellingen die ook positief zijn: ", np.sum(pred_up[label_up]))
+    # print("  === negatieve ===")
+    # print(" negatieve labels: ", np.sum(~label_up))
+    # print(" negatieve voorspellingen: ", np.sum(~pred_up))
+    # print(" aantal negatieve voorspellingen die ook negatief zijn: ", np.sum(~pred_up[~label_up]))
           
     acc = np.mean(pred_up == label_up)
     return acc
@@ -95,11 +95,11 @@ def check_labelsvsprediction(path):
     mae, mse, r2 = evaluate_predictions(predictions, tllabels)
     acc = direction_accuracy(predictions, tllabels)
 
-    print(f"MAE: {mae:.6f}")
-    print(f"MSE: {mse:.6f}")
-    print(f"RMSE: {np.sqrt(mse):.6f}")
-    # print(f"BCE: {bce:.6f}")
-    print(f"Accuracy op richting: {acc:.2%}")
+    # print(f"MAE: {mae:.6f}")
+    # print(f"MSE: {mse:.6f}")
+    # print(f"RMSE: {np.sqrt(mse):.6f}")
+    # # print(f"BCE: {bce:.6f}")
+    # print(f"Accuracy op richting: {acc:.2%}")
 
     for horizon, name in [(1, 'day1'), (5, 'day5'), (20, 'day20')]:
         horizon_df = predictionsdf.groupby("code").head(horizon)
@@ -111,8 +111,8 @@ def check_labelsvsprediction(path):
         acc = direction_accuracy(preds, labels)
 
         results.append({
-            "threshold": th,
-            "min_neighbours": mn,
+            "positive_threshold": p,
+            "negative_threshold": n,
             "horizon": name,
             "mae": mae,
             "mse": mse,
@@ -123,16 +123,15 @@ def check_labelsvsprediction(path):
 
 
 
-
+# # results aanmaken
 # results = []
-results_df = pd.read_csv(os.path.join(prediction_map, "results.csv"))
-print(results_df.head())
+
 # for map in os.listdir(prediction_map):
 #     try:
-#         th, mn = map.split("_")
-#         th = float(th)
-#         mn = int(mn)
-#         print(th, mn)
+#         p, n = map.split("_")
+#         p = float(p)
+#         n = float(n)
+#         print(p, n)
 #         check_labelsvsprediction(os.path.join(prediction_map, map))
 #     except:
 #         print('niet gelukt')
@@ -140,13 +139,18 @@ print(results_df.head())
 # results_df = pd.DataFrame(results)
 # results_df.to_csv(os.path.join(prediction_map, "results.csv"), index=False)
 
-filtered_df = results_df[(results_df['threshold'] >= 0.3) & (results_df['threshold'] <= 0.8)]
-filtered_df = filtered_df[filtered_df['horizon'].isin(['day5', 'day20'])]
+
+# results zijn er al
+results_df = pd.read_csv(os.path.join(prediction_map, "results.csv"))
+print(results_df.head())
+
+# filtered_df = results_df[(results_df['threshold'] >= 0.3) & (results_df['threshold'] <= 0.8)]
+# filtered_df = filtered_df[filtered_df['horizon'].isin(['day5', 'day20'])]
 
 plt.figure(figsize=(10,6))
-sns.lineplot(data=filtered_df, x="threshold", y="r2", hue="horizon", style="min_neighbours", markers=True, dashes=False)
-plt.title("r2 per threshold en horizon")
-plt.xlabel("Threshold")
+sns.lineplot(data=results_df, x="positive_threshold", y="r2", hue="horizon", style="negative_threshold", markers=True, dashes=False)
+plt.title("r2 per negative en positive")
+plt.xlabel("positive")
 plt.ylabel("r2")
 plt.grid(True)
 plt.tight_layout()
