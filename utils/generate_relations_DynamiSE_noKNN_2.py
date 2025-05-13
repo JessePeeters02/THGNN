@@ -962,7 +962,10 @@ min_neighbors = 5
 # start model
 for filemap in os.listdir(snapshot_map):
     sthp, sthn = filemap.split("_")
-    if sthp != "0.5":
+    if sthp != "0.5" and sthp != "0.6":
+        if sthn == "-0.4":
+            continue
+    else:
         continue
     sthp = float(sthp)
     sthn = float(sthn)
