@@ -155,3 +155,14 @@ plt.ylabel("r2")
 plt.grid(True)
 plt.tight_layout()
 plt.show()
+
+
+
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.axis('off')
+table = ax.table(cellText=results_df.values, colLabels=results_df.columns, cellLoc='center', loc='center')
+table.auto_set_font_size(False)
+table.set_fontsize(10)
+table.scale(1.2, 1.2)
+
+plt.savefig("tabel_resultaten.png", bbox_inches='tight', dpi=300)

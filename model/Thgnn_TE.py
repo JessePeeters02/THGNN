@@ -98,7 +98,7 @@ class GraphAttnSemIndividual(Module):
 
 
 class StockHeteGAT(nn.Module):
-    def __init__(self, in_features=6, out_features=8, num_heads=8, hidden_dim=64, num_layers=1):
+    def __init__(self, in_features=6, out_features=8, num_heads=8, hidden_dim=128, num_layers=2):
         super(StockHeteGAT, self).__init__()
         self.input_layer = nn.Sequential(
             nn.Linear(in_features, hidden_dim),
@@ -108,8 +108,8 @@ class StockHeteGAT(nn.Module):
         self.encoding = TransformerEncoder(
             d_model=hidden_dim,
             d_ff=hidden_dim * 4,
-            n_heads=4,
-            n_layers=2,
+            n_heads=num_heads,
+            n_layers=num_layers, 
             dropout=0.1
         )
         self.pos_gat = GraphAttnMultiHead(

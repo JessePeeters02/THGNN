@@ -129,11 +129,11 @@ def check_labelsvsprediction(nr, path, start):
     tllabels = np.tanh(np.log(labels+1))
     print(len(labels), len(predictions))
 
-    label_stats = f"Labels - Gemiddelde: {np.mean(labels):.4f}, Std: {np.std(labels):.4f}, Max: {np.max(labels):.4f}, Min: {np.min(labels):.4f}"
+    # label_stats = f"Labels - Gemiddelde: {np.mean(labels):.4f}, Std: {np.std(labels):.4f}, Max: {np.max(labels):.4f}, Min: {np.min(labels):.4f}"
     tllabel_stats = f"tanh log Labels - Gemiddelde: {np.mean(tllabels):.4f}, Std: {np.std(tllabels):.4f}, Max: {np.max(tllabels):.4f}, Min: {np.min(tllabels):.4f}"
     pred_stats = f"Voorspellingen - Gemiddelde: {np.mean(predictions):.4f}, Std: {np.std(predictions):.4f}, Max: {np.max(predictions):.4f}, Min: {np.min(predictions):.4f}"
     
-    print(label_stats)
+    # print(label_stats)
     print(tllabel_stats)
     print(pred_stats)
 
@@ -261,7 +261,7 @@ def gpu_info():
 """ aanroepen van alle testfuncties"""
 # check_pickles(3, "data_train_predict_DSE_noknn2", 7)
 # check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
-check_labelsvsprediction(2, os.path.join("data_train_predict_corr", "0.6_5"), 20)
+check_labelsvsprediction(2, os.path.join("data_train_predict_corr", "0.4_3"), 20)
 # check_pickles(30, "data_train_predict", 20)
 # check_csi300()
 # memory_info()
