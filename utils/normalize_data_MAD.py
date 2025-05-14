@@ -18,18 +18,8 @@ outlier_cap = 30
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
-data_path = os.path.join(base_path, "data", "testbatch_1000")
-print(data_path)
-input_path = os.path.join(data_path, "stockdata")  # Map waar de CSV-bestanden staan
-print(input_path)
-daily_data_path = os.path.join(data_path, "normaliseddailydata")  # Map waar de CSV-bestanden moeten komen
-if os.path.exists(daily_data_path):
-    shutil.rmtree(daily_data_path)
-os.makedirs(daily_data_path, exist_ok=True)  # Maak de map aan als deze nog niet bestaat
-print(daily_data_path)
-stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden moeten komen
-os.makedirs(stock_data_path, exist_ok=True)  # Maak de map aan als deze nog niet bestaat
-print(stock_data_path)
+data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
+print(f"data_path: {data_path}")
 
 
 def load_stock_data(stock_data_path):
@@ -125,10 +115,24 @@ def normalise_stock_data(df):
         combined.to_csv(os.path.join(daily_data_path, f"{date}.csv"), index=False)
            
 
-stock_data = load_stock_data(input_path)
-# print(stock_data)
+for batchmap in os.listdir(data_path):
+    print('batchmap: ', batchmap)
 
-all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
-print(f"Unique dates determined: {len(all_dates)}")
+    input_path = os.path.join(data_path, batchmap, "stockdata")  # Map waar de CSV-bestanden staan
+    print(input_path)
+    daily_data_path = os.path.join(data_path, batchmap, "normaliseddailydata")  # Map waar de CSV-bestanden moeten komen
+    if os.path.exists(daily_data_path):
+        shutil.rmtree(daily_data_path)
+    os.makedirs(daily_data_path, exist_ok=True)  # Maak de map aan als deze nog niet bestaat
+    print(daily_data_path)
+    stock_data_path = os.path.join(data_path, batchmap, "normalisedstockdata")  # Map waar de CSV-bestanden moeten komen
+    os.makedirs(stock_data_path, exist_ok=True)  # Maak de map aan als deze nog niet bestaat
+    print(stock_data_path)
 
-normalise_stock_data(stock_data)
+    stock_data = load_stock_data(input_path)
+    # print(stock_data)
+
+    all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
+    print(f"Unique dates determined: {len(all_dates)}")
+
+    normalise_stock_data(stock_data)

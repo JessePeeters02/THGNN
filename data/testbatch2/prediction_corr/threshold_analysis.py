@@ -186,10 +186,10 @@ ax1.set_xlabel("positive_threshold")
 ax1.set_ylabel("RMSE")
 ax1.grid(True)
 
-sns.lineplot(data=filtered_df, x="positive_threshold", y="mae", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax2)
-ax2.set_title("mae")
+sns.lineplot(data=filtered_df, x="positive_threshold", y="r2", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax2)
+ax2.set_title("R²")
 ax2.set_xlabel("positive_threshold")
-ax2.set_ylabel("mae")
+ax2.set_ylabel("R²")
 ax2.grid(True)
 
 plt.tight_layout()
