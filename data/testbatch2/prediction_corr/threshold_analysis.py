@@ -147,22 +147,19 @@ print(results_df.head())
 # filtered_df = results_df[(results_df['threshold'] >= 0.3) & (results_df['threshold'] <= 0.8)]
 # filtered_df = filtered_df[filtered_df['horizon'].isin(['day5', 'day20'])]
 
-plt.figure(figsize=(10,6))
-sns.lineplot(data=results_df, x="positive_threshold", y="r2", hue="horizon", style="negative_threshold", markers=True, dashes=False)
-plt.title("r2 per negative en positive")
-plt.xlabel("positive")
-plt.ylabel("r2")
-plt.grid(True)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
+
+sns.lineplot(data=results_df, x="positive_threshold", y="rmse", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax1)
+ax1.set_title("RMSE per negative and positive")
+ax1.set_xlabel("Positive")
+ax1.set_ylabel("RMSE")
+ax1.grid(True)
+
+sns.lineplot(data=results_df, x="positive_threshold", y="r2", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax2)
+ax2.set_title("r2 per negative and positive")
+ax2.set_xlabel("Positive")
+ax2.set_ylabel("r2")
+ax2.grid(True)
+
 plt.tight_layout()
 plt.show()
-
-
-
-fig, ax = plt.subplots(figsize=(10, 4))
-ax.axis('off')
-table = ax.table(cellText=results_df.values, colLabels=results_df.columns, cellLoc='center', loc='center')
-table.auto_set_font_size(False)
-table.set_fontsize(10)
-table.scale(1.2, 1.2)
-
-plt.savefig("tabel_resultaten.png", bbox_inches='tight', dpi=300)
