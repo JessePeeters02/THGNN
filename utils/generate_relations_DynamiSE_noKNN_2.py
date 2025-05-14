@@ -960,7 +960,7 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 
 # start model
 
-log_path = os.path.join(data_path, f"snapshot_log_csi300.csv")
+log_path = os.path.join(data_path, f"snapshot_log_SP.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 snapshots = prepare_dynamic_data(stock_data)
 
