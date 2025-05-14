@@ -18,17 +18,17 @@ print(f"Device: {device}")
 
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(base_path, "data", "CSI300")
+data_path = os.path.join(base_path, "data", "S&P500")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_csi300")
+relation_path = os.path.join(data_path, "relation_dynamiSE_SP")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path= os.path.join(data_path, "intermediate_snapshots_csi300")
+snapshot_path= os.path.join(data_path, "intermediate_snapshots_SP")
 os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_csi300")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_SP")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_csi300")
+daily_stock_path = os.path.join(data_path, "daily_stock_SP")
 os.makedirs(daily_stock_path, exist_ok=True)
 
 # Hyperparameters

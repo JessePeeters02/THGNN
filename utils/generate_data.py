@@ -12,15 +12,15 @@ from torch.autograd import Variable
 feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 prev_date_num = 20
 
-threshold = [0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1]
-min_neighbors = [0,1,3,5,7]
+threshold = 0.4
+min_neighbors = 3
 
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
-data_path = os.path.join(base_path, "data", "testbatch2")
+data_path = os.path.join(base_path, "data", "csi300")
 print(data_path)
-relation_path = os.path.join(data_path, "relations_oldway")
+relation_path = os.path.join(data_path, "correlations")
 print(relation_path)
 raw_data_path = os.path.join(data_path, "stockdata")
 print(raw_data_path)
@@ -293,15 +293,14 @@ def fun(iend, enddt, stock_data, pdn, tr, mn):
 # fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
 
 
-for tr in threshold:
-    for mn in min_neighbors:
-        for i in tqdm(range(prev_date_num-1, len(all_dates)), desc=f"Processing dates: {tr} {mn}"):
-            end_date = all_dates[i]
-            data_train_predict_path = os.path.join(data_path, "data_train_predict_corr", f"{tr}_{mn}")
-            os.makedirs(data_train_predict_path, exist_ok=True)
-            daily_stock_path = os.path.join(data_path, "daily_stock_corr", f"{tr}_{mn}")
-            os.makedirs(daily_stock_path, exist_ok=True)
-            fun(i, end_date, stock_data, prev_date_num, tr, mn)
+
+for i in tqdm(range(prev_date_num-1, len(all_dates)), desc=f"Processing dates"):
+    end_date = all_dates[i]
+    data_train_predict_path = os.path.join(data_path, "data_train_predict_corr")
+    os.makedirs(data_train_predict_path, exist_ok=True)
+    daily_stock_path = os.path.join(data_path, "daily_stock_corr")
+    os.makedirs(daily_stock_path, exist_ok=True)
+    fun(i, end_date, stock_data, prev_date_num, threshold, min_neighbors)
 
 
 

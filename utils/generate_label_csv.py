@@ -5,7 +5,7 @@ from tqdm import tqdm
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
-data_path = os.path.join(base_path, "data", "testbatch2")
+data_path = os.path.join(base_path, "data", "CSI300")
 print(data_path)
 raw_data_path = os.path.join(data_path, "stockdata")
 print(raw_data_path)

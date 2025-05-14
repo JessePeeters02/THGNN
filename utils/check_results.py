@@ -9,6 +9,7 @@ import psutil
 import seaborn as sns
 import torch.nn as nn
 from sklearn.metrics import r2_score
+from scipy.stats import ks_2samp
 
 
 
@@ -97,7 +98,7 @@ def check_labelsvsprediction(path):
 
     predictionsdf = pd.read_csv(os.path.join(path, "pred.csv"))
     predictiondates = pd.unique(predictionsdf["dt"].values)
-    predictiondates = predictiondates[0:2] # het aantal dagen aanpassen
+    predictiondates = predictiondates[1:2] # het aantal dagen aanpassen
     print(f"predictiondates: {predictiondates}")
     predictionsdf = predictionsdf[predictionsdf['dt'].isin(predictiondates)]  # Filter op de eerste 5 dagen
     # print(predictionsdf.head())
@@ -134,6 +135,8 @@ def check_labelsvsprediction(path):
     # mae, mse , bce = evaluate_predictions(predictions, labels)
     mae, mse, r2 = evaluate_predictions(predictions, tllabels)
     acc = direction_accuracy(predictions, tllabels)
+    d, p = ks_2samp(labels, predictions)
+    print(f"KS-D distribution: {d:.4f} (p-value={p:.4g})")
 
     print(f"MAE: {mae:.6f}")
     print(f"MSE: {mse:.6f}")
