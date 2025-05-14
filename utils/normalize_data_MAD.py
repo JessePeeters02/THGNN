@@ -117,6 +117,9 @@ def normalise_stock_data(df):
 
 for batchmap in os.listdir(data_path):
     print('batchmap: ', batchmap)
+    if batchmap == 'batch_1':
+        print('batch_1 gededecteerd')
+        continue
 
     input_path = os.path.join(data_path, batchmap, "stockdata")  # Map waar de CSV-bestanden staan
     print(input_path)
