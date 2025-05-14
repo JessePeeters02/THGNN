@@ -18,17 +18,17 @@ print(f"Device: {device}")
 
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(base_path, "data", "S&P500")
-daily_data_path = os.path.join(data_path, "normaliseddailydata")
+data_path = os.path.join(base_path, "data", "testbatch2")
+daily_data_path = os.path.join(data_path, "normaliseddailydata_stabletimes")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_SP")
+relation_path = os.path.join(data_path, "relation_dynamiSE_stabletimes")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path= os.path.join(data_path, "intermediate_snapshots_SP")
+snapshot_path= os.path.join(data_path, "intermediate_snapshots_stabletimes")
 os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_SP")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_stabletimes")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_SP")
+daily_stock_path = os.path.join(data_path, "daily_stock_stabletimes")
 os.makedirs(daily_stock_path, exist_ok=True)
 
 # Hyperparameters
@@ -161,10 +161,10 @@ def load_raw_stocks(raw_stock_path, all_dates):
     for file in tqdm(raw_files, desc="Loading raw data for label creation"):
         stock_name = file.split('.')[0]
         df = pd.read_csv(os.path.join(raw_stock_path, file), parse_dates=['Date'])
-        if restrict_last_n_days is not None:
+        # if restrict_last_n_days is not None:
             # all_dates = sorted(df['Date'].unique())
             # last_dates = all_dates[-restrict_last_n_days:]
-            df = df[df['Date'].isin(all_dates)]
+        df = df[df['Date'].isin(all_dates)]
         df = df.reset_index(drop=True)
         raw_data[stock_name] = df[['Date', 'Stock'] + feature_cols1]
     return raw_data
@@ -960,7 +960,7 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 
 # start model
 
-log_path = os.path.join(data_path, f"snapshot_log_SP.csv")
+log_path = os.path.join(data_path, f"snapshot_log_stabletimes.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 snapshots = prepare_dynamic_data(stock_data)
 
