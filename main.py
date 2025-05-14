@@ -185,17 +185,17 @@ if __name__ == "__main__":
     print(f"data_train_predict_path: {data_train_predict_path}")
     daily_stock_path = os.path.join(data_path, "daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
     print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, "model_saved_corr-20")
+    save_path = os.path.join(data_path, "model_saved_corr-100")
     os.makedirs(save_path, exist_ok=True)
-    prediction_path = os.path.join(data_path, "prediction_corr-20")
+    prediction_path = os.path.join(data_path, "prediction_corr-100")
     os.makedirs(prediction_path, exist_ok=True)
     print(prediction_path)
 
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
     data_start = 0
-    data_middle = total_data_points-20-20
-    data_end = total_data_points-20
+    data_middle = total_data_points-20-100
+    data_end = total_data_points-100
     pre_data = '2025-03-07'
     fun_train_predict(data_start, data_middle, data_end, pre_data)
 
@@ -207,107 +207,21 @@ if __name__ == "__main__":
     print(f"data_train_predict_path: {data_train_predict_path}")
     daily_stock_path = os.path.join(data_path, "daily_stock_csi300") #gpu_wvt, oldway, gpu_wvt
     print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, "model_saved_dynamise-20")
+    save_path = os.path.join(data_path, "model_saved_dynamise-100")
     os.makedirs(save_path, exist_ok=True)
-    prediction_path = os.path.join(data_path, "prediction_dynamise-20")
+    prediction_path = os.path.join(data_path, "prediction_dynamise-100")
     os.makedirs(prediction_path, exist_ok=True)
     print(prediction_path)
 
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
     data_start = 0
-    data_middle = total_data_points-20-20
-    data_end = total_data_points-20
+    data_middle = total_data_points-20-100
+    data_end = total_data_points-100
     pre_data = '2025-03-07'
     fun_train_predict(data_start, data_middle, data_end, pre_data)
 
-    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
-    print(f"base_path: {base_path}")
-    data_path = os.path.join(base_path, "data", "CSI300")
-    print(f"data_path: {data_path}")
-    data_train_predict_path = os.path.join(data_path, "data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
-    print(f"data_train_predict_path: {data_train_predict_path}")
-    daily_stock_path = os.path.join(data_path, "daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
-    print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, "model_saved_corr-40")
-    os.makedirs(save_path, exist_ok=True)
-    prediction_path = os.path.join(data_path, "prediction_corr-40")
-    os.makedirs(prediction_path, exist_ok=True)
-    print(prediction_path)
 
-    total_data_points = len(os.listdir(data_train_predict_path))
-    print(f"Total data points: {total_data_points}")
-    data_start = 0
-    data_middle = total_data_points-20-40
-    data_end = total_data_points-40
-    pre_data = '2025-03-07'
-    fun_train_predict(data_start, data_middle, data_end, pre_data)
-
-    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
-    print(f"base_path: {base_path}")
-    data_path = os.path.join(base_path, "data", "CSI300")
-    print(f"data_path: {data_path}")
-    data_train_predict_path = os.path.join(data_path, "data_train_predict_csi300") #gpu_wvt, oldway_0.6, gpu_wvt
-    print(f"data_train_predict_path: {data_train_predict_path}")
-    daily_stock_path = os.path.join(data_path, "daily_stock_csi300") #gpu_wvt, oldway, gpu_wvt
-    print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, "model_saved_dynamise-40")
-    os.makedirs(save_path, exist_ok=True)
-    prediction_path = os.path.join(data_path, "prediction_dynamise-40")
-    os.makedirs(prediction_path, exist_ok=True)
-    print(prediction_path)
-
-    total_data_points = len(os.listdir(data_train_predict_path))
-    print(f"Total data points: {total_data_points}")
-    data_start = 0
-    data_middle = total_data_points-20-40
-    data_end = total_data_points-40
-    pre_data = '2025-03-07'
-    fun_train_predict(data_start, data_middle, data_end, pre_data)
-
-    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
-    print(f"base_path: {base_path}")
-    data_path = os.path.join(base_path, "data", "CSI300")
-    print(f"data_path: {data_path}")
-    data_train_predict_path = os.path.join(data_path, "data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
-    print(f"data_train_predict_path: {data_train_predict_path}")
-    daily_stock_path = os.path.join(data_path, "daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
-    print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, "model_saved_corr-60")
-    os.makedirs(save_path, exist_ok=True)
-    prediction_path = os.path.join(data_path, "prediction_corr-60")
-    os.makedirs(prediction_path, exist_ok=True)
-    print(prediction_path)
-
-    total_data_points = len(os.listdir(data_train_predict_path))
-    print(f"Total data points: {total_data_points}")
-    data_start = 0
-    data_middle = total_data_points-20-60
-    data_end = total_data_points-60
-    pre_data = '2025-03-07'
-    fun_train_predict(data_start, data_middle, data_end, pre_data)
-
-    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
-    print(f"base_path: {base_path}")
-    data_path = os.path.join(base_path, "data", "CSI300")
-    print(f"data_path: {data_path}")
-    data_train_predict_path = os.path.join(data_path, "data_train_predict_csi300") #gpu_wvt, oldway_0.6, gpu_wvt
-    print(f"data_train_predict_path: {data_train_predict_path}")
-    daily_stock_path = os.path.join(data_path, "daily_stock_csi300") #gpu_wvt, oldway, gpu_wvt
-    print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, "model_saved_dynamise-60")
-    os.makedirs(save_path, exist_ok=True)
-    prediction_path = os.path.join(data_path, "prediction_dynamise-60")
-    os.makedirs(prediction_path, exist_ok=True)
-    print(prediction_path)
-    
-    total_data_points = len(os.listdir(data_train_predict_path))
-    print(f"Total data points: {total_data_points}")
-    data_start = 0
-    data_middle = total_data_points-20-60
-    data_end = total_data_points-60
-    pre_data = '2025-03-07'
-    fun_train_predict(data_start, data_middle, data_end, pre_data)
 
     # for map in os.listdir(data_train_predict_map):
     #     sthp, sthn = map.split("_")

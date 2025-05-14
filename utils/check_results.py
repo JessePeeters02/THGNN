@@ -98,7 +98,7 @@ def check_labelsvsprediction(path):
 
     predictionsdf = pd.read_csv(os.path.join(path, "pred.csv"))
     predictiondates = pd.unique(predictionsdf["dt"].values)
-    predictiondates = predictiondates[1:2] # het aantal dagen aanpassen
+    predictiondates = predictiondates[0:20] # het aantal dagen aanpassen
     print(f"predictiondates: {predictiondates}")
     predictionsdf = predictionsdf[predictionsdf['dt'].isin(predictiondates)]  # Filter op de eerste 5 dagen
     # print(predictionsdf.head())
@@ -119,6 +119,7 @@ def check_labelsvsprediction(path):
             return float('nan')  # of np.nan als je NumPy gebruikt
 
     predictionsdf['true_score'] = predictionsdf.apply(lookup_label, axis=1)
+    # print(predictionsdf)
 
     predictions = torch.tensor(predictionsdf['score'].values, dtype=torch.float32).numpy()
     labels = torch.tensor(predictionsdf['true_score'].values, dtype=torch.float32).numpy()
@@ -168,12 +169,12 @@ def check_labelsvsprediction(path):
     return tllabels, predictions
 
 
-prediction_path = os.path.join(data_path, "prediction_corr")
+prediction_path = os.path.join(data_path, "prediction_corr-40")
 print(prediction_path)
 print(" ==== correlation ====")
 labels, corrpredictions = check_labelsvsprediction(prediction_path)
 
-prediction_path = os.path.join(data_path, "prediction_dynamise")
+prediction_path = os.path.join(data_path, "prediction_dynamise-40")
 print(prediction_path)
 print(" ==== dynamiSE ====")
 labels, dynamipredictions = check_labelsvsprediction(prediction_path)
