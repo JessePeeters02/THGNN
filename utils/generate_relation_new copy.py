@@ -113,5 +113,20 @@ def main(asc):
             print(f"No data available for date range {start_date} to {end_date}. Skipping...")
             
 if __name__ == "__main__":
-    ascending = True  # Set to False if needed
-    main(ascending)
+
+    # Path setup
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    print(base_path)
+    data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
+    print(data_path)
+
+    for batchmap in os.listdir(data_path):
+        print(batchmap)
+        relation_path = os.path.join(data_path, batchmap, "correlations")
+        os.makedirs(relation_path, exist_ok=True)
+        print(relation_path)
+        stock_data_path = os.path.join(data_path, batchmap, "dailydata")
+        print(stock_data_path)
+
+        ascending = True
+        main(ascending)
