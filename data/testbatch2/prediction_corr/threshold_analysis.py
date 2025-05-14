@@ -10,12 +10,10 @@ import seaborn as sns
 import torch.nn as nn
 from sklearn.metrics import r2_score
 
-
-
 # Pad configuratie
 label_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "stock_labels.csv")
 print(label_path)
-prediction_map = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prediction_overnight")
+prediction_map = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prediction_corr")
 print(prediction_map)
 
 def evaluate_predictions(predictions, labels):
@@ -144,21 +142,54 @@ def check_labelsvsprediction(path):
 results_df = pd.read_csv(os.path.join(prediction_map, "results.csv"))
 print(results_df.head())
 
+filtered_df = results_df[(results_df['threshold'] >= 0.3) & (results_df['threshold'] <= 0.8)]
+filtered_df = filtered_df[filtered_df['horizon'].isin(['day5', 'day20'])]
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
+
+sns.lineplot(data=filtered_df, x="threshold", y="rmse", hue="horizon", style="min_neighbours", markers=True, dashes=False, ax=ax1)
+ax1.set_title("RMSE")
+ax1.set_xlabel("Threshold")
+ax1.set_ylabel("RMSE")
+ax1.grid(True)
+
+sns.lineplot(data=filtered_df, x="threshold", y="mae", hue="horizon", style="min_neighbours", markers=True, dashes=False, ax=ax2)
+ax2.set_title("mae")
+ax2.set_xlabel("Threshold")
+ax2.set_ylabel("mae")
+ax2.grid(True)
+
+plt.tight_layout()
+plt.show()
+
+
+
+# Pad configuratie
+label_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "stock_labels.csv")
+print(label_path)
+prediction_map = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prediction_overnight")
+print(prediction_map)
+
+
+results_df = pd.read_csv(os.path.join(prediction_map, "results.csv"))
+print(results_df.head())
+
+filtered_df = results_df
 # filtered_df = results_df[(results_df['threshold'] >= 0.3) & (results_df['threshold'] <= 0.8)]
 # filtered_df = filtered_df[filtered_df['horizon'].isin(['day5', 'day20'])]
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
 
-sns.lineplot(data=results_df, x="positive_threshold", y="rmse", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax1)
-ax1.set_title("RMSE per negative and positive")
-ax1.set_xlabel("Positive")
+sns.lineplot(data=filtered_df, x="positive_threshold", y="rmse", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax1)
+ax1.set_title("RMSE")
+ax1.set_xlabel("positive_threshold")
 ax1.set_ylabel("RMSE")
 ax1.grid(True)
 
-sns.lineplot(data=results_df, x="positive_threshold", y="r2", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax2)
-ax2.set_title("r2 per negative and positive")
-ax2.set_xlabel("Positive")
-ax2.set_ylabel("r2")
+sns.lineplot(data=filtered_df, x="positive_threshold", y="mae", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax2)
+ax2.set_title("mae")
+ax2.set_xlabel("positive_threshold")
+ax2.set_ylabel("mae")
 ax2.grid(True)
 
 plt.tight_layout()
