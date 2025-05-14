@@ -930,6 +930,10 @@ def main1_load():
 for batchmap in os.listdir(data_path):
     batchmap = os.path.join(data_path, batchmap)
 
+    if (batchmap == 'batch_1') or (batchmap == 'batch_2'):
+        continue
+    print(batchmap)
+
     daily_data_path = os.path.join(data_path, batchmap, "normaliseddailydata")
     raw_data_path = os.path.join(data_path, batchmap, "stockdata")
     # kies hieronder de map waarin je de resultaten wilt opslaan
@@ -953,13 +957,13 @@ for batchmap in os.listdir(data_path):
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     snapshots = prepare_dynamic_data(stock_data)
 
-    # try:
-    #     main1_generate()
-    # except Exception as e:
-    #     print(f"main1_generate() faalde: {e}")
-    #     # geen return, geen raise — gewoon doorgaan
+    try:
+        main1_generate()
+    except Exception as e:
+        print(f"main1_generate() faalde: {e}")
+        # geen return, geen raise — gewoon doorgaan
 
-    # try:
-    #     main1_load()
-    # except Exception as e:
-    #     print(f"main1_load() faalde: {e}")
+    try:
+        main1_load()
+    except Exception as e:
+        print(f"main1_load() faalde: {e}")
