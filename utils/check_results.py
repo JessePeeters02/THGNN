@@ -16,7 +16,7 @@ from scipy.stats import ks_2samp
 # Pad configuratie
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
-data_path = os.path.join(base_path, "data", "CSI300")
+data_path = os.path.join(base_path, "data", "testbatch2")
 print(data_path)
 label_path = os.path.join(data_path, "stock_labels.csv")
 print(label_path)
@@ -93,12 +93,12 @@ def direction_accuracy(predictions, labels, threshold=0.0000000):
     return acc
 
 
-def check_labelsvsprediction(path):
+def check_labelsvsprediction(path, modelname):
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat"""
 
     predictionsdf = pd.read_csv(os.path.join(path, "pred.csv"))
     predictiondates = pd.unique(predictionsdf["dt"].values)
-    predictiondates = predictiondates[0:1] # het aantal dagen aanpassen
+    # predictiondates = predictiondates[0:1] # het aantal dagen aanpassen
     print(f"predictiondates: {predictiondates}")
     predictionsdf = predictionsdf[predictionsdf['dt'].isin(predictiondates)]  # Filter op de eerste 5 dagen
     # print(predictionsdf.head())
@@ -156,8 +156,9 @@ def check_labelsvsprediction(path):
     #     acc = direction_accuracy(preds, labels)
 
     #     results.append({
-    #         "positive_threshold": p,
-    #         "negative_threshold": n,
+    #         # "positive_threshold": p,
+    #         # "negative_threshold": n,
+    #         "name": modelname,
     #         "horizon": name,
     #         "mae": mae,
     #         "mse": mse,
@@ -168,18 +169,21 @@ def check_labelsvsprediction(path):
 
     return tllabels, predictions
 
-
-prediction_path = os.path.join(data_path, "prediction_corr-100")
+results = []
+prediction_path = os.path.join(data_path, "prediction_corr_TE", "0.4_3")
 print(prediction_path)
-print(" ==== correlation ====")
-labels, corrpredictions = check_labelsvsprediction(prediction_path)
+print(" ==== te small ====")
+labels, corrpredictions = check_labelsvsprediction(prediction_path, 'small')
 
-prediction_path = os.path.join(data_path, "prediction_dynamise-100")
+prediction_path = os.path.join(data_path, "prediction_corr_TEbig", "0.4_3")
 print(prediction_path)
-print(" ==== dynamiSE ====")
-labels, dynamipredictions = check_labelsvsprediction(prediction_path)
+print(" ==== te big ====")
+labels, dynamipredictions = check_labelsvsprediction(prediction_path, 'big')
 
 distribution(corrpredictions, labels, dynamipredictions)
+
+# results_df = pd.DataFrame(results)
+# results_df.to_csv(os.path.join(data_path, "results.csv"), index=False)
 
 # # results aanmaken
 # results = []
@@ -198,26 +202,26 @@ distribution(corrpredictions, labels, dynamipredictions)
 # results_df.to_csv(os.path.join(prediction_map, "results.csv"), index=False)
 
 
-# # results zijn er al
-# results_df = pd.read_csv(os.path.join(prediction_map, "results.csv"))
-# print(results_df.head())
+# results zijn er al
+results_df = pd.read_csv(os.path.join(data_path, "results.csv"))
+print(results_df.head())
 
-# # filtered_df = results_df[(results_df['threshold'] >= 0.3) & (results_df['threshold'] <= 0.8)]
-# # filtered_df = filtered_df[filtered_df['horizon'].isin(['day5', 'day20'])]
+# filtered_df = results_df[(results_df['threshold'] >= 0.3) & (results_df['threshold'] <= 0.8)]
+# filtered_df = filtered_df[filtered_df['horizon'].isin(['day5', 'day20'])]
 
-# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
 
-# sns.lineplot(data=results_df, x="positive_threshold", y="rmse", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax1)
-# ax1.set_title("RMSE per negative and positive")
-# ax1.set_xlabel("Positive")
-# ax1.set_ylabel("RMSE")
-# ax1.grid(True)
+sns.lineplot(data=results_df, x="positive_threshold", y="rmse", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax1)
+ax1.set_title("RMSE per negative and positive")
+ax1.set_xlabel("Positive")
+ax1.set_ylabel("RMSE")
+ax1.grid(True)
 
-# sns.lineplot(data=results_df, x="positive_threshold", y="r2", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax2)
-# ax2.set_title("r2 per negative and positive")
-# ax2.set_xlabel("Positive")
-# ax2.set_ylabel("r2")
-# ax2.grid(True)
+sns.lineplot(data=results_df, x="positive_threshold", y="r2", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax2)
+ax2.set_title("r2 per negative and positive")
+ax2.set_xlabel("Positive")
+ax2.set_ylabel("r2")
+ax2.grid(True)
 
-# plt.tight_layout()
-# plt.show()
+plt.tight_layout()
+plt.show()

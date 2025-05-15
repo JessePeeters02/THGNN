@@ -16,25 +16,25 @@ warnings.filterwarnings("ignore")
 t_float = torch.float64
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
-print(f"base_path: {base_path}")
-data_path = os.path.join(base_path, "data", "testbatch2")
-print(f"data_path: {data_path}")
-data_train_predict_map = os.path.join(data_path, "data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
-print(f"data_train_predict_path: {data_train_predict_map}")
-daily_stock_map = os.path.join(data_path, "daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
-print(f"daily_stock_path: {daily_stock_map}")
-save_map = os.path.join(data_path, "model_saved_corr_TEbig")
-os.makedirs(save_map, exist_ok=True)
-prediction_map = os.path.join(data_path, "prediction_corr_TEbig")
-os.makedirs(prediction_map, exist_ok=True)
+# base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+# print(f"base_path: {base_path}")
+# data_path = os.path.join(base_path, "data", "testbatch2")
+# print(f"data_path: {data_path}")
+# data_train_predict_map = os.path.join(data_path, "data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
+# print(f"data_train_predict_path: {data_train_predict_map}")
+# daily_stock_map = os.path.join(data_path, "daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
+# print(f"daily_stock_path: {daily_stock_map}")
+# save_map = os.path.join(data_path, "model_saved_corr_TEbig")
+# os.makedirs(save_map, exist_ok=True)
+# prediction_map = os.path.join(data_path, "prediction_corr_TEbig")
+# os.makedirs(prediction_map, exist_ok=True)
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
     print(device)
 
 class Args:
-    def __init__(self, gpu=0, subtask="regression"):
+    def __init__(self, gpu=0, subtask="regression"): #regression or classification_binare, also switch: trainer.py 31/32 and thgnn.py 128/129
         # device
         self.gpu = str(1)
         self.device = 'cuda'
@@ -167,19 +167,51 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     
 if __name__ == "__main__":
 
-    data_train_predict_path = os.path.join(data_train_predict_map, "0.4_3") #gpu_wvt, oldway_0.6, gpu_wvt
-    print(f"data_train_predict_path: {data_train_predict_path}")
-    daily_stock_path = os.path.join(daily_stock_map, "0.4_3") #gpu_wvt, oldway, gpu_wvt
-    print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(save_map, "0.4_3")
-    os.makedirs(save_path, exist_ok=True)
-    prediction_path = os.path.join(prediction_map, "0.4_3")
-    os.makedirs(prediction_path, exist_ok=True)
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
+    print(f"data_path: {data_path}")
 
-    total_data_points = len(os.listdir(data_train_predict_path))
-    print(f"Total data points: {total_data_points}")
-    data_start = 0
-    data_middle = total_data_points-20
-    data_end = total_data_points
-    pre_data = '2025-03-07'
-    fun_train_predict(data_start, data_middle, data_end, pre_data)
+    for batchmap in os.listdir(data_path):
+        print("batchmap: ", batchmap)
+
+        # # select batches that can be skipped
+        # if (batchmap == 'batch_1') or (batchmap == 'batch_2'):
+        #     print('al gebeurd')
+        #     continue
+
+        data_train_predict_path = os.path.join(data_path, batchmap, "data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
+        print(f"data_train_predict_path: {data_train_predict_path}")
+        daily_stock_path = os.path.join(data_path, batchmap, "daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
+        print(f"daily_stock_path: {daily_stock_path}")
+        save_path = os.path.join(data_path, batchmap, "model_saved_TE_corr")
+        os.makedirs(save_path, exist_ok=True)
+        prediction_path = os.path.join(data_path, batchmap, "prediction_TE_corr")
+        os.makedirs(prediction_path, exist_ok=True)
+        print(prediction_path)
+
+        total_data_points = len(os.listdir(data_train_predict_path))
+        print(f"Total data points: {total_data_points}")
+        data_start = 0
+        data_middle = total_data_points-20
+        data_end = total_data_points
+        pre_data = '2025-03-07'
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+        data_train_predict_path = os.path.join(data_path, batchmap, "data_train_predict_DSE") #gpu_wvt, oldway_0.6, gpu_wvt
+        print(f"data_train_predict_path: {data_train_predict_path}")
+        daily_stock_path = os.path.join(data_path, batchmap, "daily_stock_DSE") #gpu_wvt, oldway, gpu_wvt
+        print(f"daily_stock_path: {daily_stock_path}")
+        save_path = os.path.join(data_path, batchmap, "model_saved_TE_DSE")
+        os.makedirs(save_path, exist_ok=True)
+        prediction_path = os.path.join(data_path, batchmap, "prediction_TE_DSE")
+        os.makedirs(prediction_path, exist_ok=True)
+        print(prediction_path)
+
+        total_data_points = len(os.listdir(data_train_predict_path))
+        print(f"Total data points: {total_data_points}")
+        data_start = 0
+        data_middle = total_data_points-20
+        data_end = total_data_points
+        pre_data = '2025-03-07'
+        fun_train_predict(data_start, data_middle, data_end, pre_data)

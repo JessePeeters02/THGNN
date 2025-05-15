@@ -168,15 +168,6 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     
 if __name__ == "__main__":
 
-    # data_train_predict_path = os.path.join(data_train_predict_map, "0.6_5") #gpu_wvt, oldway_0.6, gpu_wvt
-    # print(f"data_train_predict_path: {data_train_predict_path}")
-    # daily_stock_path = os.path.join(daily_stock_map, "0.6_5") #gpu_wvt, oldway, gpu_wvt
-    # print(f"daily_stock_path: {daily_stock_path}")
-    # save_path = os.path.join(save_map, "0.6_5")
-    # os.makedirs(save_path, exist_ok=True)
-    # prediction_path = os.path.join(prediction_map, "0.6_5")
-    # os.makedirs(prediction_path, exist_ok=True)
-
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
     data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
@@ -184,6 +175,10 @@ if __name__ == "__main__":
 
     for batchmap in os.listdir(data_path):
         print("batchmap: ", batchmap)
+
+        if (batchmap == 'batch_1') or (batchmap == 'batch_2') or (batchmap == 'batch_3'):
+            print('al gebeurd')
+            continue
 
         data_train_predict_path = os.path.join(data_path, batchmap, "data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
         print(f"data_train_predict_path: {data_train_predict_path}")
