@@ -34,10 +34,10 @@ if torch.cuda.is_available():
     print(device)
 
 class Args:
-    def __init__(self, gpu=0, subtask="regression"): #regression or classification_binare, also switch: trainer.py 31/32 and thgnn.py 128/129
+    def __init__(self, gpu=0, subtask="classification_binary"): #regression or classification_binare, also switch: trainer.py 31/32 and thgnn.py 128/129
         # device
-        self.gpu = str(1)
-        self.device = 'cuda'
+        self.gpu = str(0)
+        self.device = 'cpu'
         # data settings
         # adj_threshold = 0.4
         # self.adj_str = str(int(100*adj_threshold))
@@ -184,9 +184,9 @@ if __name__ == "__main__":
         print(f"data_train_predict_path: {data_train_predict_path}")
         daily_stock_path = os.path.join(data_path, batchmap, "daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
         print(f"daily_stock_path: {daily_stock_path}")
-        save_path = os.path.join(data_path, batchmap, "model_saved_TE_corr")
+        save_path = os.path.join(data_path, batchmap, "model_saved_TE_corr_bin")
         os.makedirs(save_path, exist_ok=True)
-        prediction_path = os.path.join(data_path, batchmap, "prediction_TE_corr")
+        prediction_path = os.path.join(data_path, batchmap, "prediction_TE_corr_bin")
         os.makedirs(prediction_path, exist_ok=True)
         print(prediction_path)
 
@@ -202,9 +202,9 @@ if __name__ == "__main__":
         print(f"data_train_predict_path: {data_train_predict_path}")
         daily_stock_path = os.path.join(data_path, batchmap, "daily_stock_DSE") #gpu_wvt, oldway, gpu_wvt
         print(f"daily_stock_path: {daily_stock_path}")
-        save_path = os.path.join(data_path, batchmap, "model_saved_TE_DSE")
+        save_path = os.path.join(data_path, batchmap, "model_saved_TE_DSE_bin")
         os.makedirs(save_path, exist_ok=True)
-        prediction_path = os.path.join(data_path, batchmap, "prediction_TE_DSE")
+        prediction_path = os.path.join(data_path, batchmap, "prediction_TE_DSE_bin")
         os.makedirs(prediction_path, exist_ok=True)
         print(prediction_path)
 
