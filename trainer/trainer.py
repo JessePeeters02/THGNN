@@ -29,8 +29,8 @@ def extract_data(data_dict, device):
     neg_adj = data_dict['neg_adj'].to(device).squeeze()
     features = data_dict['features'].to(device).squeeze()
     labels = data_dict['labels'].to(device).squeeze()
-    labels = torch.tanh(torch.log(labels+1))
-    # labels = (data_dict['labels'].to(device).squeeze() > 0).float()
+    # labels = torch.tanh(torch.log(labels+1))
+    labels = (data_dict['labels'].to(device).squeeze() > 0).float()
     mask = data_dict['mask']
     return pos_adj, neg_adj, features, labels, mask
 
@@ -53,8 +53,8 @@ def train_epoch(epoch, args, model, dataset_train, optimizer, scheduler, loss_fc
             optimizer.step()
             scheduler.step()
             if batch_idx == 0:
-                if loss.detach().cpu().item() > 0.1:
-                    print("loss: ", loss.detach().cpu().item(), "   dag: ", dag)
+                # if loss.detach().cpu().item() > 0.1:
+                #     print("loss: ", loss.detach().cpu().item(), "   dag: ", dag)
                 # loss_list2.append(loss.detach().cpu().item())
                 # loss_list.append((dag, loss.detach().cpu().item()))
                 aantal_keer_berekend += 1

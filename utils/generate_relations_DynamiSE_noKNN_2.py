@@ -829,9 +829,9 @@ def calculate_label(raw_df, current_date):
 
 
 def main1_generate():
-    print(f"Aantal snapshots: {len(snapshots)}")
-    print(f"Gemiddelde nodes per snapshot: {np.mean([s['features'].shape[0] for s in snapshots]):.0f}")
-    print(f"Gemiddelde edges per snapshot: {np.mean([len(s['pos_edges_info']) + len(s['neg_edges_info']) for s in snapshots]):.0f}")
+    print(f"Aantal snapshots: {len(date_to_idx)}")
+
+ 
 
     model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -843,7 +843,14 @@ def main1_generate():
         model.train()
         epoch_losses = []
 
-        for snapshot in tqdm(snapshots, desc=f"Epoch {epoch+1} van de {num_epochs}"):
+        for date in tqdm(all_dates[prev_date_num-1:], desc=f"Epoch {epoch+1} van de {num_epochs}"):
+            snapshot_file = os.path.join(snapshot_path, f"{date}.pkl")
+            if not os.path.exists(snapshot_file):
+                print(f"Error: {snapshot_file} for date {date} not found.")
+                continue
+            with open(snapshot_file, 'rb') as f:
+                snapshot = pickle.load(f)
+
             optimizer.zero_grad()
 
             features = snapshot['features'].float().to(device)
@@ -894,7 +901,15 @@ def main1_load():
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth"), map_location=device))
     model.eval()
 
-    for snapshot in tqdm(snapshots, desc="Generating outputs"):
+    for date in tqdm(all_dates[prev_date_num-1:], desc="Generating outputs"):
+        snapshot_file = os.path.join(snapshot_path, f"{date}.pkl")
+        if not os.path.exists(snapshot_file):
+            print(f"Error: {snapshot_file} for date {date} not found.")
+            continue
+            
+        with open(snapshot_file, 'rb') as f:
+            snapshot = pickle.load(f)
+
         with torch.no_grad():
             N = len(snapshot['tickers'])
             pos_edges_tensor = edge_info_to_tensor(snapshot['pos_edges_info']).to(device)
@@ -962,7 +977,7 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 
 log_path = os.path.join(data_path, f"snapshot_log_SP.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
-snapshots = prepare_dynamic_data(stock_data)
+# snapshots = prepare_dynamic_data(stock_data)
 
 try:
     main1_generate()
