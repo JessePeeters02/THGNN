@@ -36,8 +36,8 @@ if torch.cuda.is_available():
 class Args:
     def __init__(self, gpu=0, subtask="classification_binary"): #regression or classification_binare, also switch: trainer.py 31/32 and thgnn.py 128/129
         # device
-        self.gpu = str(0)
-        self.device = 'cpu'
+        self.gpu = str(1)
+        self.device = 'cuda'
         # data settings
         # adj_threshold = 0.4
         # self.adj_str = str(int(100*adj_threshold))
