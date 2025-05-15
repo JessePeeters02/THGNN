@@ -175,11 +175,11 @@ if __name__ == "__main__":
     for batchmap in os.listdir(data_path):
         print("batchmap: ", batchmap)
 
-        # # select batches that can be skipped
-        # if (batchmap == 'batch_1') or (batchmap == 'batch_2'):
-        #     print('al gebeurd')
-        #     continue
-
+        # select batches that can be skipped
+        if (batchmap == 'batch_1') or (batchmap == 'batch_2'):
+            print('al gebeurd')
+            continue
+        
         data_train_predict_path = os.path.join(data_path, batchmap, "data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
         print(f"data_train_predict_path: {data_train_predict_path}")
         daily_stock_path = os.path.join(data_path, batchmap, "daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
