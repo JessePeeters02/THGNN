@@ -928,7 +928,6 @@ def main1_load():
 
 
 for batchmap in os.listdir(data_path):
-    batchmap = os.path.join(data_path, batchmap)
 
     if (batchmap == 'batch_1') or (batchmap == 'batch_2'):
         continue
