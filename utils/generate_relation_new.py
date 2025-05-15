@@ -19,7 +19,7 @@ n_jobs = -1  # Use all available cores (-1)
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print(base_path)
 # data_path = os.path.join(base_path, "data")
-data_path = os.path.join(base_path, "data", "testbatch_1000")
+data_path = os.path.join(base_path, "data", "S&P500")
 print(data_path)
 relation_path = os.path.join(data_path, "correlations")
 os.makedirs(relation_path, exist_ok=True)  # Create the directory if it doesn't exist

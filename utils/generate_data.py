@@ -18,7 +18,7 @@ min_neighbors = 3
 # Basis pad naar de data-map
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
-data_path = os.path.join(base_path, "data", "csi300")
+data_path = os.path.join(base_path, "data", "S&P500")
 print(data_path)
 relation_path = os.path.join(data_path, "correlations")
 print(relation_path)
@@ -293,9 +293,13 @@ def fun(iend, enddt, stock_data, pdn, tr, mn):
 # fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
 
 
-
+already_done = True
 for i in tqdm(range(prev_date_num-1, len(all_dates)), desc=f"Processing dates"):
     end_date = all_dates[i]
+    if already_done:
+        if end_date == '2024-03-26':
+            already_done = False
+            continue
     data_train_predict_path = os.path.join(data_path, "data_train_predict_corr")
     os.makedirs(data_train_predict_path, exist_ok=True)
     daily_stock_path = os.path.join(data_path, "daily_stock_corr")
