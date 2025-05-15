@@ -19,7 +19,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
 print(f"base_path: {base_path}")
-data_path = os.path.join(base_path, "data", "CSI300")
+data_path = os.path.join(base_path, "data", "S&P500")
 print(f"data_path: {data_path}")
 data_train_predict_path = os.path.join(data_path, "data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
 print(f"data_train_predict_path: {data_train_predict_path}")
