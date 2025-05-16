@@ -18,8 +18,7 @@ base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidi
 print(base_path)
 data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
 print(data_path)
-label_path = os.path.join(data_path, "stock_labels.csv")
-print(label_path)
+
 
 
 def distribution(cpreds, labels, dpred):
@@ -114,7 +113,7 @@ def check_labelsvsprediction(path):
     predictionsdf = pd.read_csv(os.path.join(path, "pred.csv"))
     predictiondates = pd.unique(predictionsdf["dt"].values)
     # predictiondates = predictiondates[0:1] # het aantal dagen aanpassen
-    print(f"predictiondates: {predictiondates}")
+    # print(f"predictiondates: {predictiondates}")
     predictionsdf = predictionsdf[predictionsdf['dt'].isin(predictiondates)]  # Filter op de eerste x dagen
     # print(predictionsdf.head())
     
@@ -134,7 +133,7 @@ def check_labelsvsprediction(path):
             return float('nan')  # of np.nan als je NumPy gebruikt
 
     predictionsdf['true_score'] = predictionsdf.apply(lookup_label, axis=1)
-    # print(predictionsdf)
+    # print(predictionsdf.head(5))
 
     predictions = torch.tensor(predictionsdf['score'].values, dtype=torch.float32).numpy()
     labels = torch.tensor(predictionsdf['true_score'].values, dtype=torch.float32).numpy()
@@ -142,7 +141,7 @@ def check_labelsvsprediction(path):
     if task == 'regression':
         tllabels = np.tanh(np.log(labels+1))
     else:
-        tllabels = labels
+        tllabels = (labels > 0).astype(float)
     print(len(labels), len(predictions))
 
     tllabel_stats = f"tanh log Labels - Gemiddelde: {np.mean(tllabels):.4f}, Std: {np.std(tllabels):.4f}, Max: {np.max(tllabels):.4f}, Min: {np.min(tllabels):.4f}"
@@ -170,14 +169,20 @@ def check_labelsvsprediction(path):
         horizon_df = predictionsdf.groupby("code").head(horizon)
         
         preds = horizon_df["score"].values
-        labels = np.tanh(np.log(horizon_df["true_score"].values + 1))
-
         if task == 'regression':
-            mae, mse, r2 = evaluate_reg_predictions(preds, labels)
+            labs = np.tanh(np.log(horizon_df["true_score"].values + 1))
+        elif task == 'classification':
+            labs = (horizon_df["true_score"].values > 0).astype(float)
+
+        # print(preds[0:10])
+        # print(labs[0:10])
+        if task == 'regression':
+            mae, mse, r2 = evaluate_reg_predictions(preds, labs)
             rmse = np.sqrt(mse)
             bce, acc = None, None
         if task == 'classification':
-            bce, acc= evaluate_reg_predictions(preds, labels)
+            bce, acc= evaluate_cla_predictions(preds, labs)
+            bce = bce.item()
             mae, mse, r2, rmse = None, None, None, None
 
         results.append({
@@ -198,50 +203,71 @@ def check_labelsvsprediction(path):
 
     return tllabels, predictions
 
-results = []
+# results = []
 
-for batchmap in os.listdir(data_path):
-    for predictionmap in os.listdir(os.path.join(data_path, batchmap)):
+# for batchmap in os.listdir(data_path):
+#     label_path = os.path.join(data_path, batchmap, "stock_labels.csv")
+#     print(label_path)
+#     for predictionmap in os.listdir(os.path.join(data_path, batchmap)):
         
-        if not predictionmap.startswith("prediction"):
-            continue
-        print(f"batchmap: {batchmap}, predictionmap: {predictionmap}")
-        parts = predictionmap[len("prediction_"):].split("_")
-        encoder = ""
-        input = ""
-        task = ""
+#         if not predictionmap.startswith("prediction"):
+#             continue
+#         print(f"batchmap: {batchmap}, predictionmap: {predictionmap}")
+#         parts = predictionmap[len("prediction_"):].split("_")
+#         encoder = ""
+#         input = ""
+#         task = ""
 
-        if len(parts) == 1:
-            encoder = "GRU"
-            input = "correlation" if parts[0] == "corr" else "dynamiSE"
-            task = "regression"
+#         if len(parts) == 1:
+#             encoder = "GRU"
+#             input = "correlation" if parts[0] == "corr" else "dynamiSE"
+#             task = "regression"
 
-        elif len(parts) == 2:
-            if parts[1] == "bin":
-                encoder = "GRU"
-                input = "correlation" if parts[0] == "corr" else "dynamiSE"
-                task = "classification"
-            else:
-                encoder = "TE" if parts[0] == "TE" else "GRU"
-                input = "correlation" if parts[1] == "corr" else "dynamiSE"
-                task = "regression"
-        elif len(parts) == 3:
-            encoder = "TE"
-            input = "correlation" if parts[1] == "corr" else "dynamiSE"
-            task = "classification"
+#         elif len(parts) == 2:
+#             if parts[1] == "bin":
+#                 encoder = "GRU"
+#                 input = "correlation" if parts[0] == "corr" else "dynamiSE"
+#                 task = "classification"
+#             else:
+#                 encoder = "TE" if parts[0] == "TE" else "GRU"
+#                 input = "correlation" if parts[1] == "corr" else "dynamiSE"
+#                 task = "regression"
+#         elif len(parts) == 3:
+#             encoder = "TE"
+#             input = "correlation" if parts[1] == "corr" else "dynamiSE"
+#             task = "classification"
 
-        # print(f"Map: {predictionmap} → input: {input}, Encoder: {encoder}, task: {task}")
-
-
-        prediction_path = os.path.join(data_path, batchmap, predictionmap)
-        print(prediction_path)
-        labels, corrpredictions = check_labelsvsprediction(prediction_path)
+#         # print(f"Map: {predictionmap} → input: {input}, Encoder: {encoder}, task: {task}")
 
 
-    # distribution(corrpredictions, labels, dynamipredictions)
+#         prediction_path = os.path.join(data_path, batchmap, predictionmap)
+#         print(prediction_path)
+#         labels, corrpredictions = check_labelsvsprediction(prediction_path)
 
-results_df = pd.DataFrame(results)
-results_df.to_csv(os.path.join(data_path, "results.csv"), index=False)
+
+#     # distribution(corrpredictions, labels, dynamipredictions)
+
+# results_df = pd.DataFrame(results)
+# results_df.to_csv(os.path.join(data_path, "results.csv"), index=False)
+
+# # CSV inlezen
+# df = pd.read_csv(os.path.join(data_path, "results.csv"))
+
+# # Drop de task-kolom
+# df = df.drop(columns=["task"])
+
+# # Groeperen per unieke combinatie en aggregatie toepassen
+# df_combined = df.groupby(["batch", "encoder", "input", "horizon"], as_index=False).agg({
+#     "mae": "max",  # max omdat maar één van de twee rijen een waarde heeft
+#     "mse": "max",
+#     "rmse": "max",
+#     "r2": "max",
+#     "accuracy": "max",
+#     "bce": "max"
+# })
+
+# # Opslaan of printen
+# df_combined.to_csv(os.path.join(data_path, "results_combined.csv"), index=False)
 
 # # results aanmaken
 # results = []
@@ -283,3 +309,43 @@ results_df.to_csv(os.path.join(data_path, "results.csv"), index=False)
 
 # plt.tight_layout()
 # plt.show()
+
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Data inladen
+df = pd.read_csv(os.path.join(data_path, "results_combined.csv"))
+df["horizon"] = pd.Categorical(df["horizon"], categories=["day1", "day5", "day20"], ordered=True)
+# 1. Staafdiagram: Gemiddelde MAE per horizon en encoder
+plt.figure(figsize=(10, 5))
+sns.barplot(data=df, x="horizon", y="rmse", hue="encoder", ci=None)
+plt.title("Gemiddelde RMSE: GRU vs. TE per horizon")
+plt.ylabel("RMSE (lager = beter)")
+plt.show()
+
+# 2. Boxplot: Spreiding van R2-scores per model
+plt.figure(figsize=(10, 5))
+sns.boxplot(data=df, x="horizon", y="r2", hue="encoder")
+plt.title("Spreiding van R²-scores per horizon")
+plt.ylabel("R² (hoger = beter)")
+plt.show()
+
+# 3. Lijngrafiek: Trend in Accuracy over horizons
+plt.figure(figsize=(10, 5))
+sns.lineplot(data=df, x="horizon", y="accuracy", hue="encoder", ci=None, marker="o")
+plt.title("Accuracy over verschillende horizons")
+plt.ylabel("Accuracy (hoger = beter)")
+plt.show()
+
+# 4. Samenvattende tabel (gemiddelden per groep)
+summary_table = df.groupby(["encoder", "horizon"]).agg({
+    "mae": "mean",
+    "rmse": "mean",
+    "r2": "mean",
+    "accuracy": "mean",
+    "bce": "mean"
+}).round(3)
+print(summary_table)
