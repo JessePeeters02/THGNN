@@ -17,7 +17,7 @@ import torch.nn as nn
 # Pad configuratie
 base_path = os.path.dirname(os.path.abspath(__file__))
 # print(base_path)
-data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200", "batch1")
+data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200", "batch_3")
 # print(data_path)
 daily_data_path = os.path.join(data_path, "dailydata")
 # print(daily_data_path)
@@ -104,24 +104,25 @@ def direction_accuracy(predictions, labels, threshold=0.0000000):
     acc = np.mean(pred_up == label_up)
     return acc
 
-def check_labelsvsprediction(nr, path, start):
+def check_labelsvsprediction(nr, path, start, predictionsmapje):
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat"""
     bestandspad = os.path.join(data_path, path)
-    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_random1", "pred.csv"))
+    predictionsdf = pd.read_csv(os.path.join(data_path, predictionsmapje, "pred.csv"))
+    print('predictionpath: ', os.path.join(data_path, predictionsmapje, "pred.csv"))
     predictions = predictionsdf["score"].values
     predictiondates = set(predictionsdf["dt"].values)
-    predictions = predictions[:200]
+    # predictions = predictions[:200]
     # print(f"predictions: {predictions}")
     print(f"predictiondates: {predictiondates}")
     print("Bestandspad:", bestandspad)
     labels = []
     startind = 1194
-    for file in os.listdir(bestandspad)[startind:startind+1]:
-        print("Bestand:", file)
+    for file in os.listdir(bestandspad)[startind:startind+20]:
+        # print("Bestand:", file)
         file = os.path.join(bestandspad, file)
         with open(file, 'rb') as f:
             data = pickle.load(f)
-        print("labels keys: ",data.keys())
+        # print("labels keys: ",data.keys())
         labels.append(data['labels'].numpy())
     labels = np.concatenate(labels)
     # print(f"labels: {labels}")
@@ -261,7 +262,11 @@ def gpu_info():
 """ aanroepen van alle testfuncties"""
 # check_pickles(3, "data_train_predict_DSE_noknn2", 7)
 # check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
-check_labelsvsprediction(2, os.path.join("data_train_predict_random1"), 20)
+check_labelsvsprediction(2, os.path.join("data_train_predict_corr"), 20, "prediction_corr")
+check_labelsvsprediction(2, os.path.join("data_train_predict_DSE"), 20, "prediction_DSE")
+check_labelsvsprediction(2, os.path.join("data_train_predict_random1"), 20, "prediction_random1")
+check_labelsvsprediction(2, os.path.join("data_train_predict_random2"), 20, "prediction_random2")
+check_labelsvsprediction(2, os.path.join("data_train_predict_random3"), 20, "prediction_random3")
 # check_pickles(30, "data_train_predict", 20)
 # check_csi300()
 # memory_info()
