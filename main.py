@@ -1,7 +1,7 @@
 # Leugen! het is 18:19 tegen dat ik hier gevonden heb hoe het moet
 from trainer.trainer import *
 from data_loader import *
-from model.Thgnn import *
+from model.Thgnn_no_alpha import *
 # from model.Thgnn_new import *
 import warnings
 import torch
@@ -180,15 +180,51 @@ if __name__ == "__main__":
         #     print('al gebeurd')
         #     continue
 
+        data_train_predict_path = os.path.join(data_path, batchmap, f"data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
+        print(f"data_train_predict_path: {data_train_predict_path}")
+        daily_stock_path = os.path.join(data_path, batchmap, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
+        print(f"daily_stock_path: {daily_stock_path}")
+        save_path = os.path.join(data_path, batchmap, f"model_saved_noalpha_corr")
+        os.makedirs(save_path, exist_ok=True)
+        prediction_path = os.path.join(data_path, batchmap, f"prediction_noalpha_corr")
+        os.makedirs(prediction_path, exist_ok=True)
+        print(prediction_path)
+
+        total_data_points = len(os.listdir(data_train_predict_path))
+        print(f"Total data points: {total_data_points}")
+        data_start = 0
+        data_middle = total_data_points-20
+        data_end = total_data_points
+        pre_data = '2025-03-07'
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+        data_train_predict_path = os.path.join(data_path, batchmap, f"data_train_predict_DSE") #gpu_wvt, oldway_0.6, gpu_wvt
+        print(f"data_train_predict_path: {data_train_predict_path}")
+        daily_stock_path = os.path.join(data_path, batchmap, f"daily_stock_DSE") #gpu_wvt, oldway, gpu_wvt
+        print(f"daily_stock_path: {daily_stock_path}")
+        save_path = os.path.join(data_path, batchmap, f"model_saved_noalpha_DSE")
+        os.makedirs(save_path, exist_ok=True)
+        prediction_path = os.path.join(data_path, batchmap, f"prediction_noalpha_DSE")
+        os.makedirs(prediction_path, exist_ok=True)
+        print(prediction_path)
+
+        total_data_points = len(os.listdir(data_train_predict_path))
+        print(f"Total data points: {total_data_points}")
+        data_start = 0
+        data_middle = total_data_points-20
+        data_end = total_data_points
+        pre_data = '2025-03-07'
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+
         for j in [1, 2, 3]:
 
             data_train_predict_path = os.path.join(data_path, batchmap, f"data_train_predict_random{j}") #gpu_wvt, oldway_0.6, gpu_wvt
             print(f"data_train_predict_path: {data_train_predict_path}")
             daily_stock_path = os.path.join(data_path, batchmap, f"daily_stock_random{j}") #gpu_wvt, oldway, gpu_wvt
             print(f"daily_stock_path: {daily_stock_path}")
-            save_path = os.path.join(data_path, batchmap, f"model_saved_random{j}")
+            save_path = os.path.join(data_path, batchmap, f"model_saved_noalpha_random{j}")
             os.makedirs(save_path, exist_ok=True)
-            prediction_path = os.path.join(data_path, batchmap, f"prediction_random{j}")
+            prediction_path = os.path.join(data_path, batchmap, f"prediction_noalpha_random{j}")
             os.makedirs(prediction_path, exist_ok=True)
             print(prediction_path)
 
