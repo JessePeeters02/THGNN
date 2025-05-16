@@ -38,8 +38,8 @@ if torch.cuda.is_available():
 class Args:
     def __init__(self, gpu=0, subtask="regression"): #regression or classification_binare, also switch: trainer.py 31/32 and thgnn.py 128/129
         # device
-        self.gpu = str(1)
-        self.device = 'cuda'
+        self.gpu = str(0)
+        self.device = 'cpu'
         # data settings
         # adj_threshold = 0.4
         # self.adj_str = str(int(100*adj_threshold))
@@ -118,22 +118,22 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
                                   out_features=args.out_features).to(args.device)
 
     # # train
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    # cold_scheduler = StepLR(optimizer=optimizer, step_size=5000, gamma=0.9, last_epoch=-1)
-    # default_scheduler = cold_scheduler
-    # print('start training')
-    # for epoch in range(args.max_epochs):
-    #     train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
-    #                              optimizer=optimizer, scheduler=default_scheduler, loss_fcn=args.loss_fcn)
-    #     if (epoch+1) % args.epochs_eval == 0:
-    #         eval_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader, loss_fcn=args.loss_fcn)
-    #         print('Epoch: {}/{}, train loss: {:.6f}, val loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss, eval_loss))
-    #     else:
-    #         print('Epoch: {}/{}, train loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss))
-    #     if (epoch + 1) % args.epochs_save_by == 0:
-    #         print("save model!")
-    #         state = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': epoch + 1}
-    #         torch.save(state, os.path.join(args.save_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    cold_scheduler = StepLR(optimizer=optimizer, step_size=5000, gamma=0.9, last_epoch=-1)
+    default_scheduler = cold_scheduler
+    print('start training')
+    for epoch in range(args.max_epochs):
+        train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
+                                 optimizer=optimizer, scheduler=default_scheduler, loss_fcn=args.loss_fcn)
+        if (epoch+1) % args.epochs_eval == 0:
+            eval_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader, loss_fcn=args.loss_fcn)
+            print('Epoch: {}/{}, train loss: {:.6f}, val loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss, eval_loss))
+        else:
+            print('Epoch: {}/{}, train loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss))
+        if (epoch + 1) % args.epochs_save_by == 0:
+            print("save model!")
+            state = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': epoch + 1}
+            torch.save(state, os.path.join(args.save_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
 
 
 
@@ -234,43 +234,43 @@ if __name__ == "__main__":
         data_path = os.path.join(base_path, "data", "CSI300")
         print(f"data_path: {data_path}")
 
-        for i in ["0", "-20", "-40", "-60", "-80", "-100", "-120"]:
+        for i in [1,2,3]:
 
-            data_train_predict_path = os.path.join(data_path, f"data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
+            data_train_predict_path = os.path.join(data_path, f"data_train_predict_random{i}") #gpu_wvt, oldway_0.6, gpu_wvt
             print(f"data_train_predict_path: {data_train_predict_path}")
-            daily_stock_path = os.path.join(data_path, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
+            daily_stock_path = os.path.join(data_path, f"daily_stock_random{i}") #gpu_wvt, oldway, gpu_wvt
             print(f"daily_stock_path: {daily_stock_path}")
-            save_path = os.path.join(data_path, f"model_saved_corr_{i}")
+            save_path = os.path.join(data_path, f"model_saved_random_{i}_-120")
             os.makedirs(save_path, exist_ok=True)
-            prediction_path = os.path.join(data_path, f"prediction_corr_{i}")
+            prediction_path = os.path.join(data_path, f"prediction_random_{i}_-120")
             os.makedirs(prediction_path, exist_ok=True)
             print(prediction_path)
 
             total_data_points = len(os.listdir(data_train_predict_path))
             print(f"Total data points: {total_data_points}")
             data_start = 0
-            data_middle = total_data_points-20+int(i)
-            data_end = total_data_points+int(i)
+            data_middle = total_data_points-20 - 120
+            data_end = total_data_points -120
             pre_data = '2025-03-07'
             fun_train_predict(data_start, data_middle, data_end, pre_data)
 
-            data_train_predict_path = os.path.join(data_path, f"data_train_predict_csi300") #gpu_wvt, oldway_0.6, gpu_wvt
-            print(f"data_train_predict_path: {data_train_predict_path}")
-            daily_stock_path = os.path.join(data_path, f"daily_stock_csi300") #gpu_wvt, oldway, gpu_wvt
-            print(f"daily_stock_path: {daily_stock_path}")
-            save_path = os.path.join(data_path, f"model_saved_DSE_{i}")
-            os.makedirs(save_path, exist_ok=True)
-            prediction_path = os.path.join(data_path, f"prediction_DSE_{i}")
-            os.makedirs(prediction_path, exist_ok=True)
-            print(prediction_path)
+            # data_train_predict_path = os.path.join(data_path, f"data_train_predict_csi300") #gpu_wvt, oldway_0.6, gpu_wvt
+            # print(f"data_train_predict_path: {data_train_predict_path}")
+            # daily_stock_path = os.path.join(data_path, f"daily_stock_csi300") #gpu_wvt, oldway, gpu_wvt
+            # print(f"daily_stock_path: {daily_stock_path}")
+            # save_path = os.path.join(data_path, f"model_saved_DSE_{i}")
+            # os.makedirs(save_path, exist_ok=True)
+            # prediction_path = os.path.join(data_path, f"prediction_DSE_{i}")
+            # os.makedirs(prediction_path, exist_ok=True)
+            # print(prediction_path)
 
-            total_data_points = len(os.listdir(data_train_predict_path))
-            print(f"Total data points: {total_data_points}")
-            data_start = 0
-            data_middle = total_data_points-20+int(i)
-            data_end = total_data_points+int(i)
-            pre_data = '2025-03-07'
-            fun_train_predict(data_start, data_middle, data_end, pre_data)
+            # total_data_points = len(os.listdir(data_train_predict_path))
+            # print(f"Total data points: {total_data_points}")
+            # data_start = 0
+            # data_middle = total_data_points-20 -120
+            # data_end = total_data_points -120
+            # pre_data = '2025-03-07'
+            # fun_train_predict(data_start, data_middle, data_end, pre_data)
 
 
     # for batchmap in os.listdir(data_path):

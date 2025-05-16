@@ -18,7 +18,7 @@ def bce_loss(logits, targets):
 def evaluate(model, features, adj_pos, adj_neg, labels, mask, loss_func):
     model.eval()
     with torch.no_grad():
-        logits = model(features, adj_pos, adj_neg)
+        logits,*_ = model(features, adj_pos, adj_neg)
 
     loss = loss_func(logits,labels)
     return loss, logits
@@ -46,7 +46,7 @@ def train_epoch(epoch, args, model, dataset_train, optimizer, scheduler, loss_fc
         for batch_idx, data in enumerate(batch_data):
             model.zero_grad()
             pos_adj, neg_adj, features, labels, mask = extract_data(data, args.device)
-            logits = model(features, pos_adj, neg_adj)
+            logits,*_ = model(features, pos_adj, neg_adj)
             loss = loss_fcn(logits[mask], labels[mask])
             # print(f"loss: {loss}")
             loss.backward()
