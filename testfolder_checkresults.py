@@ -17,7 +17,8 @@ import torch.nn as nn
 # Pad configuratie
 base_path = os.path.dirname(os.path.abspath(__file__))
 # print(base_path)
-data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200", "batch_3")
+# data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200", "batch_3")
+data_path = os.path.join(base_path, "data", "S&P500")
 # print(data_path)
 daily_data_path = os.path.join(data_path, "dailydata")
 # print(daily_data_path)
@@ -116,9 +117,9 @@ def check_labelsvsprediction(nr, path, start, predictionsmapje):
     print(f"predictiondates: {predictiondates}")
     print("Bestandspad:", bestandspad)
     labels = []
-    startind = 1194
+    startind = 1010
     for file in os.listdir(bestandspad)[startind:startind+20]:
-        # print("Bestand:", file)
+        print("Bestand:", file)
         file = os.path.join(bestandspad, file)
         with open(file, 'rb') as f:
             data = pickle.load(f)
@@ -263,7 +264,7 @@ def gpu_info():
 # check_pickles(3, "data_train_predict_DSE_noknn2", 7)
 # check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
 check_labelsvsprediction(2, os.path.join("data_train_predict_corr"), 20, "prediction_corr")
-check_labelsvsprediction(2, os.path.join("data_train_predict_DSE"), 20, "prediction_DSE")
+check_labelsvsprediction(2, os.path.join("data_train_predict_SP"), 20, "prediction_DSE")
 check_labelsvsprediction(2, os.path.join("data_train_predict_random1"), 20, "prediction_random1")
 check_labelsvsprediction(2, os.path.join("data_train_predict_random2"), 20, "prediction_random2")
 check_labelsvsprediction(2, os.path.join("data_train_predict_random3"), 20, "prediction_random3")
