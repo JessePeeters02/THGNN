@@ -1,7 +1,7 @@
 # Leugen! het is 18:19 tegen dat ik hier gevonden heb hoe het moet
 from trainer.trainer import *
 from data_loader import *
-from model.Thgnn_no_alpha import *
+from model.Thgnn import *
 # from model.Thgnn_new import *
 import warnings
 import torch
@@ -12,6 +12,7 @@ from torch.optim.lr_scheduler import StepLR
 import pandas as pd
 from pandas.core.frame import DataFrame
 from tqdm import tqdm
+import numpy as np
 
 warnings.filterwarnings("ignore")
 t_float = torch.float64
@@ -116,27 +117,34 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     model = eval(args.model_name)(hidden_dim=args.hidden_dim, num_heads=args.num_heads,
                                   out_features=args.out_features).to(args.device)
 
-    # train
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    cold_scheduler = StepLR(optimizer=optimizer, step_size=5000, gamma=0.9, last_epoch=-1)
-    default_scheduler = cold_scheduler
-    print('start training')
-    for epoch in range(args.max_epochs):
-        train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
-                                 optimizer=optimizer, scheduler=default_scheduler, loss_fcn=args.loss_fcn)
-        if (epoch+1) % args.epochs_eval == 0:
-            eval_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader, loss_fcn=args.loss_fcn)
-            print('Epoch: {}/{}, train loss: {:.6f}, val loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss, eval_loss))
-        else:
-            print('Epoch: {}/{}, train loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss))
-        if (epoch + 1) % args.epochs_save_by == 0:
-            print("save model!")
-            state = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': epoch + 1}
-            torch.save(state, os.path.join(args.save_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
+    # # train
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # cold_scheduler = StepLR(optimizer=optimizer, step_size=5000, gamma=0.9, last_epoch=-1)
+    # default_scheduler = cold_scheduler
+    # print('start training')
+    # for epoch in range(args.max_epochs):
+    #     train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
+    #                              optimizer=optimizer, scheduler=default_scheduler, loss_fcn=args.loss_fcn)
+    #     if (epoch+1) % args.epochs_eval == 0:
+    #         eval_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader, loss_fcn=args.loss_fcn)
+    #         print('Epoch: {}/{}, train loss: {:.6f}, val loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss, eval_loss))
+    #     else:
+    #         print('Epoch: {}/{}, train loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss))
+    #     if (epoch + 1) % args.epochs_save_by == 0:
+    #         print("save model!")
+    #         state = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': epoch + 1}
+    #         torch.save(state, os.path.join(args.save_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
+
+
 
     # predict
+    epoch = 19
     checkpoint = torch.load(os.path.join(args.load_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
     model.load_state_dict(checkpoint['model'])
+
+    #new
+    df_weights = pd.DataFrame()
+
     data_files = daily_stock_path
     data_code = sorted(os.listdir(data_files))
     data_code_last = data_code[data_middle:data_end]
@@ -152,7 +160,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         pos_adj, neg_adj, features, labels, mask = extract_data(tmp_data, args.device)
         model.eval()
         with torch.no_grad():
-            logits = model(features, pos_adj, neg_adj)
+            logits, weights = model(features, pos_adj, neg_adj, requires_weight=True)
         result = logits.data.cpu().numpy().tolist()
         result_new = []
         for j in range(len(result)):
@@ -161,9 +169,53 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         res = DataFrame(res)
         df['score'] = res
         df_score=pd.concat([df_score,df])
+        # Sla gedetailleerde gewichten per sample op
+        pos_weights = weights["pos_attn_weights"].cpu().numpy()  # Shape: [num_heads, num_nodes, num_nodes]
+        neg_weights = weights["neg_attn_weights"].cpu().numpy()
+        sem_weights = weights["sem_attn_weights"].cpu().numpy()  # Shape: [num_nodes, 3] (beta_self, beta_pos, beta_neg)
+
+        # Bereken statistieken voor POSITIEVE edges
+        pos_weights_flat = pos_weights.flatten()  # Maak 1D voor statistieken
+        pos_stats = {
+            "pos_weight_mean": np.mean(pos_weights_flat),
+            "pos_weight_std": np.std(pos_weights_flat),
+            "pos_weight_max": np.max(pos_weights_flat),
+            "pos_weight_min": np.min(pos_weights_flat),
+            "pos_weight_median": np.median(pos_weights_flat),
+        }
+
+        # Hetzelfde voor NEGATIEVE edges
+        neg_weights_flat = neg_weights.flatten()
+        neg_stats = {
+            "neg_weight_mean": np.mean(neg_weights_flat),
+            "neg_weight_std": np.std(neg_weights_flat),
+            "neg_weight_max": np.max(neg_weights_flat),
+            "neg_weight_min": np.min(neg_weights_flat),
+            "neg_weight_median": np.median(neg_weights_flat),
+        }
+
+        # Beta-statistieken (self/pos/neg)
+        beta_stats = {
+            "beta_self_mean": np.mean(sem_weights[:, 0]),
+            "beta_self_std": np.std(sem_weights[:, 0]),
+            "beta_pos_mean": np.mean(sem_weights[:, 1]),
+            "beta_pos_std": np.std(sem_weights[:, 1]),
+            "beta_neg_mean": np.mean(sem_weights[:, 2]),
+            "beta_neg_std": np.std(sem_weights[:, 2]),
+        }
+
+        # Voeg alles samen in een DataFrame
+        df_weights = pd.concat([df_weights, pd.DataFrame({
+            **pos_stats,
+            **neg_stats,
+            **beta_stats,
+            # Optioneel: Sample-ID voor tracking
+            "sample_id": [i]  
+        })])
 
         #df.to_csv('prediction/' + data_code_last[i], encoding='utf-8-sig', index=False)
     df_score.to_csv(os.path.join(prediction_path, "pred.csv"))
+    df_weights.to_csv(os.path.join(prediction_path, "attention_weights.csv"))
     print(df_score)
     
 if __name__ == "__main__":
@@ -184,9 +236,9 @@ if __name__ == "__main__":
         print(f"data_train_predict_path: {data_train_predict_path}")
         daily_stock_path = os.path.join(data_path, batchmap, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
         print(f"daily_stock_path: {daily_stock_path}")
-        save_path = os.path.join(data_path, batchmap, f"model_saved_noalpha_corr")
+        save_path = os.path.join(data_path, batchmap, f"model_saved_corr")
         os.makedirs(save_path, exist_ok=True)
-        prediction_path = os.path.join(data_path, batchmap, f"prediction_noalpha_corr")
+        prediction_path = os.path.join(data_path, batchmap, f"prediction_corr")
         os.makedirs(prediction_path, exist_ok=True)
         print(prediction_path)
 
@@ -202,9 +254,9 @@ if __name__ == "__main__":
         print(f"data_train_predict_path: {data_train_predict_path}")
         daily_stock_path = os.path.join(data_path, batchmap, f"daily_stock_DSE") #gpu_wvt, oldway, gpu_wvt
         print(f"daily_stock_path: {daily_stock_path}")
-        save_path = os.path.join(data_path, batchmap, f"model_saved_noalpha_DSE")
+        save_path = os.path.join(data_path, batchmap, f"model_saved_DSE")
         os.makedirs(save_path, exist_ok=True)
-        prediction_path = os.path.join(data_path, batchmap, f"prediction_noalpha_DSE")
+        prediction_path = os.path.join(data_path, batchmap, f"prediction_DSE")
         os.makedirs(prediction_path, exist_ok=True)
         print(prediction_path)
 
@@ -222,9 +274,9 @@ if __name__ == "__main__":
             print(f"data_train_predict_path: {data_train_predict_path}")
             daily_stock_path = os.path.join(data_path, batchmap, f"daily_stock_random{j}") #gpu_wvt, oldway, gpu_wvt
             print(f"daily_stock_path: {daily_stock_path}")
-            save_path = os.path.join(data_path, batchmap, f"model_saved_noalpha_random{j}")
+            save_path = os.path.join(data_path, batchmap, f"model_saved_random{j}")
             os.makedirs(save_path, exist_ok=True)
-            prediction_path = os.path.join(data_path, batchmap, f"prediction_noalpha_random{j}")
+            prediction_path = os.path.join(data_path, batchmap, f"prediction_random{j}")
             os.makedirs(prediction_path, exist_ok=True)
             print(prediction_path)
 
