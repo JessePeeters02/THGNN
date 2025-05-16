@@ -29,8 +29,8 @@ def extract_data(data_dict, device):
     neg_adj = data_dict['neg_adj'].to(device).squeeze()
     features = data_dict['features'].to(device).squeeze()
     labels = data_dict['labels'].to(device).squeeze()
-    # labels = torch.tanh(torch.log(labels+1))
-    labels = (data_dict['labels'].to(device).squeeze() > 0).float()
+    labels = torch.tanh(torch.log(labels+1))
+    # labels = (data_dict['labels'].to(device).squeeze() > 0).float()
     mask = data_dict['mask']
     return pos_adj, neg_adj, features, labels, mask
 

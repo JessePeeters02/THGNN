@@ -125,15 +125,15 @@ class StockHeteGAT(nn.Module):
                                               act=nn.Tanh())
         self.predictor = nn.Sequential(
             nn.Linear(hidden_dim, 1),
-            # nn.Tanh()  
-            nn.Sigmoid()
+            nn.Tanh()  
+            # nn.Sigmoid()
         )
 
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight, gain=0.02)
 
-    def forward(self, inputs, pos_adj, neg_adj, requires_weight=False):
+    def forward(self, inputs, pos_adj, neg_adj, requires_weight=True):
         _, support = self.encoding(inputs)
         # print(f" support shape: {support.shape}")
         support = support.squeeze()
@@ -147,6 +147,6 @@ class StockHeteGAT(nn.Module):
         all_embedding, sem_attn_weights = self.sem_gat(all_embedding, requires_weight)
         all_embedding = self.pn(all_embedding)
         if requires_weight:
-            return self.predictor(all_embedding), (pos_attn_weights, neg_attn_weights, sem_attn_weights)
+            return (self.predictor(all_embedding), {"pos_attn_weights":pos_attn_weights, "neg_attn_weights":neg_attn_weights, "sem_attn_weights":sem_attn_weights})
         else:
             return self.predictor(all_embedding)
