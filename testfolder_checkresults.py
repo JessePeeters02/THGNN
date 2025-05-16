@@ -17,9 +17,9 @@ import torch.nn as nn
 # Pad configuratie
 base_path = os.path.dirname(os.path.abspath(__file__))
 # print(base_path)
-data_path = os.path.join(base_path, "data", "testbatch2")
+data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200", "batch1")
 # print(data_path)
-daily_data_path = os.path.join(data_path, "NASDAQ_per_dag")
+daily_data_path = os.path.join(data_path, "dailydata")
 # print(daily_data_path)
 stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_construction", "data", "NASDAQ_data")  # Map waar de CSV-bestanden staan
 # print(stock_data_path)
@@ -107,7 +107,7 @@ def direction_accuracy(predictions, labels, threshold=0.0000000):
 def check_labelsvsprediction(nr, path, start):
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat"""
     bestandspad = os.path.join(data_path, path)
-    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_corr", "0.6_5", "pred.csv"))
+    predictionsdf = pd.read_csv(os.path.join(data_path, "prediction_random1", "pred.csv"))
     predictions = predictionsdf["score"].values
     predictiondates = set(predictionsdf["dt"].values)
     predictions = predictions[:200]
@@ -261,7 +261,7 @@ def gpu_info():
 """ aanroepen van alle testfuncties"""
 # check_pickles(3, "data_train_predict_DSE_noknn2", 7)
 # check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
-check_labelsvsprediction(2, os.path.join("data_train_predict_corr", "0.4_3"), 20)
+check_labelsvsprediction(2, os.path.join("data_train_predict_random1"), 20)
 # check_pickles(30, "data_train_predict", 20)
 # check_csi300()
 # memory_info()

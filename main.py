@@ -170,52 +170,53 @@ if __name__ == "__main__":
 
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
-    data_path = os.path.join(base_path, "data")
+    data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
     print(f"data_path: {data_path}")
-    batchmap = "S&P500"
 
-    # for batchmap in os.listdir(data_path):
-    #     print("batchmap: ", batchmap)
+    for batchmap in os.listdir(data_path):
+        print("batchmap: ", batchmap)
 
-    #     if (batchmap == 'batch_1') or (batchmap == 'batch_2') or (batchmap == 'batch_3'):
-    #         print('al gebeurd')
-    #         continue
+        # if (batchmap == 'batch_1') or (batchmap == 'batch_2') or (batchmap == 'batch_3'):
+        #     print('al gebeurd')
+        #     continue
 
-    data_train_predict_path = os.path.join(data_path, batchmap, "data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
-    print(f"data_train_predict_path: {data_train_predict_path}")
-    daily_stock_path = os.path.join(data_path, batchmap, "daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
-    print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, batchmap, "model_saved_corr")
-    os.makedirs(save_path, exist_ok=True)
-    prediction_path = os.path.join(data_path, batchmap, "prediction_corr")
-    os.makedirs(prediction_path, exist_ok=True)
-    print(prediction_path)
+        for j in [1, 2, 3]:
 
-    total_data_points = len(os.listdir(data_train_predict_path))
-    print(f"Total data points: {total_data_points}")
-    data_start = 0
-    data_middle = total_data_points-20
-    data_end = total_data_points
-    pre_data = '2025-03-07'
-    fun_train_predict(data_start, data_middle, data_end, pre_data)
+            data_train_predict_path = os.path.join(data_path, batchmap, f"data_train_predict_random{j}") #gpu_wvt, oldway_0.6, gpu_wvt
+            print(f"data_train_predict_path: {data_train_predict_path}")
+            daily_stock_path = os.path.join(data_path, batchmap, f"daily_stock_random{j}") #gpu_wvt, oldway, gpu_wvt
+            print(f"daily_stock_path: {daily_stock_path}")
+            save_path = os.path.join(data_path, batchmap, f"model_saved_random{j}")
+            os.makedirs(save_path, exist_ok=True)
+            prediction_path = os.path.join(data_path, batchmap, f"prediction_random{j}")
+            os.makedirs(prediction_path, exist_ok=True)
+            print(prediction_path)
 
-    data_train_predict_path = os.path.join(data_path, batchmap, "data_train_predict_SP") #gpu_wvt, oldway_0.6, gpu_wvt
-    print(f"data_train_predict_path: {data_train_predict_path}")
-    daily_stock_path = os.path.join(data_path, batchmap, "daily_stock_SP") #gpu_wvt, oldway, gpu_wvt
-    print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, batchmap, "model_saved_DSE")
-    os.makedirs(save_path, exist_ok=True)
-    prediction_path = os.path.join(data_path, batchmap, "prediction_DSE")
-    os.makedirs(prediction_path, exist_ok=True)
-    print(prediction_path)
+            total_data_points = len(os.listdir(data_train_predict_path))
+            print(f"Total data points: {total_data_points}")
+            data_start = 0
+            data_middle = total_data_points-20
+            data_end = total_data_points
+            pre_data = '2025-03-07'
+            fun_train_predict(data_start, data_middle, data_end, pre_data)
 
-    total_data_points = len(os.listdir(data_train_predict_path))
-    print(f"Total data points: {total_data_points}")
-    data_start = 0
-    data_middle = total_data_points-20
-    data_end = total_data_points
-    pre_data = '2025-03-07'
-    fun_train_predict(data_start, data_middle, data_end, pre_data)
+            # data_train_predict_path = os.path.join(data_path, batchmap, "data_train_predict_SP") #gpu_wvt, oldway_0.6, gpu_wvt
+            # print(f"data_train_predict_path: {data_train_predict_path}")
+            # daily_stock_path = os.path.join(data_path, batchmap, "daily_stock_SP") #gpu_wvt, oldway, gpu_wvt
+            # print(f"daily_stock_path: {daily_stock_path}")
+            # save_path = os.path.join(data_path, batchmap, "model_saved_DSE")
+            # os.makedirs(save_path, exist_ok=True)
+            # prediction_path = os.path.join(data_path, batchmap, "prediction_DSE")
+            # os.makedirs(prediction_path, exist_ok=True)
+            # print(prediction_path)
+
+            # total_data_points = len(os.listdir(data_train_predict_path))
+            # print(f"Total data points: {total_data_points}")
+            # data_start = 0
+            # data_middle = total_data_points-20
+            # data_end = total_data_points
+            # pre_data = '2025-03-07'
+            # fun_train_predict(data_start, data_middle, data_end, pre_data)
 
 
 
