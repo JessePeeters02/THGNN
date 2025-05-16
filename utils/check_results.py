@@ -9,8 +9,8 @@ import psutil
 import seaborn as sns
 import torch.nn as nn
 from sklearn.metrics import r2_score
-from scipy.stats import ks_2samp
-
+from scipy.stats import wasserstein_distance
+from sklearn.metrics import precision_score, recall_score, f1_score, matthews_corrcoef
 
 
 # Pad configuratie
@@ -59,6 +59,7 @@ def evaluate_reg_predictions(predictions, labels):
     mae = np.mean(np.abs(predictions - labels))
     mse = np.mean((predictions - labels) ** 2)
     r2 = r2_score(labels, predictions)
+    distance = wasserstein_distance(predictions, labels)
     # tpredictions = torch.tensor(predictions, dtype=torch.float32)
     # tlabels = torch.tensor(labels, dtype=torch.float32)
     # print('tlabels: ', tlabels)
@@ -66,7 +67,7 @@ def evaluate_reg_predictions(predictions, labels):
     # print(type(tpredictions), type(tlabels))
     # BCE = nn.BCELoss(reduction='mean')
     # bce = BCE(tpredictions, tlabels)
-    return mae, mse, r2#, bce
+    return mae, mse, r2, distance#, bce
 
 def evaluate_cla_predictions(predictions, labels):
     tpredictions = torch.tensor(predictions, dtype=torch.float32)
@@ -80,8 +81,13 @@ def evaluate_cla_predictions(predictions, labels):
     # Calculate accuracy
     pred_classes = (tpredictions > 0.5).float()
     accuracy = (pred_classes == tlabels).float().mean().item()
+
+    precision = precision_score(labels, predictions)
+    recall = recall_score(labels, predictions)
+    f1 = f1_score(labels, predictions)
+    Mcorc = matthews_corrcoef(labels, predictions)
     
-    return bce, accuracy
+    return bce, accuracy, precision, recall, f1, Mcorc
 
 # def direction_accuracy(predictions, labels, threshold=0.0000000):
 #     if threshold == 'mean':
@@ -177,13 +183,13 @@ def check_labelsvsprediction(path):
         # print(preds[0:10])
         # print(labs[0:10])
         if task == 'regression':
-            mae, mse, r2 = evaluate_reg_predictions(preds, labs)
+            mae, mse, r2, WS = evaluate_reg_predictions(preds, labs)
             rmse = np.sqrt(mse)
-            bce, acc = None, None
+            bce, acc, precision, recall, f1, Mcorc = None, None, None, None, None, None
         if task == 'classification':
-            bce, acc= evaluate_cla_predictions(preds, labs)
+            bce, acc, precision, recall, f1, Mcorc = evaluate_cla_predictions(preds, labs)
             bce = bce.item()
-            mae, mse, r2, rmse = None, None, None, None
+            mae, mse, r2, rmse, WS = None, None, None, None, None
 
         results.append({
             # "positive_threshold": p,
@@ -198,7 +204,12 @@ def check_labelsvsprediction(path):
             "rmse": rmse,
             "r2": r2,
             "accuracy": acc,
-            "bce": bce
+            "precission": precision,
+            "recall": recall,
+            "F1": f1,
+            "MCC": Mcorc,
+            "bce": bce,
+            "WS-dist": WS
         })
 
     return tllabels, predictions
