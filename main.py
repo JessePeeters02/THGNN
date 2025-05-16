@@ -36,7 +36,7 @@ if torch.cuda.is_available():
     print(device)
 
 class Args:
-    def __init__(self, gpu=0, subtask="regression"): #regression or classification_binare, also switch: trainer.py 31/32 and thgnn.py 128/129
+    def __init__(self, gpu=0, subtask="classification_binary"): #regression or classification_binare, also switch: trainer.py 31/32 and thgnn.py 128/129
         # device
         self.gpu = str(1)
         self.device = 'cuda'
@@ -234,41 +234,43 @@ if __name__ == "__main__":
         data_path = os.path.join(base_path, "data", "CSI300")
         print(f"data_path: {data_path}")
 
-        data_train_predict_path = os.path.join(data_path, f"data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
-        print(f"data_train_predict_path: {data_train_predict_path}")
-        daily_stock_path = os.path.join(data_path, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
-        print(f"daily_stock_path: {daily_stock_path}")
-        save_path = os.path.join(data_path, f"model_saved_corr{i}")
-        os.makedirs(save_path, exist_ok=True)
-        prediction_path = os.path.join(data_path, f"prediction_corr{i}")
-        os.makedirs(prediction_path, exist_ok=True)
-        print(prediction_path)
+        for i in ["0", "-20", "-40", "-60", "-80", "-100", "-120"]:
 
-        total_data_points = len(os.listdir(data_train_predict_path))
-        print(f"Total data points: {total_data_points}")
-        data_start = 0
-        data_middle = total_data_points-20
-        data_end = total_data_points
-        pre_data = '2025-03-07'
-        fun_train_predict(data_start, data_middle, data_end, pre_data)
+            data_train_predict_path = os.path.join(data_path, f"data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
+            print(f"data_train_predict_path: {data_train_predict_path}")
+            daily_stock_path = os.path.join(data_path, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
+            print(f"daily_stock_path: {daily_stock_path}")
+            save_path = os.path.join(data_path, f"model_saved_corr_bin_{i}")
+            os.makedirs(save_path, exist_ok=True)
+            prediction_path = os.path.join(data_path, f"prediction_corr_bin_{i}")
+            os.makedirs(prediction_path, exist_ok=True)
+            print(prediction_path)
 
-        data_train_predict_path = os.path.join(data_path, f"data_train_predict_SP") #gpu_wvt, oldway_0.6, gpu_wvt
-        print(f"data_train_predict_path: {data_train_predict_path}")
-        daily_stock_path = os.path.join(data_path, f"daily_stock_SP") #gpu_wvt, oldway, gpu_wvt
-        print(f"daily_stock_path: {daily_stock_path}")
-        save_path = os.path.join(data_path, f"model_saved_DSE")
-        os.makedirs(save_path, exist_ok=True)
-        prediction_path = os.path.join(data_path, f"prediction_DSE")
-        os.makedirs(prediction_path, exist_ok=True)
-        print(prediction_path)
+            total_data_points = len(os.listdir(data_train_predict_path))
+            print(f"Total data points: {total_data_points}")
+            data_start = 0
+            data_middle = total_data_points-20
+            data_end = total_data_points
+            pre_data = '2025-03-07'
+            fun_train_predict(data_start, data_middle, data_end, pre_data)
 
-        total_data_points = len(os.listdir(data_train_predict_path))
-        print(f"Total data points: {total_data_points}")
-        data_start = 0
-        data_middle = total_data_points-20
-        data_end = total_data_points
-        pre_data = '2025-03-07'
-        fun_train_predict(data_start, data_middle, data_end, pre_data)
+            data_train_predict_path = os.path.join(data_path, f"data_train_predict_csi300") #gpu_wvt, oldway_0.6, gpu_wvt
+            print(f"data_train_predict_path: {data_train_predict_path}")
+            daily_stock_path = os.path.join(data_path, f"daily_stock_csi300") #gpu_wvt, oldway, gpu_wvt
+            print(f"daily_stock_path: {daily_stock_path}")
+            save_path = os.path.join(data_path, f"model_saved_DSE_bin_{i}")
+            os.makedirs(save_path, exist_ok=True)
+            prediction_path = os.path.join(data_path, f"prediction_DSE_bin_{i}")
+            os.makedirs(prediction_path, exist_ok=True)
+            print(prediction_path)
+
+            total_data_points = len(os.listdir(data_train_predict_path))
+            print(f"Total data points: {total_data_points}")
+            data_start = 0
+            data_middle = total_data_points-20
+            data_end = total_data_points
+            pre_data = '2025-03-07'
+            fun_train_predict(data_start, data_middle, data_end, pre_data)
 
 
     # for batchmap in os.listdir(data_path):
