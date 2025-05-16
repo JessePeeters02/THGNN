@@ -16,10 +16,6 @@ from sklearn.metrics import precision_score, recall_score, f1_score, matthews_co
 # Pad configuratie
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
-data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
-print(data_path)
-
-
 
 def distribution(cpreds, labels, dpred):
     fig, axes = plt.subplots(1, 3, figsize=(15, 6))
@@ -82,10 +78,10 @@ def evaluate_cla_predictions(predictions, labels):
     pred_classes = (tpredictions > 0.5).float()
     accuracy = (pred_classes == tlabels).float().mean().item()
 
-    precision = precision_score(labels, predictions)
-    recall = recall_score(labels, predictions)
-    f1 = f1_score(labels, predictions)
-    Mcorc = matthews_corrcoef(labels, predictions)
+    precision = precision_score(labels, pred_classes)
+    recall = recall_score(labels, pred_classes)
+    f1 = f1_score(labels, pred_classes)
+    Mcorc = matthews_corrcoef(labels, pred_classes)
     
     return bce, accuracy, precision, recall, f1, Mcorc
 
@@ -194,8 +190,6 @@ def check_labelsvsprediction(path):
         results.append({
             # "positive_threshold": p,
             # "negative_threshold": n,
-            "batch": batchmap,
-            "encoder": encoder,
             "input": input,
             "task": task,
             "horizon": name,
@@ -216,50 +210,42 @@ def check_labelsvsprediction(path):
 
 # results = []
 
-# for batchmap in os.listdir(data_path):
-#     label_path = os.path.join(data_path, batchmap, "stock_labels.csv")
-#     print(label_path)
-#     for predictionmap in os.listdir(os.path.join(data_path, batchmap)):
-        
-#         if not predictionmap.startswith("prediction"):
-#             continue
-#         print(f"batchmap: {batchmap}, predictionmap: {predictionmap}")
-#         parts = predictionmap[len("prediction_"):].split("_")
-#         encoder = ""
-#         input = ""
-#         task = ""
 
-#         if len(parts) == 1:
-#             encoder = "GRU"
-#             input = "correlation" if parts[0] == "corr" else "dynamiSE"
-#             task = "regression"
+data_path = os.path.join(base_path, "data", "csi300")
+print(data_path)
 
-#         elif len(parts) == 2:
-#             if parts[1] == "bin":
-#                 encoder = "GRU"
-#                 input = "correlation" if parts[0] == "corr" else "dynamiSE"
-#                 task = "classification"
-#             else:
-#                 encoder = "TE" if parts[0] == "TE" else "GRU"
-#                 input = "correlation" if parts[1] == "corr" else "dynamiSE"
-#                 task = "regression"
-#         elif len(parts) == 3:
-#             encoder = "TE"
-#             input = "correlation" if parts[1] == "corr" else "dynamiSE"
-#             task = "classification"
+label_path = os.path.join(data_path, "stock_labels.csv")
+print(label_path)
+for predictionmap in os.listdir(os.path.join(data_path)):
+    
+    if not predictionmap.startswith("prediction"):
+        continue
+    print(f"predictionmap: {predictionmap}")
+    parts = predictionmap[len("prediction_"):].split("_")
+    input = ""
+    task = ""
 
-#         # print(f"Map: {predictionmap} → input: {input}, Encoder: {encoder}, task: {task}")
+    if len(parts) == 1:
+        input = parts[0]
+        task = "regression"
+
+    elif len(parts) == 2:
+        input = parts[0]
+        task = "classification"
 
 
-#         prediction_path = os.path.join(data_path, batchmap, predictionmap)
-#         print(prediction_path)
-#         labels, corrpredictions = check_labelsvsprediction(prediction_path)
+    print(f"Map: {predictionmap} → input: {input}, task: {task}")
 
 
-#     # distribution(corrpredictions, labels, dynamipredictions)
+    prediction_path = os.path.join(data_path, predictionmap)
+    print(prediction_path)
+    labels, corrpredictions = check_labelsvsprediction(prediction_path)
 
-# results_df = pd.DataFrame(results)
-# results_df.to_csv(os.path.join(data_path, "results.csv"), index=False)
+
+    # distribution(corrpredictions, labels, dynamipredictions)
+
+results_df = pd.DataFrame(results)
+results_df.to_csv(os.path.join(data_path, "results.csv"), index=False)
 
 # # CSV inlezen
 # df = pd.read_csv(os.path.join(data_path, "results.csv"))
@@ -268,33 +254,24 @@ def check_labelsvsprediction(path):
 # df = df.drop(columns=["task"])
 
 # # Groeperen per unieke combinatie en aggregatie toepassen
-# df_combined = df.groupby(["batch", "encoder", "input", "horizon"], as_index=False).agg({
+# df_combined = df.groupby(["input", "horizon"], as_index=False).agg({
 #     "mae": "max",  # max omdat maar één van de twee rijen een waarde heeft
 #     "mse": "max",
 #     "rmse": "max",
 #     "r2": "max",
 #     "accuracy": "max",
-#     "bce": "max"
+#     "precission": "max",
+#     "recall": "max",
+#     "F1": "max",
+#     "MCC": "max",
+#     "bce": "max",
+#     "WS-dist": "max"
 # })
 
 # # Opslaan of printen
 # df_combined.to_csv(os.path.join(data_path, "results_combined.csv"), index=False)
 
-# # results aanmaken
-# results = []
 
-# for map in os.listdir(prediction_map):
-#     try:
-#         p, n = map.split("_")
-#         p = float(p)
-#         n = float(n)
-#         print(p, n)
-#         check_labelsvsprediction(os.path.join(prediction_map, map))
-#     except:
-#         print('niet gelukt')
-#         continue
-# results_df = pd.DataFrame(results)
-# results_df.to_csv(os.path.join(prediction_map, "results.csv"), index=False)
 
 
 # # results zijn er al
@@ -323,40 +300,40 @@ def check_labelsvsprediction(path):
 
 
 
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+# import pandas as pd
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
-# Data inladen
-df = pd.read_csv(os.path.join(data_path, "results_combined.csv"))
-df["horizon"] = pd.Categorical(df["horizon"], categories=["day1", "day5", "day20"], ordered=True)
-# 1. Staafdiagram: Gemiddelde MAE per horizon en encoder
-plt.figure(figsize=(10, 5))
-sns.barplot(data=df, x="horizon", y="rmse", hue="encoder", ci=None)
-plt.title("Gemiddelde RMSE: GRU vs. TE per horizon")
-plt.ylabel("RMSE (lager = beter)")
-plt.show()
+# # Data inladen
+# df = pd.read_csv(os.path.join(data_path, "results_combined.csv"))
+# df["horizon"] = pd.Categorical(df["horizon"], categories=["day1", "day5", "day20"], ordered=True)
+# # 1. Staafdiagram: Gemiddelde MAE per horizon en encoder
+# plt.figure(figsize=(10, 5))
+# sns.barplot(data=df, x="horizon", y="rmse", hue="encoder", ci=None)
+# plt.title("Gemiddelde RMSE: GRU vs. TE per horizon")
+# plt.ylabel("RMSE (lager = beter)")
+# plt.show()
 
-# 2. Boxplot: Spreiding van R2-scores per model
-plt.figure(figsize=(10, 5))
-sns.boxplot(data=df, x="horizon", y="r2", hue="encoder")
-plt.title("Spreiding van R²-scores per horizon")
-plt.ylabel("R² (hoger = beter)")
-plt.show()
+# # 2. Boxplot: Spreiding van R2-scores per model
+# plt.figure(figsize=(10, 5))
+# sns.boxplot(data=df, x="horizon", y="r2", hue="encoder")
+# plt.title("Spreiding van R²-scores per horizon")
+# plt.ylabel("R² (hoger = beter)")
+# plt.show()
 
-# 3. Lijngrafiek: Trend in Accuracy over horizons
-plt.figure(figsize=(10, 5))
-sns.lineplot(data=df, x="horizon", y="accuracy", hue="encoder", ci=None, marker="o")
-plt.title("Accuracy over verschillende horizons")
-plt.ylabel("Accuracy (hoger = beter)")
-plt.show()
+# # 3. Lijngrafiek: Trend in Accuracy over horizons
+# plt.figure(figsize=(10, 5))
+# sns.lineplot(data=df, x="horizon", y="accuracy", hue="encoder", ci=None, marker="o")
+# plt.title("Accuracy over verschillende horizons")
+# plt.ylabel("Accuracy (hoger = beter)")
+# plt.show()
 
-# 4. Samenvattende tabel (gemiddelden per groep)
-summary_table = df.groupby(["encoder", "horizon"]).agg({
-    "mae": "mean",
-    "rmse": "mean",
-    "r2": "mean",
-    "accuracy": "mean",
-    "bce": "mean"
-}).round(3)
-print(summary_table)
+# # 4. Samenvattende tabel (gemiddelden per groep)
+# summary_table = df.groupby(["encoder", "horizon"]).agg({
+#     "mae": "mean",
+#     "rmse": "mean",
+#     "r2": "mean",
+#     "accuracy": "mean",
+#     "bce": "mean"
+# }).round(3)
+# print(summary_table)
