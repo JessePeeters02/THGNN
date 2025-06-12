@@ -18,7 +18,7 @@ import torch.nn as nn
 base_path = os.path.dirname(os.path.abspath(__file__))
 # print(base_path)
 # data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200", "batch_3")
-data_path = os.path.join(base_path, "data", "S&P500")
+data_path = os.path.join(base_path, "data", "CSI300")
 # print(data_path)
 daily_data_path = os.path.join(data_path, "dailydata")
 # print(daily_data_path)
@@ -30,45 +30,51 @@ stock_data_path = os.path.join(os.path.dirname(base_path), "portfolio_constructi
 def check_pickles(nr, path, start):
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat """
     bestandspad = os.path.join(data_path, path)
-    print("Bestandspad:", bestandspad)
+    
+    dates = []
+    pos_totals = []
+    neg_totals = []
+    
     for file in os.listdir(bestandspad)[start:start+nr]:
-        print("Bestand:", file)
+        filename = file
         file = os.path.join(bestandspad, file)
         with open(file, 'rb') as f:
             data = pickle.load(f)
 
-        # Print de keys van het opgeslagen dict
-        print("Keys in het bestand:", data.keys())
-
-        # Voor een idee van de inhoud:
-        # print("\nVoorbeeldshape features:", data['features'].shape)
-        # print("Aantal labels:", len(data['labels']))
-        # print("Voorbeeldlabels:", data['labels'])  # eerste 10 labels
-        # print("Voorbeeldmask:", data['mask'][:10])  # eerste 10 mask-waarden
-        # print("Positive adj shape:", data['pos_adj'].shape)
-        # print("Negative adj shape:", data['neg_adj'].shape)
-
-        # print("Positive adjacency (10x10):")
-        # print(data['pos_adj'][:15, :15])
-
-        # print("\nNegative adjacency (10x10):")
-        # print(data['neg_adj'][:15, :15])
-
         pos_counts = data['pos_adj'].sum(dim=1)
         neg_counts = data['neg_adj'].sum(dim=1)
 
-        total_pos = pos_counts.sum()
-        total_neg = neg_counts.sum()
+        total_pos = pos_counts.sum().item()
+        total_neg = neg_counts.sum().item()
+        
+        date = filename.split('.')[0]
+        dates.append(date)
+        pos_totals.append(total_pos)
+        neg_totals.append(total_neg)
 
-        print(f"Totaal aantal positieve buren: {total_pos}")
-        print(f"Totaal aantal negatieve buren: {total_neg}")
+    # Create plot
+    plt.figure(figsize=(6, 3))
+    plt.plot(dates, pos_totals, label='Positive neighbors')
+    plt.plot(dates, neg_totals, label='Negative neighbors')
+    
+    plt.xlabel('Date')
+    plt.ylabel('Number of neighbors')
+    # Convert dates to just show months
+    # Convert dates to datetime objects
+    dates_dt = pd.to_datetime(dates)
+    # Find indices where month changes
+    month_starts = [i for i in range(len(dates_dt)) if i == 0 or dates_dt[i].month != dates_dt[i-1].month]
+    # Format dates for these indices
+    plt.xticks(month_starts, 
+               [dates_dt[i].strftime('%Y-%m') for i in month_starts], 
+               rotation=45)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
-        # for i in range(len(pos_counts)):
-        #     print(f"Aandeel {i}: {int(pos_counts[i])} positieve buren, {int(neg_counts[i])} negatieve buren")
-
-        # Eventueel 1 feature sample inspecteren
-        # print("\features:")
-        # print(data['features'])
+    # Print summary statistics
+    print(f"Average positive neighbors: {np.mean(pos_totals):.2f}")
+    print(f"Average negative neighbors: {np.mean(neg_totals):.2f}")
 
 def evaluate_predictions(predictions, labels):
     mae = np.mean(np.abs(predictions - labels))
@@ -263,12 +269,13 @@ def gpu_info():
 """ aanroepen van alle testfuncties"""
 # check_pickles(3, "data_train_predict_DSE_noknn2", 7)
 # check_pickles(3, "data_train_predict", len(os.listdir(os.path.join(data_path, "data_train_predict")))-3)
-check_labelsvsprediction(2, os.path.join("data_train_predict_corr"), 20, "prediction_corr")
-check_labelsvsprediction(2, os.path.join("data_train_predict_SP"), 20, "prediction_DSE")
-check_labelsvsprediction(2, os.path.join("data_train_predict_random1"), 20, "prediction_random1")
-check_labelsvsprediction(2, os.path.join("data_train_predict_random2"), 20, "prediction_random2")
-check_labelsvsprediction(2, os.path.join("data_train_predict_random3"), 20, "prediction_random3")
-# check_pickles(30, "data_train_predict", 20)
+# check_labelsvsprediction(2, os.path.join("data_train_predict_corr"), 20, "prediction_corr")
+# check_labelsvsprediction(2, os.path.join("data_train_predict_SP"), 20, "prediction_DSE")
+# check_labelsvsprediction(2, os.path.join("data_train_predict_random1"), 20, "prediction_random1")
+# check_labelsvsprediction(2, os.path.join("data_train_predict_random2"), 20, "prediction_random2")
+# check_labelsvsprediction(2, os.path.join("data_train_predict_random3"), 20, "prediction_random3")
+i=1008
+check_pickles(len(os.listdir(os.path.join(data_path, "data_train_predict_corr")))-i, "data_train_predict_corr", i)
 # check_csi300()
 # memory_info()
 # cpu_info()
