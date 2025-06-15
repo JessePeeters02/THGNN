@@ -241,18 +241,22 @@ class DynamiSE(nn.Module):
         return torch.tanh(self.predictor(h_pair).squeeze())
 
     def full_loss(self, h, pos_edges, neg_edges, alpha=0.1, beta=0.001):
-        # Reconstructieverlies (RMSE)
+       # Reconstructieverlies (RMSE)
 
-        loss_pos = self.edge_loss(h, pos_edges, +1)
-        loss_neg = self.edge_loss(h, neg_edges, -1)
+        w_hat_pos = self.predict_edge_weight(h, pos_edges)
+        w_true_pos = torch.full_like(w_hat_pos, +1, dtype=torch.float32)
+        loss_pos = (w_hat_pos - w_true_pos).pow(2)
+
+        w_hat_neg = self.predict_edge_weight(h, neg_edges)
+        w_true_neg = torch.full_like(w_hat_neg, -1, dtype=torch.float32)
+        loss_neg = (w_hat_neg - w_true_neg).pow(2)
+
         # print(f"loss_pos range: [{loss_pos.min().item():.4f}, {loss_pos.max().item():.4f}]")
         # print(f"loss_neg range: [{loss_neg.min().item():.4f}, {loss_neg.max().item():.4f}]")
-        recon_loss = loss_pos + loss_neg
+        recon_loss = torch.cat([loss_pos, loss_neg]).mean()
         # print(loss_pos.shape())
-        # Teken-constraint (paper Eq.7)
-        w_hat_pos = self.predict_edge_weight(h, pos_edges)
-        w_hat_neg = self.predict_edge_weight(h, neg_edges)
 
+        # Teken-constraint (paper Eq.7)
         # print(f"w_hat_pos range: [{w_hat_pos.min().item():.4f}, {w_hat_pos.max().item():.4f}]")
         # print(f"w_hat_neg range: [{w_hat_neg.min().item():.4f}, {w_hat_neg.max().item():.4f}]")
         # log_pos = torch.log(1 + w_hat_pos)

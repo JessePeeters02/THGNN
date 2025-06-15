@@ -242,23 +242,26 @@ class DynamiSE(nn.Module):
     def full_loss(self, h, pos_edges, neg_edges, alpha=0.1, beta=0.001):
         # Reconstructieverlies (RMSE)
 
-        loss_pos = self.edge_loss(h, pos_edges, +1)
-        loss_neg = self.edge_loss(h, neg_edges, -1)
+        w_hat_pos = self.predict_edge_weight(h, pos_edges)
+        w_true_pos = torch.full_like(w_hat_pos, +1, dtype=torch.float32)
+        loss_pos = (w_hat_pos - w_true_pos).pow(2)
+
+        w_hat_neg = self.predict_edge_weight(h, neg_edges)
+        w_true_neg = torch.full_like(w_hat_neg, -1, dtype=torch.float32)
+        loss_neg = (w_hat_neg - w_true_neg).pow(2)
+
         # print(f"loss_pos range: [{loss_pos.min().item():.4f}, {loss_pos.max().item():.4f}]")
         # print(f"loss_neg range: [{loss_neg.min().item():.4f}, {loss_neg.max().item():.4f}]")
-        recon_loss = loss_pos + loss_neg
+        recon_loss = torch.cat([loss_pos, loss_neg]).mean()
         # print(loss_pos.shape())
-        # Teken-constraint (paper Eq.7)
-        w_hat_pos = self.predict_edge_weight(h, pos_edges)
-        w_hat_neg = self.predict_edge_weight(h, neg_edges)
 
+        # Teken-constraint (paper Eq.7)
         # print(f"w_hat_pos range: [{w_hat_pos.min().item():.4f}, {w_hat_pos.max().item():.4f}]")
         # print(f"w_hat_neg range: [{w_hat_neg.min().item():.4f}, {w_hat_neg.max().item():.4f}]")
         # log_pos = torch.log(1 + w_hat_pos)
         # log_neg = torch.log(1 - w_hat_neg)
         # print(f"log_pos range: [{log_pos.min().item():.4f}, {log_pos.max().item():.4f}]")
         # print(f"log_neg range: [{log_neg.min().item():.4f}, {log_neg.max().item():.4f}]")
-
         sign_loss = -alpha * (
             torch.log(1 + w_hat_pos).mean() + 
             torch.log(1 - w_hat_neg).mean()
@@ -278,14 +281,6 @@ class DynamiSE(nn.Module):
             return torch.tensor(0.0, requires_grad=True)
         return total_loss
 
-    def edge_loss(self, h, edge_index, sign):
-        w_hat = self.predict_edge_weight(h, edge_index)
-        w_true = torch.full_like(w_hat, sign, dtype=torch.float32)
-        recon = (w_hat - w_true).pow(2)
-        log_term = torch.log1p(torch.exp(-w_true * w_hat))
-        # print(f"recon range: [{recon.min().item():.4f}, {recon.max().item():.4f}]")
-        # print(f"log_term range: [{log_term.min().item():.4f}, {log_term.max().item():.4f}]")
-        return recon.mean() + log_term.mean()
 
 class ODEFunc(nn.Module):
     # def __init__(self, hidden_dim, pos_conv, neg_conv, psi):
