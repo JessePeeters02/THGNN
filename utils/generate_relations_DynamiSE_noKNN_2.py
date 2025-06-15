@@ -283,14 +283,6 @@ class DynamiSE(nn.Module):
             return torch.tensor(0.0, requires_grad=True)
         return total_loss
 
-    def edge_loss(self, h, edge_index, sign):
-        w_hat = self.predict_edge_weight(h, edge_index)
-        w_true = torch.full_like(w_hat, sign, dtype=torch.float32)
-        recon = (w_hat - w_true).pow(2)
-        log_term = torch.log1p(torch.exp(-w_true * w_hat))
-        # print(f"recon range: [{recon.min().item():.4f}, {recon.max().item():.4f}]")
-        # print(f"log_term range: [{log_term.min().item():.4f}, {log_term.max().item():.4f}]")
-        return recon.mean() + log_term.mean()
 
 class ODEFunc(nn.Module):
     # def __init__(self, hidden_dim, pos_conv, neg_conv, psi):
