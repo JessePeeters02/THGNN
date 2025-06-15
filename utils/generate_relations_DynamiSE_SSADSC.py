@@ -699,8 +699,30 @@ def main1_load():
             N = len(snapshot['tickers'])
             pos_edges_tensor = edge_info_to_tensor(snapshot['pos_edges_info']).to(device)
             neg_edges_tensor = edge_info_to_tensor(snapshot['neg_edges_info']).to(device)
-            pos_adj = edges_to_adj_matrix(pos_edges_tensor, N).to(device)
-            neg_adj = edges_to_adj_matrix(neg_edges_tensor, N).to(device)
+            #vanaf hier is het vervangen:
+            # pos_adj = edges_to_adj_matrix(pos_edges_tensor, N).to(device)
+            # neg_adj = edges_to_adj_matrix(neg_edges_tensor, N).to(device)
+            features = snapshot['features'].float().to(device)
+            t = torch.tensor([0.0, 1.0], device=device)
+
+            embeddings = model(features, pos_edges_tensor, neg_edges_tensor, t)
+
+            # Combineer originele edges en voorspel w_hat
+            all_edges_tensor = torch.cat([pos_edges_tensor, neg_edges_tensor], dim=1) # maar dit maakt dan zowel positief als negatief 1?
+            edge_scores = model.predict_edge_weight(embeddings, all_edges_tensor) # is deze gemaakt voor negatief en positief tesamen te doen?
+            num_pos = pos_edges_tensor.shape[1]
+            scores_pos = edge_scores[:num_pos]
+            scores_neg = edge_scores[num_pos:]
+
+            # Filter edges op basis van model-output
+            new_pos_edges = all_edges_tensor[:, :num_pos][:, scores_pos > 0.3]
+            new_neg_edges = all_edges_tensor[:, num_pos:][:, scores_neg < -0.3]
+
+            # Maak refined adjacencymatrices
+            pos_adj = edges_to_adj_matrix(new_pos_edges, N).to(device)
+            neg_adj = edges_to_adj_matrix(new_neg_edges, N).to(device)
+
+            #hier stopt het vervangen
 
             end_date = snapshot['date']
             end_idx = date_to_idx[end_date]
