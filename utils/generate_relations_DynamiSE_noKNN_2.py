@@ -18,18 +18,19 @@ print(f"Device: {device}")
 
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(base_path, "data", "S&P500")
+data_path = os.path.join(base_path, "data", "testbatch_mini")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_SP")
+relation_path = os.path.join(data_path, "relation_dynamiSE_mini")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path= os.path.join(data_path, "intermediate_snapshots_SP")
+snapshot_path= os.path.join(data_path, "intermediate_snapshots_mini")
 os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_SP")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_mini")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_SP")
+daily_stock_path = os.path.join(data_path, "daily_stock_mini")
 os.makedirs(daily_stock_path, exist_ok=True)
+
 
 # Hyperparameters
 prev_date_num = 20
@@ -37,7 +38,7 @@ feature_cols1 = ['Open', 'High', 'Low', 'Close']
 feature_cols2 = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 hidden_dim = 32
 num_epochs = 30
-restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
+restrict_last_n_days= 100 # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 relevance_threshold = 0
 max_age = 5
 learning_rate = 0.0001
@@ -132,8 +133,8 @@ def cosine_similarity(vec1, vec2):
     for i in range(vec1.shape[0]):
         sim = F.cosine_similarity(vec1[i].unsqueeze(0), vec2[i].unsqueeze(0)).item()
         cos.append(sim)
-    if len(cos) != 4:
-        print("[Warn] lengte van cos is verschillend van 4")
+    if len(cos) != len(feature_cols1):
+        print("[Warn] lengte van cos is verschillend van feature lengte")
     return np.mean(cos)
 
 def load_all_stocks(stock_data_path):
@@ -254,8 +255,8 @@ class DynamiSE(nn.Module):
 
         # print(f"w_hat_pos range: [{w_hat_pos.min().item():.4f}, {w_hat_pos.max().item():.4f}]")
         # print(f"w_hat_neg range: [{w_hat_neg.min().item():.4f}, {w_hat_neg.max().item():.4f}]")
-        log_pos = torch.log(1 + w_hat_pos)
-        log_neg = torch.log(1 - w_hat_neg)
+        # log_pos = torch.log(1 + w_hat_pos)
+        # log_neg = torch.log(1 - w_hat_neg)
         # print(f"log_pos range: [{log_pos.min().item():.4f}, {log_pos.max().item():.4f}]")
         # print(f"log_neg range: [{log_neg.min().item():.4f}, {log_neg.max().item():.4f}]")
 
@@ -975,17 +976,10 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 
 # start model
 
-log_path = os.path.join(data_path, f"snapshot_log_SP.csv")
+log_path = os.path.join(data_path, f"snapshot_log_mini.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
-# snapshots = prepare_dynamic_data(stock_data)
+snapshots = prepare_dynamic_data(stock_data)
 
-try:
-    main1_generate()
-except Exception as e:
-    print(f"main1_generate() faalde: {e}")
-    # geen return, geen raise — gewoon doorgaan
 
-try:
-    main1_load()
-except Exception as e:
-    print(f"main1_load() faalde: {e}")
+main1_generate()
+main1_load()
