@@ -11,8 +11,6 @@ import itertools
 from collections import defaultdict
 import torch.nn.functional as F
 import time
-from sklearn.metrics.pairwise import cosine_similarity as cosine_similarity_skl
-
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu') 
@@ -342,7 +340,7 @@ def build_initial_edges_via_cosine_similarity(window_data, threshold):
         for j in range(i+1, n_stocks):
             feature_cosines = []
             for f in range(len(feature_cols1)):
-                cos_sim = cosine_similarity_skl(stock_arrays[i,f,:], stock_arrays[j,f,:])[0][0]
+                cos_sim = cosine_similarity(stock_arrays[i,f,:], stock_arrays[j,f,:])
                 feature_cosines.append(cos_sim)
             avg_cos = np.nanmean(feature_cosines)
             cos_matrix[i,j] = avg_cos
@@ -355,7 +353,8 @@ def build_initial_edges_via_cosine_similarity(window_data, threshold):
     # Garandeer minimum aantal buren
     for i in range(n_stocks):
         # Positieve edges
-        strong_pos = np.where(cos_matrix[i] > threshold)[0]
+        strong_pos = np.where(cos_matrix[i] > threshold)
+        print(strong_pos)
         if len(strong_pos) < min_neighbors:
             # Voeg extra buren toe als er te weinig zijn
             cos_vals = cos_matrix[i].copy()
@@ -604,9 +603,9 @@ def prepare_dynamic_data(stock_data, window_size=20):
             pos_pairs, neg_pairs = build_initial_edges_via_cosine_similarity(window_data, threshold)
             bool_eerste = False
             for src, dst in pos_pairs.T.tolist():
-                aging_manager.update_edge(edge_info_pos, src, dst, 1.0, current_date)
+                edge_info_pos[(src, dst)] = {'created_at': current_date, 'last_score': 1.0, 'last_update': current_date}
             for src, dst in neg_pairs.T.tolist():
-                aging_manager.update_edge(edge_info_neg, src, dst, -1.0, current_date)
+                edge_info_neg[(src, dst)] = {'created_at': current_date, 'last_score': -1.0, 'last_update': current_date}
         else:
             price_df = []
             for stock in unique_stocks:
