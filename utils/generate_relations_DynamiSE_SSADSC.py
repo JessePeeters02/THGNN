@@ -342,7 +342,7 @@ def build_initial_edges_via_cosine_similarity(window_data, threshold):
         for j in range(i+1, n_stocks):
             feature_cosines = []
             for f in range(len(feature_cols1)):
-                cos_sim = cosine_similarity_skl(stock_arrays[i,f,:], stock_arrays[j,f,:])[0][0]
+                cos_sim = cosine_similarity_skl([stock_arrays[i,f,:]], [stock_arrays[j,f,:]])[0][0]
                 feature_cosines.append(cos_sim)
             avg_cos = np.nanmean(feature_cosines)
             cos_matrix[i,j] = avg_cos
