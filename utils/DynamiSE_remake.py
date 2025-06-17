@@ -331,7 +331,7 @@ def main1_generate():
 
             
 def main1_load():
-    model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim)
+    model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim).to(device)
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth"), map_location=device))
     model.eval()
 
