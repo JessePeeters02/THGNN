@@ -1,4 +1,3 @@
-# Leugen! het is 18:19 tegen dat ik hier gevonden heb hoe het moet
 from trainer.trainer import *
 from data_loader import *
 from model.Thgnn import *
@@ -229,30 +228,76 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     
 if __name__ == "__main__":
 
-        base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
-        print(f"base_path: {base_path}")
-        data_path = os.path.join(base_path, "data", "CSI300")
-        print(f"data_path: {data_path}")
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "testbatch_mini")
+    print(f"data_path: {data_path}")
 
-        for i in [1,2,3]:
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_mini") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_mini") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_test")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = os.path.join(data_path, f"model_saved_rolingwindow_test")
+    os.makedirs(prediction_path, exist_ok=True)
+    print(prediction_path)
 
-            data_train_predict_path = os.path.join(data_path, f"data_train_predict_random{i}") #gpu_wvt, oldway_0.6, gpu_wvt
-            print(f"data_train_predict_path: {data_train_predict_path}")
-            daily_stock_path = os.path.join(data_path, f"daily_stock_random{i}") #gpu_wvt, oldway, gpu_wvt
-            print(f"daily_stock_path: {daily_stock_path}")
-            save_path = os.path.join(data_path, f"model_saved_random_{i}_-120")
-            os.makedirs(save_path, exist_ok=True)
-            prediction_path = os.path.join(data_path, f"prediction_random_{i}_-120")
-            os.makedirs(prediction_path, exist_ok=True)
-            print(prediction_path)
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
 
-            total_data_points = len(os.listdir(data_train_predict_path))
-            print(f"Total data points: {total_data_points}")
-            data_start = 0
-            data_middle = total_data_points-20 - 120
-            data_end = total_data_points -120
-            pre_data = '2025-03-07'
-            fun_train_predict(data_start, data_middle, data_end, pre_data)
+    val_len = 20
+    window_len = 10
+    rolling_start = total_data_points - window_len - 1  # Laat genoeg ruimte over voor testdagen
+    rolling_end = total_data_points - 2                 # Laatste dag waarop je kan voorspellen
+
+    for T in range(rolling_start, rolling_end + 1):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+
+        pre_data = f"rolling_T{T}"
+
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+
+        # fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+
+        # base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+        # print(f"base_path: {base_path}")
+        # data_path = os.path.join(base_path, "data", "CSI300")
+        # print(f"data_path: {data_path}")
+
+        # for i in [1,2,3]:
+
+        #     data_train_predict_path = os.path.join(data_path, f"data_train_predict_random{i}") #gpu_wvt, oldway_0.6, gpu_wvt
+        #     print(f"data_train_predict_path: {data_train_predict_path}")
+        #     daily_stock_path = os.path.join(data_path, f"daily_stock_random{i}") #gpu_wvt, oldway, gpu_wvt
+        #     print(f"daily_stock_path: {daily_stock_path}")
+        #     save_path = os.path.join(data_path, f"model_saved_random_{i}_-120")
+        #     os.makedirs(save_path, exist_ok=True)
+        #     prediction_path = os.path.join(data_path, f"prediction_random_{i}_-120")
+        #     os.makedirs(prediction_path, exist_ok=True)
+        #     print(prediction_path)
+
+        #     total_data_points = len(os.listdir(data_train_predict_path))
+        #     print(f"Total data points: {total_data_points}")
+        #     data_start = 0
+        #     data_middle = total_data_points-20 - 120
+        #     data_end = total_data_points -120
+        #     pre_data = '2025-03-07'
+        #     fun_train_predict(data_start, data_middle, data_end, pre_data)
 
             # data_train_predict_path = os.path.join(data_path, f"data_train_predict_csi300") #gpu_wvt, oldway_0.6, gpu_wvt
             # print(f"data_train_predict_path: {data_train_predict_path}")
