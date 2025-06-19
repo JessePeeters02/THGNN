@@ -19,16 +19,16 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 # base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
 # print(f"base_path: {base_path}")
-# data_path = os.path.join(base_path, "data", "S&P500")
+# data_path = os.path.join(base_path, "data", "testbatch2")
 # print(f"data_path: {data_path}")
-# data_train_predict_path = os.path.join(data_path, "data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
-# print(f"data_train_predict_path: {data_train_predict_path}")
-# daily_stock_path = os.path.join(data_path, "daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
-# print(f"daily_stock_path: {daily_stock_path}")
-# save_path = os.path.join(data_path, "model_saved_corr_bin")
-# os.makedirs(save_path, exist_ok=True)
-# prediction_path = os.path.join(data_path, "prediction_corr_bin")
-# os.makedirs(prediction_path, exist_ok=True)
+# data_train_predict_map = os.path.join(data_path, "data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
+# print(f"data_train_predict_path: {data_train_predict_map}")
+# daily_stock_map = os.path.join(data_path, "daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
+# print(f"daily_stock_path: {daily_stock_map}")
+# save_map = os.path.join(data_path, "model_saved_corr_TEbig")
+# os.makedirs(save_map, exist_ok=True)
+# prediction_map = os.path.join(data_path, "prediction_corr_TEbig")
+# os.makedirs(prediction_map, exist_ok=True)
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -37,8 +37,8 @@ if torch.cuda.is_available():
 class Args:
     def __init__(self, gpu=0, subtask="regression"): #regression or classification_binare, also switch: trainer.py 31/32 and thgnn.py 128/129
         # device
-        self.gpu = str(0)
-        self.device = 'cpu'
+        self.gpu = str(1)
+        self.device = 'cuda'
         # data settings
         # adj_threshold = 0.4
         # self.adj_str = str(int(100*adj_threshold))
@@ -116,7 +116,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     model = eval(args.model_name)(hidden_dim=args.hidden_dim, num_heads=args.num_heads,
                                   out_features=args.out_features).to(args.device)
 
-    # # train
+    # train
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     cold_scheduler = StepLR(optimizer=optimizer, step_size=5000, gamma=0.9, last_epoch=-1)
     default_scheduler = cold_scheduler
@@ -134,13 +134,12 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
             state = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': epoch + 1}
             torch.save(state, os.path.join(args.save_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
 
-
-
     # predict
     epoch = 19
     checkpoint = torch.load(os.path.join(args.load_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
     model.load_state_dict(checkpoint['model'])
-
+    model.eval()
+    
     #new
     df_weights = pd.DataFrame()
 
@@ -230,74 +229,28 @@ if __name__ == "__main__":
 
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
-    data_path = os.path.join(base_path, "data", "testbatch_mini")
+    data_path = os.path.join(base_path, "data", "CSI300")
     print(f"data_path: {data_path}")
 
-    data_train_predict_path = os.path.join(data_path, f"data_train_predict_mini") #gpu_wvt, oldway_0.6, gpu_wvt
-    print(f"data_train_predict_path: {data_train_predict_path}")
-    daily_stock_path = os.path.join(data_path, f"daily_stock_mini") #gpu_wvt, oldway, gpu_wvt
-    print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, f"model_saved_rolingwindow_test")
-    os.makedirs(save_path, exist_ok=True)
-    prediction_path = os.path.join(data_path, f"model_saved_rolingwindow_test")
-    os.makedirs(prediction_path, exist_ok=True)
-    print(prediction_path)
+    for i in [1,2,3]:
 
-    total_data_points = len(os.listdir(data_train_predict_path))
-    print(f"Total data points: {total_data_points}")
+        data_train_predict_path = os.path.join(data_path, f"data_train_predict_random{i}") #gpu_wvt, oldway_0.6, gpu_wvt
+        print(f"data_train_predict_path: {data_train_predict_path}")
+        daily_stock_path = os.path.join(data_path, f"daily_stock_random{i}") #gpu_wvt, oldway, gpu_wvt
+        print(f"daily_stock_path: {daily_stock_path}")
+        save_path = os.path.join(data_path, f"model_saved_random_{i}_-120")
+        os.makedirs(save_path, exist_ok=True)
+        prediction_path = os.path.join(data_path, f"prediction_random_{i}_-120")
+        os.makedirs(prediction_path, exist_ok=True)
+        print(prediction_path)
 
-    val_len = 20
-    window_len = 10
-    rolling_start = total_data_points - window_len - 1  # Laat genoeg ruimte over voor testdagen
-    rolling_end = total_data_points - 2                 # Laatste dag waarop je kan voorspellen
-
-    for T in range(rolling_start, rolling_end + 1):
-        # Rolling setup per predictiedag T
-        train_start = 0
-        train_end = T - val_len - 1
-        val_start = T - val_len
-        val_end = T - 1
-        predict_day = T
-
-        data_start = train_start
-        data_middle = val_start
-        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
-
-        pre_data = f"rolling_T{T}"
-
-        print(f"\n==== Rolling predictiedag: T={T} ====")
-        print(f"Train: {train_start} - {train_end}")
-        print(f"Val:   {val_start} - {val_end}")
-        print(f"Test:  {predict_day}")
-        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
-
-        # fun_train_predict(data_start, data_middle, data_end, pre_data)
-
-
-        # base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
-        # print(f"base_path: {base_path}")
-        # data_path = os.path.join(base_path, "data", "CSI300")
-        # print(f"data_path: {data_path}")
-
-        # for i in [1,2,3]:
-
-        #     data_train_predict_path = os.path.join(data_path, f"data_train_predict_random{i}") #gpu_wvt, oldway_0.6, gpu_wvt
-        #     print(f"data_train_predict_path: {data_train_predict_path}")
-        #     daily_stock_path = os.path.join(data_path, f"daily_stock_random{i}") #gpu_wvt, oldway, gpu_wvt
-        #     print(f"daily_stock_path: {daily_stock_path}")
-        #     save_path = os.path.join(data_path, f"model_saved_random_{i}_-120")
-        #     os.makedirs(save_path, exist_ok=True)
-        #     prediction_path = os.path.join(data_path, f"prediction_random_{i}_-120")
-        #     os.makedirs(prediction_path, exist_ok=True)
-        #     print(prediction_path)
-
-        #     total_data_points = len(os.listdir(data_train_predict_path))
-        #     print(f"Total data points: {total_data_points}")
-        #     data_start = 0
-        #     data_middle = total_data_points-20 - 120
-        #     data_end = total_data_points -120
-        #     pre_data = '2025-03-07'
-        #     fun_train_predict(data_start, data_middle, data_end, pre_data)
+        total_data_points = len(os.listdir(data_train_predict_path))
+        print(f"Total data points: {total_data_points}")
+        data_start = 0
+        data_middle = total_data_points-20 - 120
+        data_end = total_data_points -120
+        pre_data = '2025-03-07'
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
 
             # data_train_predict_path = os.path.join(data_path, f"data_train_predict_csi300") #gpu_wvt, oldway_0.6, gpu_wvt
             # print(f"data_train_predict_path: {data_train_predict_path}")
