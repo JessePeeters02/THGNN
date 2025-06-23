@@ -728,7 +728,7 @@ def main1_generate():
 
     model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
+    
     best_loss = float('inf')
     training_results = []
 
@@ -745,15 +745,15 @@ def main1_generate():
                 snapshot = pickle.load(f)
 
             optimizer.zero_grad()
-
+            num_nodes = len(snapshot['tickers'])
             features = snapshot['features'].float().to(device)
             pos_edges_tensor = edge_info_to_tensor(snapshot['pos_edges_info']).to(device)
             neg_edges_tensor = edge_info_to_tensor(snapshot['neg_edges_info']).to(device)
             t = torch.tensor([0.0, 1.0], device=device)
 
-            delta_A_pos, delta_A_neg = sign_semantics_aggregation(
+            delta_A_pos, delta_A_neg = model.sign_semantics_aggregation(
             num_nodes, pos_edges_tensor, neg_edges_tensor, device=features.device
-)
+        )
             edge_index_pos_ssa = torch.nonzero(delta_A_pos).T
             edge_index_neg_ssa = torch.nonzero(delta_A_neg).T
             embeddings = model(
