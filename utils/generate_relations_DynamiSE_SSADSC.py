@@ -202,6 +202,7 @@ class DynamiSE(nn.Module):
         ).to(device)
     import numpy as np
 
+    @staticmethod
     def sign_semantics_aggregation(num_nodes, edge_list_pos, edge_list_neg, balance_theory_triads=True):
         """
         SSA unit: Construct new positive and negative adjacency matrices for a snapshot.
@@ -209,17 +210,18 @@ class DynamiSE(nn.Module):
         - edge_list_pos: list of (src, dst) tuples for positive edges (only new/changed)
         - edge_list_neg: list of (src, dst) tuples for negative edges (only new/changed)
         Returns:
-        delta_A_pos, delta_A_neg: np.ndarray shape (N, N), binary (1=present, 0=absent)
+        delta_A_pos, delta_A_neg: torch.Tensor shape (N, N), binary (1=present, 0=absent)
         """
+        device = edge_list_pos.device  # assumptie: beide zitten op hetzelfde device
         # 1. Initialize empty adjacency matrices
-        delta_A_pos = np.zeros((num_nodes, num_nodes), dtype=np.float32)
-        delta_A_neg = np.zeros((num_nodes, num_nodes), dtype=np.float32)
-        
+        delta_A_pos = torch.zeros((num_nodes, num_nodes), dtype=torch.float32, device=device)
+        delta_A_neg = torch.zeros((num_nodes, num_nodes), dtype=torch.float32, device=device)
+
         # 2. Fill direct edges
-        for src, dst in edge_list_pos:
-            delta_A_pos[src, dst] = 1
-        for src, dst in edge_list_neg:
-            delta_A_neg[src, dst] = 1
+        if edge_list_pos.numel() > 0:
+            delta_A_pos[edge_list_pos[0], edge_list_pos[1]] = 1.0
+        if edge_list_neg.numel() > 0:
+            delta_A_neg[edge_list_neg[0], edge_list_neg[1]] = 1.0
 
         if not balance_theory_triads:
             return delta_A_pos, delta_A_neg
@@ -251,11 +253,11 @@ class DynamiSE(nn.Module):
                     # Apply balance theory: even # of '-' means positive, odd means negative
                     neg_count = signs.count('-')
                     if neg_count % 2 == 0:
-                        delta_A_pos[i, j] = 1
-                        delta_A_pos[j, i] = 1
+                        delta_A_pos[i, j] = 1.0
+                        delta_A_pos[j, i] = 1.0
                     else:
-                        delta_A_neg[i, j] = 1
-                        delta_A_neg[j, i] = 1
+                        delta_A_neg[i, j] = 1.0
+                        delta_A_neg[j, i] = 1.0
         return delta_A_pos, delta_A_neg
 
     def forward(self, x, edge_index_pos, edge_index_neg, t, method='dopri5'):
@@ -752,10 +754,12 @@ def main1_generate():
             t = torch.tensor([0.0, 1.0], device=device)
 
             delta_A_pos, delta_A_neg = model.sign_semantics_aggregation(
-            num_nodes, pos_edges_tensor, neg_edges_tensor, device=features.device
-        )
+            num_nodes, pos_edges_tensor, neg_edges_tensor
+            )
+            # print(f"delta_a_pos: {delta_A_pos}")
             edge_index_pos_ssa = torch.nonzero(delta_A_pos).T
             edge_index_neg_ssa = torch.nonzero(delta_A_neg).T
+            # print(f"edge_index_pos_ssa: {edge_index_pos_ssa}")
             embeddings = model(
                 features,
                 edge_index_pos_ssa,

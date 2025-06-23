@@ -138,7 +138,6 @@ class SignSemanticsAggregator(nn.Module):
         
         return ΔA_pos.to(device), ΔA_neg.to(device)
 
-    @staticmethod
     def edge_index_diff(new_edges, old_edges):
         """Bereken edge verschillen tussen tijdstappen"""
         new_set = set(map(tuple, new_edges.t().tolist())) if new_edges.size(1) > 0 else set()
@@ -177,12 +176,12 @@ class DynamicSignCollaboration(nn.Module):
         
         # Positieve edges
         z_pos = odeint(self.odefunc_pos, x, t_span, 
-                      method='rk4', options={'step_size':0.1},
+                      method='dopri5', options={'step_size':0.1, 'rtol':1e-4, 'atol':1e-5},
                       adjoint=False, edge_index=pos_edge_index)[-1] if pos_edge_index.size(1) > 0 else torch.zeros_like(x)
         
         # Negatieve edges
         z_neg = odeint(self.odefunc_neg, x, t_span,
-                      method='rk4', options={'step_size':0.1},
+                      method='dopri5', options={'step_size':0.1, 'rtol':1e-4, 'atol':1e-5},
                       adjoint=False, edge_index=neg_edge_index)[-1] if neg_edge_index.size(1) > 0 else torch.zeros_like(x)
         
         return z_pos, z_neg
