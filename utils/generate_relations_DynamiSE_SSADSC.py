@@ -200,6 +200,63 @@ class DynamiSE(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, 1)
         ).to(device)
+    import numpy as np
+
+    def sign_semantics_aggregation(num_nodes, edge_list_pos, edge_list_neg, balance_theory_triads=True):
+        """
+        SSA unit: Construct new positive and negative adjacency matrices for a snapshot.
+        - num_nodes: Number of nodes
+        - edge_list_pos: list of (src, dst) tuples for positive edges (only new/changed)
+        - edge_list_neg: list of (src, dst) tuples for negative edges (only new/changed)
+        Returns:
+        delta_A_pos, delta_A_neg: np.ndarray shape (N, N), binary (1=present, 0=absent)
+        """
+        # 1. Initialize empty adjacency matrices
+        delta_A_pos = np.zeros((num_nodes, num_nodes), dtype=np.float32)
+        delta_A_neg = np.zeros((num_nodes, num_nodes), dtype=np.float32)
+        
+        # 2. Fill direct edges
+        for src, dst in edge_list_pos:
+            delta_A_pos[src, dst] = 1
+        for src, dst in edge_list_neg:
+            delta_A_neg[src, dst] = 1
+
+        if not balance_theory_triads:
+            return delta_A_pos, delta_A_neg
+
+        # 3. Triadic closure by balance theory for nodes without direct edge
+        for i in range(num_nodes):
+            for j in range(i + 1, num_nodes):
+                # Skip if direct edge exists
+                if delta_A_pos[i, j] or delta_A_neg[i, j] or delta_A_pos[j, i] or delta_A_neg[j, i]:
+                    continue
+                # Find all possible "middle" nodes k forming (i, k), (k, j)
+                for k in range(num_nodes):
+                    if k == i or k == j:
+                        continue
+                    # Find type of (i, k) and (k, j)
+                    signs = []
+                    if delta_A_pos[i, k]:
+                        signs.append('+')
+                    elif delta_A_neg[i, k]:
+                        signs.append('-')
+                    else:
+                        continue
+                    if delta_A_pos[k, j]:
+                        signs.append('+')
+                    elif delta_A_neg[k, j]:
+                        signs.append('-')
+                    else:
+                        continue
+                    # Apply balance theory: even # of '-' means positive, odd means negative
+                    neg_count = signs.count('-')
+                    if neg_count % 2 == 0:
+                        delta_A_pos[i, j] = 1
+                        delta_A_pos[j, i] = 1
+                    else:
+                        delta_A_neg[i, j] = 1
+                        delta_A_neg[j, i] = 1
+        return delta_A_pos, delta_A_neg
 
     def forward(self, x, edge_index_pos, edge_index_neg, t, method='dopri5'):
         
