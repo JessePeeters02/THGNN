@@ -751,15 +751,15 @@ def main1_generate():
             neg_edges_tensor = edge_info_to_tensor(snapshot['neg_edges_info']).to(device)
             t = torch.tensor([0.0, 1.0], device=device)
 
-            # print("\n", snapshot['date'])
-            # print("Input features stats - min:", features.min(), "max:", features.max())
-            # print("pos edge shape: ", pos_edges_tensor.shape, "\nneg edge shape: ", neg_edges_tensor.shape)
-
-            # with torch.autograd.set_detect_anomaly(True):
+            delta_A_pos, delta_A_neg = sign_semantics_aggregation(
+            num_nodes, pos_edges_tensor, neg_edges_tensor, device=features.device
+)
+            edge_index_pos_ssa = torch.nonzero(delta_A_pos).T
+            edge_index_neg_ssa = torch.nonzero(delta_A_neg).T
             embeddings = model(
                 features,
-                pos_edges_tensor,
-                neg_edges_tensor,
+                edge_index_pos_ssa,
+                edge_index_neg_ssa,
                 t
             )
             loss = model.full_loss(embeddings, pos_edges_tensor, neg_edges_tensor)
