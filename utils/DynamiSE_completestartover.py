@@ -283,7 +283,7 @@ def load_snapshots(stock_data, window_size=20):
         if current_date in already_done:
             with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'rb') as f:
                 loaded_snapshot = pickle.load(f)
-                print(loaded_snapshot)
+                # print(loaded_snapshot)
                 snapshots.append(loaded_snapshot)
             continue
     

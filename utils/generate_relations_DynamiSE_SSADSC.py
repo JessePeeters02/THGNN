@@ -26,7 +26,7 @@ raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
 relation_path = os.path.join(data_path, "relation_dynamiSE_mini")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path= os.path.join(data_path, "intermediate_snapshots_mini")
+snapshot_path= os.path.join(data_path, "intermediate_snapshots_firsttestfullcosine")
 os.makedirs(snapshot_path, exist_ok=True)
 data_train_predict_path = os.path.join(data_path, "data_train_predict_mini")
 os.makedirs(data_train_predict_path, exist_ok=True)
