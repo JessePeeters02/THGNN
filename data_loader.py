@@ -2,6 +2,7 @@ import os
 import sys
 from torch.utils import data
 import pickle
+import torch
 
 class AllGraphDataSampler(data.Dataset):
 
@@ -27,14 +28,22 @@ class AllGraphDataSampler(data.Dataset):
         return len(self.data_all)
 
     def load_state(self):
+        import torch
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         data_all = []
         length = len(self.gnames_all)
         for i in range(length):
             sys.stdout.flush()
             sys.stdout.write('{} data loading: {:.2f}%{}'.format(self.mode, (i+1)*100/length, '\r'))
-            data_all.append(pickle.load(open(os.path.join(self.data_dir, self.gnames_all[i]), "rb")))
+            sample = pickle.load(open(os.path.join(self.data_dir, self.gnames_all[i]), "rb"))
+            # Zet alle PyTorch tensors in sample naar het juiste device
+            for key in sample:
+                if isinstance(sample[key], torch.Tensor):
+                    sample[key] = sample[key].to(device)
+            data_all.append(sample)
         print('{} data loaded!'.format(self.mode))
         return data_all
+
 
     def __getitem__(self, idx):
         sample = self.data_all[idx]  # Hier kan de fout zitten
