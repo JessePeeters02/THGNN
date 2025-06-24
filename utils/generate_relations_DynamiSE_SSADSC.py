@@ -200,7 +200,6 @@ class DynamiSE(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, 1)
         ).to(device)
-    import numpy as np
 
     @staticmethod
     def sign_semantics_aggregation(num_nodes, edge_list_pos, edge_list_neg, balance_theory_triads=True):
