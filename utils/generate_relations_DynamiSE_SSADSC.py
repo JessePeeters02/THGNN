@@ -624,7 +624,7 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, pr
 
 def prepare_dynamic_data(stock_data, window_size=20):
     snapshots = []
-    bool_eerste = True
+    # bool_eerste = True
     already_done = set(fname.replace('.pkl', '') for fname in os.listdir(snapshot_path) if fname.endswith('.pkl'))
 
     aging_manager = EdgeAgingManager(relevance_threshold, max_age, date_to_idx)
@@ -637,7 +637,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
         current_date = all_dates[i]
         # print('current date: ', current_date)
         if current_date in already_done:
-            bool_eerste = False
+            # bool_eerste = False
             with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'rb') as f:
                 loaded_snapshot = pickle.load(f)
                 snapshots.append(loaded_snapshot)
@@ -658,36 +658,51 @@ def prepare_dynamic_data(stock_data, window_size=20):
             feature_matrix.append(stock_data_current[feature_cols2].values[0])
         feature_matrix = torch.FloatTensor(np.array(feature_matrix)).to(device)
 
-        if bool_eerste:
-            pos_pairs, neg_pairs = build_initial_edges_via_cosine_similarity(window_data, threshold)
-            bool_eerste = False
-            for src, dst in pos_pairs.T.tolist():
-                aging_manager.update_edge(edge_info_pos, src, dst, 1.0, current_date)
-            for src, dst in neg_pairs.T.tolist():
-                aging_manager.update_edge(edge_info_neg, src, dst, -1.0, current_date)
-        else:
-            price_df = []
-            for stock in unique_stocks:
-                stockdf = window_data[window_data['Stock'] == stock]
-                price_df.append(stockdf[feature_cols1].values.T)
-            price_df = torch.FloatTensor(np.array(price_df))
+        # if bool_eerste:
+        #     pos_pairs, neg_pairs = build_initial_edges_via_cosine_similarity(window_data, threshold)
+        #     bool_eerste = False
+        #     for src, dst in pos_pairs.T.tolist():
+        #         aging_manager.update_edge(edge_info_pos, src, dst, 1.0, current_date)
+        #     for src, dst in neg_pairs.T.tolist():
+        #         aging_manager.update_edge(edge_info_neg, src, dst, -1.0, current_date)
+        # else:
+        #     price_df = []
+        #     for stock in unique_stocks:
+        #         stockdf = window_data[window_data['Stock'] == stock]
+        #         price_df.append(stockdf[feature_cols1].values.T)
+        #     price_df = torch.FloatTensor(np.array(price_df))
             
-            aging_manager.prune_edges(edge_info_pos, current_date, price_df)
-            aging_manager.prune_edges(edge_info_neg, current_date, price_df)
+        #     aging_manager.prune_edges(edge_info_pos, current_date, price_df)
+        #     aging_manager.prune_edges(edge_info_neg, current_date, price_df)
 
-            pos_pairs, neg_pairs = build_edges_via_balance_theory(
-                edge_info_to_tensor(edge_info_pos),
-                edge_info_to_tensor(edge_info_neg),
-                len(unique_stocks),
-                price_df,
-                current_date
-            )
+        #     pos_pairs, neg_pairs = build_edges_via_balance_theory(
+        #         edge_info_to_tensor(edge_info_pos),
+        #         edge_info_to_tensor(edge_info_neg),
+        #         len(unique_stocks),
+        #         price_df,
+        #         current_date
+        #     )
 
-            for src, dst in pos_pairs.T.tolist():
-                aging_manager.update_edge(edge_info_pos, src, dst, 1.0, current_date)
-            for src, dst in neg_pairs.T.tolist():
-                aging_manager.update_edge(edge_info_neg, src, dst, -1.0, current_date)
-
+        #     for src, dst in pos_pairs.T.tolist():
+        #         aging_manager.update_edge(edge_info_pos, src, dst, 1.0, current_date)
+        #     for src, dst in neg_pairs.T.tolist():
+        #         aging_manager.update_edge(edge_info_neg, src, dst, -1.0, current_date)
+        
+        pos_pairs, neg_pairs = build_initial_edges_via_cosine_similarity(window_data, threshold)
+        edge_info_pos = {}
+        edge_info_neg = {}
+        for src, dst in pos_pairs.T.tolist():
+            edge_info_pos[(src, dst)] = {
+                'created_at': current_date,
+                'last_score': 1.0,
+                'last_update': current_date
+            }
+        for src, dst in neg_pairs.T.tolist():
+            edge_info_neg[(src, dst)] = {
+                'created_at': current_date,
+                'last_score': -1.0,
+                'last_update': current_date
+            }
         snapshots.append({
             'date': current_date,
             'features': feature_matrix.detach().cpu(),
