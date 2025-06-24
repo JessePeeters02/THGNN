@@ -30,9 +30,12 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 # prediction_map = os.path.join(data_path, "prediction_corr_TEbig")
 # os.makedirs(prediction_map, exist_ok=True)
 
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-    print(device)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Selected device: {device}")
+
+# if torch.cuda.is_available():
+#     device = torch.device("cuda")
+#     print(device)
 
 class Args:
     def __init__(self, gpu=0, subtask="regression"): #regression or classification_binare, also switch: trainer.py 31/32 and thgnn.py 128/129
@@ -136,7 +139,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
 
     # predict
     epoch = 19
-    checkpoint = torch.load(os.path.join(args.load_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
+    checkpoint = torch.load(os.path.join(args.load_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"), map_location=device)
     model.load_state_dict(checkpoint['model'])
     model.eval()
     
