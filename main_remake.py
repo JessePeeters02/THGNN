@@ -131,6 +131,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     print('start training')
     best_val_loss = float('inf')
     best_model_state = None
+    best_epoch = 0
 
     for epoch in range(args.max_epochs):
         train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
@@ -141,6 +142,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 best_model_state = model.state_dict()
+                best_epoch = epoch + 1
                 print("save model!")
                 state = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': epoch + 1}
                 torch.save(state, os.path.join(args.save_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
@@ -149,7 +151,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
 
 
     # predict
-    checkpoint = torch.load(os.path.join(args.load_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"), map_location=device)
+    checkpoint = torch.load(os.path.join(args.load_path, pre_data + "_epoch_" + str(best_epoch) + ".dat"), map_location=device)
     model.load_state_dict(checkpoint['model'])
     model.eval()
 
@@ -175,7 +177,13 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         test_label_dataset = AllGraphDataSampler(base_dir=data_train_predict_path, mode="val",
                                                  data_start=data_end, data_middle=data_end, data_end=data_end + 1)
 
-        df = pd.read_csv(os.path.join(daily_stock_path, tmp_data[data_end]), dtype=object)
+        # Pak de juiste dag uit de daily_stock_path directory, corresponderend met data_end
+        daily_files = sorted(os.listdir(daily_stock_path))
+        if data_end < len(daily_files):
+            daily_file = daily_files[data_end]
+        else:
+            raise IndexError(f"data_end index {data_end} buiten bereik van daily_stock_path-bestanden.")
+        df = pd.read_csv(os.path.join(daily_stock_path, daily_file), dtype=object)
         df['score'] = pd.DataFrame({'score': result_new})
         df_score = pd.concat([df_score, df])
 
