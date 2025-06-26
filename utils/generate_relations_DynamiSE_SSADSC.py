@@ -177,14 +177,14 @@ class DynamiSE(nn.Module):
         self.hidden_dim = hidden_dim
 
         self.feature_encoder = nn.Linear(num_features, hidden_dim).to(device)
-        self.feature_norm = nn.LayerNorm(hidden_dim)
+        self.feature_norm = nn.LayerNorm(hidden_dim).to(device)
 
         # Positieve en negatieve convoluties
         self.pos_conv = GCNConv(hidden_dim, hidden_dim).to(device)
         self.neg_conv = GCNConv(hidden_dim, hidden_dim).to(device)
 
-        self.pair_norm = nn.LayerNorm(hidden_dim)
-        self.concat_norm = nn.LayerNorm(2 * hidden_dim) 
+        self.pair_norm = nn.LayerNorm(hidden_dim).to(device)
+        self.concat_norm = nn.LayerNorm(2 * hidden_dim).to(device) 
 
         # Combinatiefunctie Ψ
         self.psi = nn.Sequential(
@@ -874,10 +874,10 @@ def main1_load():
 
             with open(os.path.join(data_train_predict_path, f"{end_date}.pkl"), 'wb') as f:
                 pickle.dump({
-                    'pos_adj': pos_adj,
-                    'neg_adj': neg_adj,
-                    'features': torch.FloatTensor(np.array(features)),
-                    'labels': torch.FloatTensor(labels),
+                    'pos_adj': pos_adj.cpu(),
+                    'neg_adj': neg_adj.cpu(),
+                    'features': torch.FloatTensor(np.array(features)).cpu(),
+                    'labels': torch.FloatTensor(labels).cpu(),
                     'mask': [True] * len(labels)
                 }, f)
 
