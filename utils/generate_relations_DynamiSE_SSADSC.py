@@ -177,14 +177,14 @@ class DynamiSE(nn.Module):
         self.hidden_dim = hidden_dim
 
         self.feature_encoder = nn.Linear(num_features, hidden_dim).to(device)
-        self.feature_norm = nn.LayerNorm(hidden_dim)
+        self.feature_norm = nn.LayerNorm(hidden_dim).to(device)
 
         # Positieve en negatieve convoluties
         self.pos_conv = GCNConv(hidden_dim, hidden_dim).to(device)
         self.neg_conv = GCNConv(hidden_dim, hidden_dim).to(device)
 
-        self.pair_norm = nn.LayerNorm(hidden_dim)
-        self.concat_norm = nn.LayerNorm(2 * hidden_dim) 
+        self.pair_norm = nn.LayerNorm(hidden_dim).to(device)
+        self.concat_norm = nn.LayerNorm(2 * hidden_dim).to(device) 
 
         # Combinatiefunctie Ψ
         self.psi = nn.Sequential(
