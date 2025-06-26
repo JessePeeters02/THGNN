@@ -874,10 +874,10 @@ def main1_load():
 
             with open(os.path.join(data_train_predict_path, f"{end_date}.pkl"), 'wb') as f:
                 pickle.dump({
-                    'pos_adj': pos_adj,
-                    'neg_adj': neg_adj,
-                    'features': torch.FloatTensor(np.array(features)),
-                    'labels': torch.FloatTensor(labels),
+                    'pos_adj': pos_adj.cpu(),
+                    'neg_adj': neg_adj.cpu(),
+                    'features': torch.FloatTensor(np.array(features)).cpu(),
+                    'labels': torch.FloatTensor(labels).cpu(),
                     'mask': [True] * len(labels)
                 }, f)
 
