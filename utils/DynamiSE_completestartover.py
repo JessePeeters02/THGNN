@@ -138,7 +138,7 @@ class SignSemanticsAggregator(nn.Module):
         
         return ΔA_pos.to(device), ΔA_neg.to(device)
 
-    def edge_index_diff(new_edges, old_edges):
+    def edge_index_diff(self, new_edges, old_edges):
         """Bereken edge verschillen tussen tijdstappen"""
         new_set = set(map(tuple, new_edges.t().tolist())) if new_edges.size(1) > 0 else set()
         old_set = set(map(tuple, old_edges.t().tolist())) if old_edges.size(1) > 0 else set()
@@ -174,15 +174,18 @@ class DynamicSignCollaboration(nn.Module):
         """Paper Eq. 4: ODE-integratie voor beide edge typen"""
         t_span = torch.linspace(0, 1, steps).to(x.device)
         
+        self.odefunc_pos.set_graph(pos_edge_index)
+        self.odefunc_neg.set_graph(neg_edge_index)
+
         # Positieve edges
         z_pos = odeint(self.odefunc_pos, x, t_span, 
                       method='dopri5', options={'step_size':0.1, 'rtol':1e-4, 'atol':1e-5},
-                      adjoint=False, edge_index=pos_edge_index)[-1] if pos_edge_index.size(1) > 0 else torch.zeros_like(x)
+                      edge_index=pos_edge_index)[-1] if pos_edge_index.size(1) > 0 else torch.zeros_like(x)
         
         # Negatieve edges
         z_neg = odeint(self.odefunc_neg, x, t_span,
                       method='dopri5', options={'step_size':0.1, 'rtol':1e-4, 'atol':1e-5},
-                      adjoint=False, edge_index=neg_edge_index)[-1] if neg_edge_index.size(1) > 0 else torch.zeros_like(x)
+                      edge_index=neg_edge_index)[-1] if neg_edge_index.size(1) > 0 else torch.zeros_like(x)
         
         return z_pos, z_neg
 
