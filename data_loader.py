@@ -35,6 +35,7 @@ class AllGraphDataSampler(data.Dataset):
         for i in range(length):
             sys.stdout.flush()
             sys.stdout.write('{} data loading: {:.2f}%{}'.format(self.mode, (i+1)*100/length, '\r'))
+            fname = self.gnames_all[i]
             with open(os.path.join(self.data_dir, self.gnames_all[i]), "rb") as f:
                 sample = pickle.load(f)
             # Zet alle tensors in sample op CPU
@@ -45,6 +46,7 @@ class AllGraphDataSampler(data.Dataset):
             # for key in sample:
             #     if isinstance(sample[key], torch.Tensor):
             #         sample[key] = sample[key].to(device)
+            sample["date"] = fname
             data_all.append(sample)
         print('{} data loaded!'.format(self.mode))
         return data_all

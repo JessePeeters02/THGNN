@@ -821,8 +821,8 @@ def edges_to_adj_matrix(edges, num_nodes):
 def calculate_label(raw_df, current_date):
     date_idx = raw_df[raw_df['Date'] == current_date].index[0]
     close_today = raw_df.iloc[date_idx]['Close']
-    close_yesterday = raw_df.iloc[date_idx-1]['Close']
-    return (close_today / close_yesterday) - 1
+    close_tomorrow = raw_df.iloc[date_idx+1]['Close']
+    return (close_tomorrow / close_today) - 1
 
 
 def main1_generate():
@@ -898,7 +898,7 @@ def main1_load():
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth"), map_location=device))
     model.eval()
 
-    for date in tqdm(all_dates[prev_date_num-1:], desc="Generating outputs"):
+    for date in tqdm(all_dates[prev_date_num-1:-1], desc="Generating outputs"):
         snapshot_file = os.path.join(snapshot_path, f"{date}.pkl")
         if not os.path.exists(snapshot_file):
             print(f"Error: {snapshot_file} for date {date} not found.")
