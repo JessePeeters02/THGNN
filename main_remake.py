@@ -206,8 +206,19 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     total_means["sample_id"] = "TOTAAL"
     df_weights = pd.concat([df_weights, pd.DataFrame([total_means])], ignore_index=True)
 
-    df_score.to_csv(os.path.join(prediction_path, "pred.csv"))
-    df_weights.to_csv(os.path.join(prediction_path, "attention_weights.csv"))
+    df_score.to_csv(
+    os.path.join(prediction_path, "pred.csv"),
+    mode='a',
+    index=False,
+    header=not os.path.exists(os.path.join(prediction_path, "pred.csv"))
+    )
+
+    df_weights.to_csv(
+    os.path.join(prediction_path, "attention_weights.csv"),
+    mode='a',
+    index=False,
+    header=not os.path.exists(os.path.join(prediction_path, "attention_weights.csv"))
+    )
     
 if __name__ == "__main__":
 
