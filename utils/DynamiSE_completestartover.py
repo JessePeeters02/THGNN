@@ -371,7 +371,7 @@ def main1_load(model):
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth"), map_location=device))
     model.eval()
 
-    for date in tqdm(all_dates[prev_date_num - 1:], desc="Predicting full graph from embeddings"):
+    for date in tqdm(all_dates[prev_date_num - 1:-1], desc="Predicting full graph from embeddings"):
         snapshot_file = os.path.join(snapshot_path, f"{date}.pkl")
         if not os.path.exists(snapshot_file):
             print(f"Snapshot ontbreekt: {snapshot_file}")

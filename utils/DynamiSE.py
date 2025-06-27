@@ -335,7 +335,7 @@ def main1_load():
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth"), map_location=device))
     model.eval()
 
-    for date in tqdm(all_dates[prev_date_num-1:], desc="Generating outputs"):
+    for date in tqdm(all_dates[prev_date_num-1:-1], desc="Generating outputs"):
         snapshot_file = os.path.join(snapshot_path, f"{date}.pkl")
         if not os.path.exists(snapshot_file):
             print(f"Error: {snapshot_file} for date {date} not found.")
