@@ -260,8 +260,8 @@ def edges_to_adj_matrix(edges, num_nodes):
 def calculate_label(raw_df, current_date):
     date_idx = raw_df[raw_df['Date'] == current_date].index[0]
     close_today = raw_df.iloc[date_idx]['Close']
-    close_yesterday = raw_df.iloc[date_idx-1]['Close']
-    return (close_today / close_yesterday) - 1
+    close_tomorrow = raw_df.iloc[date_idx+1]['Close']
+    return (close_tomorrow / close_today) - 1
 
 
 def main1_generate():
