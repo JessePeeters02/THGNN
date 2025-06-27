@@ -155,16 +155,10 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     model.load_state_dict(checkpoint['model'])
     model.eval()
 
-    # prepare prediction input: laatste dag van de val-set (data_end - 1)
-    predict_input_dataset = AllGraphDataSampler(base_dir=data_train_predict_path, mode="val",
-                                                data_start=data_end - 1, data_middle=data_end - 1, data_end=data_end)
-
-    predict_input_loader = DataLoader(predict_input_dataset, pin_memory=False)
-
     df_score = pd.DataFrame()
     df_weights = pd.DataFrame()
 
-    for i, tmp_data in enumerate(predict_input_dataset):
+    for i, tmp_data in enumerate(predict_dataset):
         pos_adj, neg_adj, features, labels, mask = extract_data(tmp_data, args.device)
 
         with torch.no_grad():
@@ -173,16 +167,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         result = logits.data.cpu().numpy().tolist()
         result_new = [r[0] for r in result]
 
-        # We koppelen deze scores aan de testdaglabels (die we apart ophalen, zonder hun features te gebruiken)
-        test_label_dataset = AllGraphDataSampler(base_dir=data_train_predict_path, mode="val",
-                                                 data_start=data_end, data_middle=data_end, data_end=data_end + 1)
-
         # Pak de juiste dag uit de daily_stock_path directory, corresponderend met data_end
-        daily_files = sorted(os.listdir(daily_stock_path))
-        if data_end < len(daily_files):
-            daily_file = daily_files[data_end]
-        else:
-            raise IndexError(f"data_end index {data_end} buiten bereik van daily_stock_path-bestanden.")
+        daily_file = tmp_data["date"].replace(".pkl", ".csv")
         df = pd.read_csv(os.path.join(daily_stock_path, daily_file), dtype=object)
         df['score'] = pd.DataFrame({'score': result_new})
         df_score = pd.concat([df_score, df])
