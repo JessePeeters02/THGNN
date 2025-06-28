@@ -631,7 +631,6 @@ def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, pr
     return pos_edges, neg_edges
 
 def prepare_dynamic_data(stock_data, window_size=20):
-    snapshots = []
     # bool_eerste = True
     already_done = set(fname.replace('.pkl', '') for fname in os.listdir(snapshot_path) if fname.endswith('.pkl'))
 
@@ -648,7 +647,6 @@ def prepare_dynamic_data(stock_data, window_size=20):
             # bool_eerste = False
             with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'rb') as f:
                 loaded_snapshot = pickle.load(f)
-                snapshots.append(loaded_snapshot)
                 edge_info_pos = dict(loaded_snapshot['pos_edges_info'])
                 edge_info_neg = dict(loaded_snapshot['neg_edges_info'])
             continue
@@ -711,17 +709,17 @@ def prepare_dynamic_data(stock_data, window_size=20):
                 'last_score': -1.0,
                 'last_update': current_date
             }
-        snapshots.append({
+        snapshot_data = {
             'date': current_date,
             'features': feature_matrix.detach().cpu(),
             'pos_edges_info': dict(edge_info_pos),
             'neg_edges_info': dict(edge_info_neg),
             'tickers': unique_stocks,
             'full_window_data': window_data
-        })
-
+        }
+        
         with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'wb') as f:
-            pickle.dump(snapshots[-1], f)
+            pickle.dump(snapshot_data, f)
 
         write_header = not os.path.exists(log_path) or os.path.getsize(log_path) == 0
         with open(log_path, "a") as log_f:
@@ -730,8 +728,6 @@ def prepare_dynamic_data(stock_data, window_size=20):
             pos_count = len(edge_info_pos)
             neg_count = len(edge_info_neg)
             log_f.write(f"{current_date},{len(unique_stocks)},{pos_count},{neg_count}\n")
-
-    return snapshots
 
 def edges_to_adj_matrix(edges, num_nodes):
     """Converteer edges naar adjacency matrix"""
@@ -905,7 +901,7 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 
 log_path = os.path.join(data_path, f"snapshot_log_0627.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
-snapshots = prepare_dynamic_data(stock_data)
+prepare_dynamic_data(stock_data)
 
 
 main1_generate()
