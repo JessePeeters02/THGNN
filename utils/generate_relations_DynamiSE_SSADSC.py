@@ -20,17 +20,17 @@ print(f"Device: {device}")
 
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(base_path, "data", "testbatch_mini")
+data_path = os.path.join(base_path, "data", "S&P500")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_mini")
+relation_path = os.path.join(data_path, "relation_dynamiSE_0627")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path= os.path.join(data_path, "intermediate_snapshots_firsttestfullcosine")
+snapshot_path= os.path.join(data_path, "intermediate_snapshots_0627")
 os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_mini")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_0627")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_mini")
+daily_stock_path = os.path.join(data_path, "daily_stock_0627")
 os.makedirs(daily_stock_path, exist_ok=True)
 
 # Hyperparameters
@@ -39,7 +39,7 @@ feature_cols1 = ['Open', 'High', 'Low', 'Close']
 feature_cols2 = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 hidden_dim = 32
 num_epochs = 30
-restrict_last_n_days= 100 # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
+restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
 relevance_threshold = 0
 max_age = 5
 learning_rate = 0.0001
@@ -390,21 +390,29 @@ class ODEFunc(nn.Module):
         return delta_h.clamp(-50, 50)
 
 def build_initial_edges_via_cosine_similarity(window_data, threshold):
-    grouped = window_data.groupby('Stock')[feature_cols1]
-    stock_arrays = np.array([group.values.T for name, group in grouped])
-    n_stocks = stock_arrays.shape[0]
-    cos_matrix = np.zeros((n_stocks, n_stocks))
+    def gpu_featurewise_cosine(stock_tensor: torch.Tensor):
+        """
+        stock_tensor: (n_stocks, n_features, n_days)
+        Retourneert: (n_stocks, n_stocks) gem. cosine similarity over features
+        """
+        n_stocks, n_feat, n_days = stock_tensor.shape
+        sims = []
+        for f in range(n_feat):
+            feat_f = stock_tensor[:, f, :]  # (n_stocks, n_days)
+            feat_f = F.normalize(feat_f, p=2, dim=1)
+            sim_f = torch.mm(feat_f, feat_f.T)  # (n_stocks, n_stocks)
+            sims.append(sim_f)
+        mean_sim = torch.stack(sims).mean(dim=0)  # gemiddelde over features
+        return mean_sim
 
-    # Bereken cosine similarities tussen alle paren van stocks
-    for i in tqdm(range(n_stocks), desc="Calculating cosine similarities"):
-        for j in range(i+1, n_stocks):
-            feature_cosines = []
-            for f in range(len(feature_cols1)):
-                cos_sim = cosine_similarity_skl([stock_arrays[i,f,:]], [stock_arrays[j,f,:]])[0][0]
-                feature_cosines.append(cos_sim)
-            avg_cos = np.nanmean(feature_cosines)
-            cos_matrix[i,j] = avg_cos
-            cos_matrix[j,i] = avg_cos
+    # Data preparatie
+    grouped = window_data.groupby('Stock')[feature_cols1]
+    stock_arrays = np.array([group.values.T for _, group in grouped])  # (n_stocks, n_features, n_days)
+    n_stocks = stock_arrays.shape[0]
+
+    # Cosine similarity matrix op GPU, per feature gemiddeld
+    stock_tensor = torch.tensor(stock_arrays, dtype=torch.float32, device=device)
+    cos_matrix = gpu_featurewise_cosine(stock_tensor).cpu().numpy()  # terug naar CPU
 
     # Bouw edges op basis van drempelwaarde
     pos_edges = []
@@ -895,7 +903,7 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 
 # start model
 
-log_path = os.path.join(data_path, f"snapshot_log_mini.csv")
+log_path = os.path.join(data_path, f"snapshot_log_0627.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 snapshots = prepare_dynamic_data(stock_data)
 
