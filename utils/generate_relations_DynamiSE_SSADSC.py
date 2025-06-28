@@ -204,59 +204,44 @@ class DynamiSE(nn.Module):
     @staticmethod
     def sign_semantics_aggregation(num_nodes, edge_list_pos, edge_list_neg, balance_theory_triads=True):
         """
-        SSA unit: Construct new positive and negative adjacency matrices for a snapshot.
-        - num_nodes: Number of nodes
-        - edge_list_pos: list of (src, dst) tuples for positive edges (only new/changed)
-        - edge_list_neg: list of (src, dst) tuples for negative edges (only new/changed)
-        Returns:
-        delta_A_pos, delta_A_neg: torch.Tensor shape (N, N), binary (1=present, 0=absent)
+        GPU-versnelde SSA: produceert delta_A_pos en delta_A_neg (shape: [N, N]) volgens balance theory.
         """
-        device = edge_list_pos.device  # assumptie: beide zitten op hetzelfde device
-        # 1. Initialize empty adjacency matrices
-        delta_A_pos = torch.zeros((num_nodes, num_nodes), dtype=torch.float32, device=device)
-        delta_A_neg = torch.zeros((num_nodes, num_nodes), dtype=torch.float32, device=device)
+        device = edge_list_pos.device
 
-        # 2. Fill direct edges
+        # 1. Directe edges
+        A_pos = torch.zeros((num_nodes, num_nodes), dtype=torch.float32, device=device)
+        A_neg = torch.zeros((num_nodes, num_nodes), dtype=torch.float32, device=device)
         if edge_list_pos.numel() > 0:
-            delta_A_pos[edge_list_pos[0], edge_list_pos[1]] = 1.0
+            A_pos[edge_list_pos[0], edge_list_pos[1]] = 1.0
         if edge_list_neg.numel() > 0:
-            delta_A_neg[edge_list_neg[0], edge_list_neg[1]] = 1.0
+            A_neg[edge_list_neg[0], edge_list_neg[1]] = 1.0
 
         if not balance_theory_triads:
-            return delta_A_pos, delta_A_neg
+            return A_pos, A_neg
 
-        # 3. Triadic closure by balance theory for nodes without direct edge
-        for i in range(num_nodes):
-            for j in range(i + 1, num_nodes):
-                # Skip if direct edge exists
-                if delta_A_pos[i, j] or delta_A_neg[i, j] or delta_A_pos[j, i] or delta_A_neg[j, i]:
-                    continue
-                # Find all possible "middle" nodes k forming (i, k), (k, j)
-                for k in range(num_nodes):
-                    if k == i or k == j:
-                        continue
-                    # Find type of (i, k) and (k, j)
-                    signs = []
-                    if delta_A_pos[i, k]:
-                        signs.append('+')
-                    elif delta_A_neg[i, k]:
-                        signs.append('-')
-                    else:
-                        continue
-                    if delta_A_pos[k, j]:
-                        signs.append('+')
-                    elif delta_A_neg[k, j]:
-                        signs.append('-')
-                    else:
-                        continue
-                    # Apply balance theory: even # of '-' means positive, odd means negative
-                    neg_count = signs.count('-')
-                    if neg_count % 2 == 0:
-                        delta_A_pos[i, j] = 1.0
-                        delta_A_pos[j, i] = 1.0
-                    else:
-                        delta_A_neg[i, j] = 1.0
-                        delta_A_neg[j, i] = 1.0
+        # 2. Triad closure via matrixvermenigvuldiging
+        # Maak binaire maskers voor "positieve paden" en "negatieve paden"
+        P1 = A_pos @ A_pos   # i → k → j met + +
+        P2 = A_neg @ A_neg   # i → k → j met - -
+        P3 = A_pos @ A_neg   # i → k → j met + -
+        P4 = A_neg @ A_pos   # i → k → j met - +
+
+        # Nieuwe kandidaten (nog geen directe verbinding)
+        existing = (A_pos + A_neg) > 0
+        suggested_pos = ((P1 + P2) > 0) & (~existing)
+        suggested_neg = ((P3 + P4) > 0) & (~existing)
+
+        # Maak uiteindelijke delta-matrices
+        delta_A_pos = A_pos.clone()
+        delta_A_neg = A_neg.clone()
+
+        delta_A_pos[suggested_pos] = 1.0
+        delta_A_neg[suggested_neg] = 1.0
+
+        # Zorg dat de matrices symmetrisch zijn (zoals jouw origineel)
+        delta_A_pos = torch.maximum(delta_A_pos, delta_A_pos.T)
+        delta_A_neg = torch.maximum(delta_A_neg, delta_A_neg.T)
+
         return delta_A_pos, delta_A_neg
 
     def forward(self, x, edge_index_pos, edge_index_neg, t, method='dopri5'):
