@@ -21,14 +21,15 @@ data_path = os.path.join(base_path, "data", "S&P500")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_0627")
+relation_path = os.path.join(data_path, "relation_dynamiSE_0628")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path= os.path.join(data_path, "intermediate_snapshots_0627")
+snapshot_path= os.path.join(data_path, "intermediate_snapshots_0628")
 os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_0627")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_0628")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_0627")
+daily_stock_path = os.path.join(data_path, "daily_stock_0628")
 os.makedirs(daily_stock_path, exist_ok=True)
+log_path = os.path.join(data_path, f"snapshot_log_0628.csv")
 
 # Hyperparameters
 prev_date_num = 20
@@ -215,10 +216,10 @@ class DynamiSE(nn.Module):
         # log_neg = torch.log(1 - w_hat_neg)
         # print(f"log_pos range: [{log_pos.min().item():.4f}, {log_pos.max().item():.4f}]")
         # print(f"log_neg range: [{log_neg.min().item():.4f}, {log_neg.max().item():.4f}]")
-        sign_loss = -alpha * (
-            torch.log(1 + w_hat_pos).mean() + 
-            torch.log(1 - w_hat_neg).mean()
-        )
+        sign_loss = -alpha * torch.cat([
+            torch.log(1 + w_hat_pos),
+            torch.log(1 - w_hat_neg)
+        ]).mean()
         #print("w_hat_pos:", w_hat_pos.min().item(), w_hat_pos.max().item(), w_hat_pos.mean().item())
         #print("w_hat_neg:", w_hat_neg.min().item(), w_hat_neg.max().item(), w_hat_neg.mean().item())
 
@@ -305,7 +306,7 @@ def build_initial_edges_via_cosine_similarity(window_data, threshold):
 
     # Cosine similarity matrix op GPU, per feature gemiddeld
     stock_tensor = torch.tensor(stock_arrays, dtype=torch.float32, device=device)
-    cos_matrix = gpu_featurewise_cosine(stock_tensor).cpu().numpy()  # terug naar CPU
+    cos_matrix = gpu_featurewise_cosine(stock_tensor).cpu().numpy()
 
     # Bouw edges op basis van drempelwaarde
     pos_edges = []
@@ -441,7 +442,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
         snapshot_data = {
             'date': current_date,
-            'features': feature_matrix.detach().cpu(),
+            'features': feature_matrix,
             'pos_edges': pos_pairs.cpu(),
             'neg_edges': neg_pairs.cpu(),
             'tickers': unique_stocks,
@@ -455,8 +456,8 @@ def prepare_dynamic_data(stock_data, window_size=20):
         with open(log_path, "a") as log_f:
             if write_header:
                 log_f.write("date,nodes,pos_edges,neg_edges\n")
-            pos_count = len(pos_pairs)
-            neg_count = len(neg_pairs)
+            pos_count = pos_pairs.shape[1]
+            neg_count = neg_pairs.shape[1]
             log_f.write(f"{current_date},{len(unique_stocks)},{pos_count},{neg_count}\n")
 
 def edges_to_adj_matrix(edges, num_nodes):
@@ -474,7 +475,8 @@ def calculate_label(raw_df, current_date):
 
 
 def main1_generate():
-    print(f"Aantal snapshots: {len(date_to_idx)}")
+    num_snapshots = len([fname for fname in os.listdir(snapshot_path) if fname.endswith('.pkl')])
+    print(f"Aantal snapshots: {num_snapshots}")
 
     model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -496,7 +498,7 @@ def main1_generate():
 
             optimizer.zero_grad()
             num_nodes = len(snapshot['tickers'])
-            features = snapshot['features'].float().to(device)
+            features = torch.from_numpy(snapshot['features']).float().to(device)
             pos_edges_tensor = snapshot['pos_edges'].to(device)
             neg_edges_tensor = snapshot['neg_edges'].to(device)
             t = torch.tensor([0.0, 1.0], device=device)
@@ -512,7 +514,7 @@ def main1_generate():
                 edge_index_neg_ssa,
                 t
             )
-            loss = model.full_loss(embeddings, pos_edges_tensor, neg_edges_tensor)
+            loss = model.full_loss(embeddings, edge_index_pos_ssa, edge_index_neg_ssa)
             if torch.isnan(loss):
                 print("NaN loss detected!")
                 for name, param in model.named_parameters():
@@ -560,14 +562,17 @@ def main1_load():
             #vanaf hier is het vervangen:
             # pos_adj = edges_to_adj_matrix(pos_edges_tensor, N).to(device)
             # neg_adj = edges_to_adj_matrix(neg_edges_tensor, N).to(device)
-            features = snapshot['features'].float().to(device)
+            features = torch.from_numpy(snapshot['features']).float().to(device)
             t = torch.tensor([0.0, 1.0], device=device)
 
-            embeddings = model(features, pos_edges_tensor, neg_edges_tensor, t)
+            empty_edges = torch.empty((2, 0), dtype=torch.long).to(device)
+            embeddings = model(features, empty_edges, empty_edges, t)
 
             # Combineer originele edges en voorspel w_hat
+            N = embeddings.shape[0]
+            candidate_edges = torch.combinations(torch.arange(N), r=2).T.to(device)
             all_edges_tensor = torch.cat([pos_edges_tensor, neg_edges_tensor], dim=1) # maar dit maakt dan zowel positief als negatief 1?
-            edge_scores = model.predict_edge_weight(embeddings, all_edges_tensor) # is deze gemaakt voor negatief en positief tesamen te doen?
+            edge_scores = model.predict_edge_weight(embeddings, candidate_edges) # is deze gemaakt voor negatief en positief tesamen te doen?
             num_pos = pos_edges_tensor.shape[1]
             scores_pos = edge_scores[:num_pos]
             scores_neg = edge_scores[num_pos:]
@@ -626,8 +631,6 @@ unique_stocks = sorted(stock_data['Stock'].unique())
 stock_data = stock_data.sort_values(['Stock', 'Date'])
 
 # start model
-
-log_path = os.path.join(data_path, f"snapshot_log_0627.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 prepare_dynamic_data(stock_data)
 
