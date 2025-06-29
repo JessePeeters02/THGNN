@@ -557,11 +557,6 @@ def main1_load():
 
         with torch.no_grad():
             N = len(snapshot['tickers'])
-            pos_edges_tensor = snapshot['pos_edges'].to(device)
-            neg_edges_tensor = snapshot['neg_edges'].to(device)
-            #vanaf hier is het vervangen:
-            # pos_adj = edges_to_adj_matrix(pos_edges_tensor, N).to(device)
-            # neg_adj = edges_to_adj_matrix(neg_edges_tensor, N).to(device)
             features = torch.from_numpy(snapshot['features']).float().to(device)
             t = torch.tensor([0.0, 1.0], device=device)
 
@@ -571,15 +566,16 @@ def main1_load():
             # Combineer originele edges en voorspel w_hat
             N = embeddings.shape[0]
             candidate_edges = torch.combinations(torch.arange(N), r=2).T.to(device)
-            all_edges_tensor = torch.cat([pos_edges_tensor, neg_edges_tensor], dim=1) # maar dit maakt dan zowel positief als negatief 1?
             edge_scores = model.predict_edge_weight(embeddings, candidate_edges) # is deze gemaakt voor negatief en positief tesamen te doen?
-            num_pos = pos_edges_tensor.shape[1]
-            scores_pos = edge_scores[:num_pos]
-            scores_neg = edge_scores[num_pos:]
 
             # Filter edges op basis van model-output
-            new_pos_edges = all_edges_tensor[:, :num_pos][:, scores_pos > 0.3]
-            new_neg_edges = all_edges_tensor[:, num_pos:][:, scores_neg < -0.3]
+            threshold_pos = 0.3
+            threshold_neg = -0.3
+            pos_mask = edge_scores > threshold_pos
+            neg_mask = edge_scores < threshold_neg
+
+            new_pos_edges = candidate_edges[:, pos_mask]
+            new_neg_edges = candidate_edges[:, neg_mask]
 
             # Maak refined adjacencymatrices
             pos_adj = edges_to_adj_matrix(new_pos_edges, N).to(device)
@@ -632,8 +628,8 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 
 # start model
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
-prepare_dynamic_data(stock_data)
+# prepare_dynamic_data(stock_data)
 
 
-main1_generate()
+# main1_generate()
 main1_load()
