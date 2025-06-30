@@ -24,8 +24,8 @@ print(base_path)
 database = "testbatch_mini"
 data_path = os.path.join(base_path, "data", database)
 print(data_path)
-label_path = os.path.join(data_path, "stock_labels.csv")
-print(label_path)
+prediction_path = os.path.join(data_path, "model_saved_rolingwindow_test")
+label_path = os.path.join(data_path, "labels.csv")
 # endregion
 
 def distribution(cpreds, labels, dpred):
@@ -60,7 +60,25 @@ def distribution(cpreds, labels, dpred):
     plt.tight_layout()
     plt.show()
 
-
+def plot_distributions(predictions, labels):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    
+    # Combineer data voor consistente x-as limieten
+    combined = np.concatenate([predictions, labels])
+    x_min, x_max = np.min(combined), np.max(combined)
+    
+    # Plot voorspellingen
+    sns.histplot(predictions, bins=50, kde=True, color='blue', ax=ax1)
+    ax1.set_title("Distributie van voorspellingen")
+    ax1.set_xlim(x_min, x_max)
+    
+    # Plot labels
+    sns.histplot(labels, bins=50, kde=True, color='orange', ax=ax2)
+    ax2.set_title("Distributie van labels")
+    ax2.set_xlim(x_min, x_max)
+    
+    plt.tight_layout()
+    plt.show()
 
 def evaluate_reg_predictions(predictions, labels):
     mae = np.mean(np.abs(predictions - labels))
@@ -77,53 +95,18 @@ def evaluate_reg_predictions(predictions, labels):
     return mae, mse, r2, distance#, bce
 
 def check_labelsvsprediction(path):
-    """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat"""
-
     predictionsdf = pd.read_csv(os.path.join(path, "pred.csv"))
-    predictiondates = pd.unique(predictionsdf["dt"].values)
-    # predictiondates = predictiondates[0:1] # het aantal dagen aanpassen
-    # print(f"predictiondates: {predictiondates}")
-    predictionsdf = predictionsdf[predictionsdf['dt'].isin(predictiondates)]  # Filter op de eerste x dagen
-    # print(predictionsdf.head())
-    
-    # print("Bestandspad:", label_path)
-    labelsdf = pd.read_csv(label_path, index_col=0)
-    labelsdf = labelsdf[predictiondates]
-    labelsdf['stock'] = labelsdf.index
-    # print(labelsdf.head())
+    predictions = predictionsdf['score'].values
+    labels = predictionsdf['label'].values
 
-    def lookup_label(row):
-        stock = row['code']
-        date = row['dt']
-        try:
-            return labelsdf.loc[stock, date]
-        except KeyError:
-            print('niet gevonden:', stock, date)
-            return float('nan')  # of np.nan als je NumPy gebruikt
-
-    predictionsdf['true_score'] = predictionsdf.apply(lookup_label, axis=1)
-    # print(predictionsdf.head(5))
-
-    predictions = torch.tensor(predictionsdf['score'].values, dtype=torch.float32).numpy()
-    labels = torch.tensor(predictionsdf['true_score'].values, dtype=torch.float32).numpy()
-
-    if task == 'regression':
-        tllabels = np.tanh(np.log(labels+1))
-    else:
-        tllabels = (labels > 0).astype(float)
     print(len(labels), len(predictions))
-
-    tllabel_stats = f"tanh log Labels - Gemiddelde: {np.mean(tllabels):.4f}, Std: {np.std(tllabels):.4f}, Max: {np.max(tllabels):.4f}, Min: {np.min(tllabels):.4f}"
+    tllabel_stats = f"Labels - Gemiddelde: {np.mean(labels):.4f}, Std: {np.std(labels):.4f}, Max: {np.max(labels):.4f}, Min: {np.min(labels):.4f}"
     pred_stats = f"Voorspellingen - Gemiddelde: {np.mean(predictions):.4f}, Std: {np.std(predictions):.4f}, Max: {np.max(predictions):.4f}, Min: {np.min(predictions):.4f}"
-    
+    print("Statistieken:")
     print(tllabel_stats)
     print(pred_stats)
 
-    # mae, mse , bce = evaluate_predictions(predictions, labels)
-    if task == 'regression':
-        mae, mse, r2 = evaluate_reg_predictions(predictions, tllabels)
-    if task == 'classification':
-        bce, acc= evaluate_reg_predictions(predictions, tllabels)
+    mae, mse, r2 = evaluate_reg_predictions(predictions, labels)
     d, p = ks_2samp(labels, predictions)
     print(f"KS-D distribution: {d:.4f} (p-value={p:.4g})")
 
