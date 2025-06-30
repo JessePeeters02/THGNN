@@ -7,8 +7,11 @@ import pandas as pd
 import pickle
 from tqdm import tqdm
 import os
+import itertools
+from collections import defaultdict
 import torch.nn.functional as F
 import time
+from sklearn.metrics.pairwise import cosine_similarity as cosine_similarity_skl
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -17,19 +20,18 @@ print(f"Device: {device}")
 
 # alle paden relatief aanmaken
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(base_path, "data", "CSI300")
+data_path = os.path.join(base_path, "data", "S&P500")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_0628")
+relation_path = os.path.join(data_path, "relation_dynamiSE_0627")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path= os.path.join(data_path, "intermediate_snapshots_0628")
+snapshot_path= os.path.join(data_path, "intermediate_snapshots_0627")
 os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_0628")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_0627")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_0628")
+daily_stock_path = os.path.join(data_path, "daily_stock_0627")
 os.makedirs(daily_stock_path, exist_ok=True)
-log_path = os.path.join(data_path, f"snapshot_log_0628.csv")
 
 # Hyperparameters
 prev_date_num = 20
@@ -41,13 +43,100 @@ restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-da
 relevance_threshold = 0
 max_age = 5
 learning_rate = 0.0001
-
-min_neighbors = 3
-sim_threshold_pos = 0.4
-sim_threshold_neg = -0.4
 threshold = 0.4
+min_neighbors = 3
 
-edge_evaluation = True
+sim_threshold_pos = 0.6
+sim_threshold_neg = -0.4
+
+class EdgeAgingManager:
+    def __init__(self, relevance_threshold, max_age, date_to_idx):
+        self.relevance_threshold = relevance_threshold
+        self.max_age = max_age
+        self.date_to_idx = date_to_idx
+
+    def update_edge(self, edge_info, src, dst, new_score, current_date):
+        key = (src, dst)
+        if key in edge_info:
+            edge_info[key]['last_score'] = new_score
+            edge_info[key]['last_update'] = current_date
+        else:
+            edge_info[key] = {
+                'created_at': current_date,
+                'last_score': new_score,
+                'last_update': current_date
+            }
+
+    def prune_edges(self, edge_info, current_date, price_data):
+        to_delete = []
+        for (src, dst), info in edge_info.items():
+            age = self._calculate_age(info['last_update'], current_date)
+            if (age >= self.max_age):
+                vec_i = price_data[src]
+                vec_k = price_data[dst]
+                sim = cosine_similarity(vec_i, vec_k)
+
+                # Get the edge score to determine if it's positive or negative
+                edge_score = info['last_score']
+                if edge_score > 0:  # Positive edge
+                    if sim > sim_threshold_pos:
+                        # Reset age by updating created_at to current date
+                        edge_info[(src,dst)]['last_update'] = current_date
+                    else:
+                        to_delete.append((src,dst))
+                else:  # Negative edge
+                    if sim < sim_threshold_neg:
+                        # Reset age by updating created_at to current date
+                        edge_info[(src,dst)]['last_update'] = current_date
+                    else:
+                        to_delete.append((src,dst))
+
+        # Delete edges that didn't meet the criteria
+        for edge in to_delete:
+            del edge_info[edge]
+
+    def _calculate_age(self, last_update, current_date):
+        idx_created = self.date_to_idx[last_update]
+        idx_current = self.date_to_idx[current_date]
+        return idx_current - idx_created
+
+def edge_info_to_tensor(edge_info):
+    if not edge_info:
+        return torch.empty((2, 0), dtype=torch.long).to(device)
+    edges = list(edge_info.keys())
+    return torch.LongTensor(list(zip(*edges))).to(device)
+
+def warn_nodes_without_neighbors(adj_pos, adj_neg, num_nodes, snapshot_date=None):
+    all_nodes = set(range(num_nodes))
+
+    nodes_with_pos = set(adj_pos.keys())
+    nodes_with_neg = set(adj_neg.keys())
+
+    # nodes_without_pos = all_nodes - nodes_with_pos
+    # nodes_without_neg = all_nodes - nodes_with_neg
+
+    # date_str = snapshot_date if snapshot_date else "unknown"
+
+    # if nodes_without_pos:
+    #     print(f"[WARN] Snapshot {date_str}: {len(nodes_without_pos)} nodes hebben GEEN positieve buren (bv. {list(nodes_without_pos)[:5]})")
+    # if nodes_without_neg:
+    #     print(f"[WARN] Snapshot {date_str}: {len(nodes_without_neg)} nodes hebben GEEN negatieve buren (bv. {list(nodes_without_neg)[:5]})")
+    isolated_nodes = all_nodes - (nodes_with_pos | nodes_with_neg)
+    # if isolated_nodes:
+    #     print(f"[WARN] Snapshot {date_str}: {len(isolated_nodes)} nodes hebben GEEN buren (positief noch negatief)")
+
+    # return (nodes_without_neg|nodes_without_pos)
+    return isolated_nodes
+
+
+def cosine_similarity(vec1, vec2):
+    cos = []
+    for i in range(vec1.shape[0]):
+        sim = F.cosine_similarity(vec1[i].unsqueeze(0), vec2[i].unsqueeze(0)).item()
+        cos.append(sim)
+    if len(cos) != len(feature_cols1):
+        print("[Warn] lengte van cos is verschillend van feature lengte")
+    return np.mean(cos)
 
 def load_all_stocks(stock_data_path):
     all_stock_data = []
@@ -218,10 +307,10 @@ class DynamiSE(nn.Module):
         # log_neg = torch.log(1 - w_hat_neg)
         # print(f"log_pos range: [{log_pos.min().item():.4f}, {log_pos.max().item():.4f}]")
         # print(f"log_neg range: [{log_neg.min().item():.4f}, {log_neg.max().item():.4f}]")
-        sign_loss = -alpha * torch.cat([
-            torch.log(1 + w_hat_pos),
-            torch.log(1 - w_hat_neg)
-        ]).mean()
+        sign_loss = -alpha * (
+            torch.log(1 + w_hat_pos).mean() + 
+            torch.log(1 - w_hat_neg).mean()
+        )
         #print("w_hat_pos:", w_hat_pos.min().item(), w_hat_pos.max().item(), w_hat_pos.mean().item())
         #print("w_hat_neg:", w_hat_neg.min().item(), w_hat_neg.max().item(), w_hat_neg.mean().item())
 
@@ -285,7 +374,7 @@ class ODEFunc(nn.Module):
         # print(f"ODE delta_h range: [{delta_h.min():.2f}, {delta_h.max():.2f}]")
         return delta_h.clamp(-50, 50)
 
-def build_initial_edges_via_cosine_similarity(window_data):
+def build_initial_edges_via_cosine_similarity(window_data, threshold):
     def gpu_featurewise_cosine(stock_tensor: torch.Tensor):
         """
         stock_tensor: (n_stocks, n_features, n_days)
@@ -298,7 +387,7 @@ def build_initial_edges_via_cosine_similarity(window_data):
             feat_f = F.normalize(feat_f, p=2, dim=1)
             sim_f = torch.mm(feat_f, feat_f.T)  # (n_stocks, n_stocks)
             sims.append(sim_f)
-        mean_sim = sum(sims) / len(sims)  # gemiddelde over features
+        mean_sim = torch.stack(sims).mean(dim=0)  # gemiddelde over features
         return mean_sim
 
     # Data preparatie
@@ -308,7 +397,7 @@ def build_initial_edges_via_cosine_similarity(window_data):
 
     # Cosine similarity matrix op GPU, per feature gemiddeld
     stock_tensor = torch.tensor(stock_arrays, dtype=torch.float32, device=device)
-    cos_matrix = gpu_featurewise_cosine(stock_tensor).cpu().numpy()
+    cos_matrix = gpu_featurewise_cosine(stock_tensor).cpu().numpy()  # terug naar CPU
 
     # Bouw edges op basis van drempelwaarde
     pos_edges = []
@@ -317,7 +406,7 @@ def build_initial_edges_via_cosine_similarity(window_data):
     # Garandeer minimum aantal buren
     for i in range(n_stocks):
         # Positieve edges
-        strong_pos = np.where(cos_matrix[i] > sim_threshold_pos)[0]
+        strong_pos = np.where(cos_matrix[i] > threshold)[0]
         if len(strong_pos) < min_neighbors:
             # Voeg extra buren toe als er te weinig zijn
             cos_vals = cos_matrix[i].copy()
@@ -333,7 +422,7 @@ def build_initial_edges_via_cosine_similarity(window_data):
                 pos_edges.append((j, i))
         
         # Negatieve edges
-        strong_neg = np.where(cos_matrix[i] < sim_threshold_neg)[0]
+        strong_neg = np.where(cos_matrix[i] < -threshold)[0]
         if len(strong_neg) < min_neighbors:
             # Voeg extra buren toe als er te weinig zijn
             cos_vals = cos_matrix[i].copy()
@@ -420,81 +509,196 @@ def build_initial_edges_via_correlation(window_data, threshold):
 
     return pos_edges, neg_edges
 
-def evaluate_edges(model,snapshot, N, pred_pos, pred_neg):
-    pos_edges_cos = snapshot['pos_edges'].to(device)
-    neg_edges_cos = snapshot['neg_edges'].to(device)
+def build_edges_via_balance_theory(prev_pos_edges, prev_neg_edges, num_nodes, price_data, current_date):#, close_data_raw):
+    adj_pos = defaultdict(set)
+    adj_neg = defaultdict(set)
 
-    # SSA edges
-    delta_A_pos, delta_A_neg = model.sign_semantics_aggregation(N, pos_edges_cos, neg_edges_cos)
-    pos_edges_ssa = torch.nonzero(delta_A_pos).T
-    neg_edges_ssa = torch.nonzero(delta_A_neg).T
+    # Bouw adjacency lists
+    if prev_pos_edges.numel() > 0:
+        for src, dst in prev_pos_edges.T.tolist():
+            adj_pos[src].add(dst)
+    if prev_neg_edges.numel() > 0:
+        for src, dst in prev_neg_edges.T.tolist():
+            adj_neg[src].add(dst)
 
-    def edge_set(edges):
-        return set(map(tuple, edges.T.cpu().numpy()))
+    # start_isolated_nodes = time.time()
+    isolated_nodes = warn_nodes_without_neighbors(adj_pos, adj_neg, num_nodes, snapshot_date=current_date)
+    # end_isolated_nodes = time.time()
+    # print(f" isolated nodes duurde {end_isolated_nodes-start_isolated_nodes:.4f} seconden")
+    pos_edges_set = set()
+    neg_edges_set = set()
+    triangle_count = 0
+    confirmed_edges = set()
+    attempted_edges = defaultdict(set)
 
-    sets = {
-        'cos_pos': edge_set(pos_edges_cos),
-        'ssa_pos': edge_set(pos_edges_ssa),
-        'pred_pos': edge_set(pred_pos),
-        'cos_neg': edge_set(neg_edges_cos),
-        'ssa_neg': edge_set(neg_edges_ssa),
-        'pred_neg': edge_set(pred_neg),
-    }
+    # start_triangles = time.time()
+    # for j in tqdm(range(num_nodes), desc="triangles"):
+    for j in range(num_nodes):
+        neighbors = adj_pos[j] | adj_neg[j]
+        for i, k in itertools.combinations(neighbors, 2):
+            if i == k:
+                continue
 
-    log_row = {
-        'date': snapshot['date'],
-        'n_nodes': N,
-        'cos_pos': len(sets['cos_pos']),
-        'ssa_pos': len(sets['ssa_pos']),
-        'pred_pos': len(sets['pred_pos']),
-        'overlap_cos_pred_pos': len(sets['cos_pos'] & sets['pred_pos']),
-        'overlap_ssa_pred_pos': len(sets['ssa_pos'] & sets['pred_pos']),
-        'overlap_cos_ssa_pos': len(sets['cos_pos'] & sets['ssa_pos']),
-        'cos_neg': len(sets['cos_neg']),
-        'ssa_neg': len(sets['ssa_neg']),
-        'pred_neg': len(sets['pred_neg']),
-        'overlap_cos_pred_neg': len(sets['cos_neg'] & sets['pred_neg']),
-        'overlap_ssa_pred_neg': len(sets['ssa_neg'] & sets['pred_neg']),
-        'overlap_cos_ssa_neg': len(sets['cos_neg'] & sets['ssa_neg']),
-        'ssa_pos_neg_overlap': len(sets['ssa_pos'] & sets['ssa_neg']),
-        'cos_pos_to_pred_neg': len(sets['cos_pos'] & sets['pred_neg']),
-        'cos_neg_to_pred_pos': len(sets['cos_neg'] & sets['pred_pos']),
-    }
+            edge_key = frozenset((i, k))
+            if edge_key in confirmed_edges:
+                continue
 
-    eval_log_file = os.path.join(relation_path, "edge_evaluation_log.csv")
-    write_header = not os.path.exists(eval_log_file)
-    with open(eval_log_file, "a") as f:
-        if write_header:
-            f.write(','.join(log_row.keys()) + '\n')
-        f.write(','.join(str(v) for v in log_row.values()) + '\n')
+            # Check bestaande edges
+            if (k in adj_pos[i]) or (k in adj_neg[i]):
+                continue
+
+            # Debug: Tel triadische checks
+            triangle_count += 1
+
+            # Triadische check  
+            signs = []
+            for u, v in [(i, j), (j, k)]:
+                if v in adj_pos[u]:
+                    signs.append('+')
+                elif v in adj_neg[u]:
+                    signs.append('-')
+                else:
+                    break
+            else:
+                neg_count = signs.count('-')
+                signature = 'positive' if neg_count % 2 == 0 else 'negative'
+
+                if signature in attempted_edges[edge_key]:
+                    continue  # deze context al geprobeerd
+                attempted_edges[edge_key].add(signature)
+
+                vec_i = price_data[i]
+                vec_k = price_data[k]
+                sim = cosine_similarity(vec_i, vec_k)
+
+                # Balance theory toepassen
+                if signature == 'positive' and sim > sim_threshold_pos:
+                    pos_edges_set.add((i, k))
+                    pos_edges_set.add((k, i))
+                    confirmed_edges.add(edge_key)
+                elif signature == 'negative' and sim < sim_threshold_neg:
+                    neg_edges_set.add((i, k))
+                    neg_edges_set.add((k, i))
+                    confirmed_edges.add(edge_key)
+
+    # end_triangles = time.time()
+    # print(f" triangles duurde {end_triangles-start_triangles:.4f} seconden")
+
+    # start_isolated_new = time.time()
+    if isolated_nodes:
+        print(f"Adding fallback connections for {len(isolated_nodes)} isolated nodes")
+        edges_added = 0
+        for i in isolated_nodes:
+            vec_i = price_data[i]
+            simmilarities = []
+            for j in range(num_nodes):
+                if j == i:
+                    continue
+                vec_j = price_data[j]
+                sim = cosine_similarity(vec_i, vec_j)
+                simmilarities.append(sim)
+                if sim > sim_threshold_pos:
+                    pos_edges_set.add((i, j))
+                    pos_edges_set.add((j, i))
+                    edges_added += 1
+                elif sim < sim_threshold_neg:
+                    neg_edges_set.add((i, j))
+                    neg_edges_set.add((j, i))
+                    edges_added += 1
+            print(f"    For node {i}, {edges_added} edges where added.")
+    #         print(f"     sim min: {min(simmilarities)}, sim max: {max(simmilarities)}")
+    # end_isolated_new = time.time()
+    # print(f" fallback duurde {end_isolated_new-start_isolated_new:.4f} seconden")
+
+    # Converteer naar tensors
+    pos_edges = torch.LongTensor(list(zip(*pos_edges_set))) if pos_edges_set else torch.empty((2, 0), dtype=torch.long)
+    neg_edges = torch.LongTensor(list(zip(*neg_edges_set))) if neg_edges_set else torch.empty((2, 0), dtype=torch.long)    
+    return pos_edges, neg_edges
 
 def prepare_dynamic_data(stock_data, window_size=20):
     # bool_eerste = True
     already_done = set(fname.replace('.pkl', '') for fname in os.listdir(snapshot_path) if fname.endswith('.pkl'))
 
+    aging_manager = EdgeAgingManager(relevance_threshold, max_age, date_to_idx)
+
+    edge_info_pos = {}
+    edge_info_neg = {}
+
     for i in tqdm(range(window_size-1, len(date_to_idx)), desc="Preparing snapshots"):
-
+        # print('dit is i:', i)
         current_date = all_dates[i]
-
+        # print('current date: ', current_date)
         if current_date in already_done:
+            # bool_eerste = False
+            with open(os.path.join(snapshot_path, f"{current_date}.pkl"), 'rb') as f:
+                loaded_snapshot = pickle.load(f)
+                edge_info_pos = dict(loaded_snapshot['pos_edges_info'])
+                edge_info_neg = dict(loaded_snapshot['neg_edges_info'])
             continue
 
         window_dates = all_dates[i-window_size+1:i+1]
+        # print('dit is windowdates', len(window_dates), window_dates)
         window_data = stock_data[stock_data['Date'].isin(window_dates)]
         current_date_data = stock_data[stock_data['Date'] == current_date]
 
-        grouped = current_date_data.groupby("Stock")
-        feature_matrix = np.stack([
-            grouped.get_group(stock)[feature_cols2].values[0] for stock in unique_stocks
-        ])
+        feature_matrix = []
+        for stock in unique_stocks:
+            stock_data_current = current_date_data[current_date_data['Stock'] == stock]
+            if len(stock_data_current) != 1:
+                print(f"Fout bij feature matrix van {stock} op {current_date}")
+            feature_matrix.append(stock_data_current[feature_cols2].values[0])
+        feature_matrix = torch.FloatTensor(np.array(feature_matrix)).to(device)
 
-        pos_pairs, neg_pairs = build_initial_edges_via_cosine_similarity(window_data)
+        # if bool_eerste:
+        #     pos_pairs, neg_pairs = build_initial_edges_via_cosine_similarity(window_data, threshold)
+        #     bool_eerste = False
+        #     for src, dst in pos_pairs.T.tolist():
+        #         aging_manager.update_edge(edge_info_pos, src, dst, 1.0, current_date)
+        #     for src, dst in neg_pairs.T.tolist():
+        #         aging_manager.update_edge(edge_info_neg, src, dst, -1.0, current_date)
+        # else:
+        #     price_df = []
+        #     for stock in unique_stocks:
+        #         stockdf = window_data[window_data['Stock'] == stock]
+        #         price_df.append(stockdf[feature_cols1].values.T)
+        #     price_df = torch.FloatTensor(np.array(price_df))
+            
+        #     aging_manager.prune_edges(edge_info_pos, current_date, price_df)
+        #     aging_manager.prune_edges(edge_info_neg, current_date, price_df)
 
+        #     pos_pairs, neg_pairs = build_edges_via_balance_theory(
+        #         edge_info_to_tensor(edge_info_pos),
+        #         edge_info_to_tensor(edge_info_neg),
+        #         len(unique_stocks),
+        #         price_df,
+        #         current_date
+        #     )
+
+        #     for src, dst in pos_pairs.T.tolist():
+        #         aging_manager.update_edge(edge_info_pos, src, dst, 1.0, current_date)
+        #     for src, dst in neg_pairs.T.tolist():
+        #         aging_manager.update_edge(edge_info_neg, src, dst, -1.0, current_date)
+        
+        pos_pairs, neg_pairs = build_initial_edges_via_cosine_similarity(window_data, threshold)
+        edge_info_pos = {}
+        edge_info_neg = {}
+        for src, dst in pos_pairs.T.tolist():
+            edge_info_pos[(src, dst)] = {
+                'created_at': current_date,
+                'last_score': 1.0,
+                'last_update': current_date
+            }
+        for src, dst in neg_pairs.T.tolist():
+            edge_info_neg[(src, dst)] = {
+                'created_at': current_date,
+                'last_score': -1.0,
+                'last_update': current_date
+            }
         snapshot_data = {
             'date': current_date,
-            'features': feature_matrix,
-            'pos_edges': pos_pairs.cpu(),
-            'neg_edges': neg_pairs.cpu(),
+            'features': feature_matrix.detach().cpu(),
+            'pos_edges_info': dict(edge_info_pos),
+            'neg_edges_info': dict(edge_info_neg),
             'tickers': unique_stocks,
             'full_window_data': window_data
         }
@@ -506,8 +710,8 @@ def prepare_dynamic_data(stock_data, window_size=20):
         with open(log_path, "a") as log_f:
             if write_header:
                 log_f.write("date,nodes,pos_edges,neg_edges\n")
-            pos_count = pos_pairs.shape[1]
-            neg_count = neg_pairs.shape[1]
+            pos_count = len(edge_info_pos)
+            neg_count = len(edge_info_neg)
             log_f.write(f"{current_date},{len(unique_stocks)},{pos_count},{neg_count}\n")
 
 def edges_to_adj_matrix(edges, num_nodes):
@@ -525,8 +729,7 @@ def calculate_label(raw_df, current_date):
 
 
 def main1_generate():
-    num_snapshots = len([fname for fname in os.listdir(snapshot_path) if fname.endswith('.pkl')])
-    print(f"Aantal snapshots: {num_snapshots}")
+    print(f"Aantal snapshots: {len(date_to_idx)}")
 
     model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -548,23 +751,25 @@ def main1_generate():
 
             optimizer.zero_grad()
             num_nodes = len(snapshot['tickers'])
-            features = torch.from_numpy(snapshot['features']).float().to(device)
-            pos_edges_tensor = snapshot['pos_edges'].to(device)
-            neg_edges_tensor = snapshot['neg_edges'].to(device)
+            features = snapshot['features'].float().to(device)
+            pos_edges_tensor = edge_info_to_tensor(snapshot['pos_edges_info']).to(device)
+            neg_edges_tensor = edge_info_to_tensor(snapshot['neg_edges_info']).to(device)
             t = torch.tensor([0.0, 1.0], device=device)
 
             delta_A_pos, delta_A_neg = model.sign_semantics_aggregation(
             num_nodes, pos_edges_tensor, neg_edges_tensor
             )
+            # print(f"delta_a_pos: {delta_A_pos}")
             edge_index_pos_ssa = torch.nonzero(delta_A_pos).T
             edge_index_neg_ssa = torch.nonzero(delta_A_neg).T
+            # print(f"edge_index_pos_ssa: {edge_index_pos_ssa}")
             embeddings = model(
                 features,
                 edge_index_pos_ssa,
                 edge_index_neg_ssa,
                 t
             )
-            loss = model.full_loss(embeddings, edge_index_pos_ssa, edge_index_neg_ssa)
+            loss = model.full_loss(embeddings, pos_edges_tensor, neg_edges_tensor)
             if torch.isnan(loss):
                 print("NaN loss detected!")
                 for name, param in model.named_parameters():
@@ -607,30 +812,32 @@ def main1_load():
 
         with torch.no_grad():
             N = len(snapshot['tickers'])
-            features = torch.from_numpy(snapshot['features']).float().to(device)
+            pos_edges_tensor = edge_info_to_tensor(snapshot['pos_edges_info']).to(device)
+            neg_edges_tensor = edge_info_to_tensor(snapshot['neg_edges_info']).to(device)
+            #vanaf hier is het vervangen:
+            # pos_adj = edges_to_adj_matrix(pos_edges_tensor, N).to(device)
+            # neg_adj = edges_to_adj_matrix(neg_edges_tensor, N).to(device)
+            features = snapshot['features'].float().to(device)
             t = torch.tensor([0.0, 1.0], device=device)
 
-            empty_edges = torch.empty((2, 0), dtype=torch.long).to(device)
-            embeddings = model(features, empty_edges, empty_edges, t)
+            embeddings = model(features, pos_edges_tensor, neg_edges_tensor, t)
 
             # Combineer originele edges en voorspel w_hat
-            N = embeddings.shape[0]
-            candidate_edges = torch.combinations(torch.arange(N), r=2).T.to(device)
-            edge_scores = model.predict_edge_weight(embeddings, candidate_edges) # is deze gemaakt voor negatief en positief tesamen te doen?
+            all_edges_tensor = torch.cat([pos_edges_tensor, neg_edges_tensor], dim=1) # maar dit maakt dan zowel positief als negatief 1?
+            edge_scores = model.predict_edge_weight(embeddings, all_edges_tensor) # is deze gemaakt voor negatief en positief tesamen te doen?
+            num_pos = pos_edges_tensor.shape[1]
+            scores_pos = edge_scores[:num_pos]
+            scores_neg = edge_scores[num_pos:]
 
             # Filter edges op basis van model-output
-            pos_mask = edge_scores > threshold
-            neg_mask = edge_scores < threshold
-
-            new_pos_edges = candidate_edges[:, pos_mask]
-            new_neg_edges = candidate_edges[:, neg_mask]
+            new_pos_edges = all_edges_tensor[:, :num_pos][:, scores_pos > 0.3]
+            new_neg_edges = all_edges_tensor[:, num_pos:][:, scores_neg < -0.3]
 
             # Maak refined adjacencymatrices
             pos_adj = edges_to_adj_matrix(new_pos_edges, N).to(device)
             neg_adj = edges_to_adj_matrix(new_neg_edges, N).to(device)
 
-            if edge_evaluation == True:
-                evaluate_edges(model, snapshot, N, new_pos_edges, new_neg_edges)
+            #hier stopt het vervangen
 
             end_date = snapshot['date']
             end_idx = date_to_idx[end_date]
@@ -676,9 +883,11 @@ unique_stocks = sorted(stock_data['Stock'].unique())
 stock_data = stock_data.sort_values(['Stock', 'Date'])
 
 # start model
+
+log_path = os.path.join(data_path, f"snapshot_log_0627.csv")
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
-# prepare_dynamic_data(stock_data)
+prepare_dynamic_data(stock_data)
 
 
-# main1_generate()
+main1_generate()
 main1_load()
