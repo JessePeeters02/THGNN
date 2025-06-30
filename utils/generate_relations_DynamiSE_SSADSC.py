@@ -21,15 +21,15 @@ data_path = os.path.join(base_path, "data", "CSI300")
 daily_data_path = os.path.join(data_path, "normaliseddailydata")
 raw_data_path = os.path.join(data_path, "stockdata")
 # kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_dynamiSE_0628")
+relation_path = os.path.join(data_path, "relation_DSE")
 os.makedirs(relation_path, exist_ok=True)
-snapshot_path= os.path.join(data_path, "intermediate_snapshots_0628")
+snapshot_path= os.path.join(data_path, "intermediate_snapshots_DSE")
 os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_0628")
+data_train_predict_path = os.path.join(data_path, "data_train_predict_DSE")
 os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_0628")
+daily_stock_path = os.path.join(data_path, "daily_stock_DSE")
 os.makedirs(daily_stock_path, exist_ok=True)
-log_path = os.path.join(data_path, f"snapshot_log_0628.csv")
+log_path = os.path.join(relation_path, f"snapshot_log.csv")
 
 # Hyperparameters
 prev_date_num = 20
@@ -111,49 +111,6 @@ class DynamiSE(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, 1)
         ).to(device)
-
-    @staticmethod
-    def sign_semantics_aggregation(num_nodes, edge_list_pos, edge_list_neg, balance_theory_triads=True):
-        """
-        GPU-versnelde SSA: produceert delta_A_pos en delta_A_neg (shape: [N, N]) volgens balance theory.
-        """
-        device = edge_list_pos.device
-
-        # 1. Directe edges
-        A_pos = torch.zeros((num_nodes, num_nodes), dtype=torch.float32, device=device)
-        A_neg = torch.zeros((num_nodes, num_nodes), dtype=torch.float32, device=device)
-        if edge_list_pos.numel() > 0:
-            A_pos[edge_list_pos[0], edge_list_pos[1]] = 1.0
-        if edge_list_neg.numel() > 0:
-            A_neg[edge_list_neg[0], edge_list_neg[1]] = 1.0
-
-        if not balance_theory_triads:
-            return A_pos, A_neg
-
-        # 2. Triad closure via matrixvermenigvuldiging
-        # Maak binaire maskers voor "positieve paden" en "negatieve paden"
-        P1 = A_pos @ A_pos   # i → k → j met + +
-        P2 = A_neg @ A_neg   # i → k → j met - -
-        P3 = A_pos @ A_neg   # i → k → j met + -
-        P4 = A_neg @ A_pos   # i → k → j met - +
-
-        # Nieuwe kandidaten (nog geen directe verbinding)
-        existing = (A_pos + A_neg) > 0
-        suggested_pos = ((P1 + P2) > 0) & (~existing)
-        suggested_neg = ((P3 + P4) > 0) & (~existing)
-
-        # Maak uiteindelijke delta-matrices
-        delta_A_pos = A_pos.clone()
-        delta_A_neg = A_neg.clone()
-
-        delta_A_pos[suggested_pos] = 1.0
-        delta_A_neg[suggested_neg] = 1.0
-
-        # Zorg dat de matrices symmetrisch zijn (zoals jouw origineel)
-        delta_A_pos = torch.maximum(delta_A_pos, delta_A_pos.T)
-        delta_A_neg = torch.maximum(delta_A_neg, delta_A_neg.T)
-
-        return delta_A_pos, delta_A_neg
 
     def forward(self, x, edge_index_pos, edge_index_neg, t, method='dopri5'):
         
@@ -284,6 +241,48 @@ class ODEFunc(nn.Module):
         delta_h = delta - self.damping * h
         # print(f"ODE delta_h range: [{delta_h.min():.2f}, {delta_h.max():.2f}]")
         return delta_h.clamp(-50, 50)
+
+def sign_semantics_aggregation(num_nodes, edge_list_pos, edge_list_neg, balance_theory_triads=True):
+    """
+    GPU-versnelde SSA: produceert delta_A_pos en delta_A_neg (shape: [N, N]) volgens balance theory.
+    """
+    device = edge_list_pos.device
+
+    # 1. Directe edges
+    A_pos = torch.zeros((num_nodes, num_nodes), dtype=torch.float32, device=device)
+    A_neg = torch.zeros((num_nodes, num_nodes), dtype=torch.float32, device=device)
+    if edge_list_pos.numel() > 0:
+        A_pos[edge_list_pos[0], edge_list_pos[1]] = 1.0
+    if edge_list_neg.numel() > 0:
+        A_neg[edge_list_neg[0], edge_list_neg[1]] = 1.0
+
+    if not balance_theory_triads:
+        return A_pos, A_neg
+
+    # 2. Triad closure via matrixvermenigvuldiging
+    # Maak binaire maskers voor "positieve paden" en "negatieve paden"
+    P1 = A_pos @ A_pos   # i → k → j met + +
+    P2 = A_neg @ A_neg   # i → k → j met - -
+    P3 = A_pos @ A_neg   # i → k → j met + -
+    P4 = A_neg @ A_pos   # i → k → j met - +
+
+    # Nieuwe kandidaten (nog geen directe verbinding)
+    existing = (A_pos + A_neg) > 0
+    suggested_pos = ((P1 + P2) > 0) & (~existing)
+    suggested_neg = ((P3 + P4) > 0) & (~existing)
+
+    # Maak uiteindelijke delta-matrices
+    delta_A_pos = A_pos.clone()
+    delta_A_neg = A_neg.clone()
+
+    delta_A_pos[suggested_pos] = 1.0
+    delta_A_neg[suggested_neg] = 1.0
+
+    # Zorg dat de matrices symmetrisch zijn (zoals jouw origineel)
+    delta_A_pos = torch.maximum(delta_A_pos, delta_A_pos.T)
+    delta_A_neg = torch.maximum(delta_A_neg, delta_A_neg.T)
+
+    return delta_A_pos, delta_A_neg
 
 def build_initial_edges_via_cosine_similarity(window_data):
     def gpu_featurewise_cosine(stock_tensor: torch.Tensor):
@@ -421,13 +420,10 @@ def build_initial_edges_via_correlation(window_data, threshold):
     return pos_edges, neg_edges
 
 def evaluate_edges(model,snapshot, N, pred_pos, pred_neg):
-    pos_edges_cos = snapshot['pos_edges'].to(device)
-    neg_edges_cos = snapshot['neg_edges'].to(device)
-
-    # SSA edges
-    delta_A_pos, delta_A_neg = model.sign_semantics_aggregation(N, pos_edges_cos, neg_edges_cos)
-    pos_edges_ssa = torch.nonzero(delta_A_pos).T
-    neg_edges_ssa = torch.nonzero(delta_A_neg).T
+    pos_edges_cos = snapshot['pos_edges_cos'].to(device)
+    neg_edges_cos = snapshot['neg_edges_cos'].to(device)
+    pos_edges_ssa = snapshot['pos_edges_ssa'].to(device)
+    neg_edges_ssa = snapshot['neg_edges_ssa'].to(device)
 
     def edge_set(edges):
         return set(map(tuple, edges.T.cpu().numpy()))
@@ -490,11 +486,22 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
         pos_pairs, neg_pairs = build_initial_edges_via_cosine_similarity(window_data)
 
+        pos_pairs_tensor = pos_pairs.to(device)
+        neg_pairs_tensor = neg_pairs.to(device)
+
+        delta_A_pos, delta_A_neg = sign_semantics_aggregation(
+            len(unique_stocks), pos_pairs_tensor, neg_pairs_tensor
+        )
+        pos_edges_ssa = torch.nonzero(delta_A_pos).T.cpu()
+        neg_edges_ssa = torch.nonzero(delta_A_neg).T.cpu()
+
         snapshot_data = {
             'date': current_date,
             'features': feature_matrix,
-            'pos_edges': pos_pairs.cpu(),
-            'neg_edges': neg_pairs.cpu(),
+            'pos_edges_cos': pos_pairs.cpu(),
+            'neg_edges_cos': neg_pairs.cpu(),
+            'pos_edges_ssa': pos_edges_ssa,
+            'neg_edges_ssa': neg_edges_ssa,
             'tickers': unique_stocks,
             'full_window_data': window_data
         }
@@ -505,10 +512,12 @@ def prepare_dynamic_data(stock_data, window_size=20):
         write_header = not os.path.exists(log_path) or os.path.getsize(log_path) == 0
         with open(log_path, "a") as log_f:
             if write_header:
-                log_f.write("date,nodes,pos_edges,neg_edges\n")
+                log_f.write("date,nodes,pos_edges_cos,neg_edges_cos,pos_edges_ssa,neg_edges_ssa\n")
             pos_count = pos_pairs.shape[1]
             neg_count = neg_pairs.shape[1]
-            log_f.write(f"{current_date},{len(unique_stocks)},{pos_count},{neg_count}\n")
+            pos_ssa_count = pos_edges_ssa.shape[1]
+            neg_ssa_count = neg_edges_ssa.shape[1]
+            log_f.write(f"{current_date},{len(unique_stocks)},{pos_count},{neg_count},{pos_ssa_count},{neg_ssa_count}\n")
 
 def edges_to_adj_matrix(edges, num_nodes):
     """Converteer edges naar adjacency matrix"""
@@ -547,17 +556,11 @@ def main1_generate():
                 snapshot = pickle.load(f)
 
             optimizer.zero_grad()
-            num_nodes = len(snapshot['tickers'])
             features = torch.from_numpy(snapshot['features']).float().to(device)
-            pos_edges_tensor = snapshot['pos_edges'].to(device)
-            neg_edges_tensor = snapshot['neg_edges'].to(device)
+            edge_index_pos_ssa = snapshot['pos_edges_ssa'].to(device)
+            edge_index_neg_ssa = snapshot['neg_edges_ssa'].to(device)
             t = torch.tensor([0.0, 1.0], device=device)
 
-            delta_A_pos, delta_A_neg = model.sign_semantics_aggregation(
-            num_nodes, pos_edges_tensor, neg_edges_tensor
-            )
-            edge_index_pos_ssa = torch.nonzero(delta_A_pos).T
-            edge_index_neg_ssa = torch.nonzero(delta_A_neg).T
             embeddings = model(
                 features,
                 edge_index_pos_ssa,
@@ -677,8 +680,8 @@ stock_data = stock_data.sort_values(['Stock', 'Date'])
 
 # start model
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
-# prepare_dynamic_data(stock_data)
+prepare_dynamic_data(stock_data)
 
 
-# main1_generate()
+main1_generate()
 main1_load()
