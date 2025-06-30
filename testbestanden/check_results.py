@@ -66,50 +66,6 @@ def evaluate_reg_predictions(predictions, labels):
     # bce = BCE(tpredictions, tlabels)
     return mae, mse, r2, distance#, bce
 
-def evaluate_cla_predictions(predictions, labels):
-    tpredictions = torch.tensor(predictions, dtype=torch.float32)
-    tlabels = torch.tensor(labels, dtype=torch.float32)
-    # print('tlabels: ', tlabels)
-    # print('tpredictions: ', tpredictions)
-    # print(type(tpredictions), type(tlabels))
-    BCE = nn.BCELoss(reduction='mean')
-    bce = BCE(tpredictions, tlabels)
-    
-    # Calculate accuracy
-    pred_classes = (tpredictions > 0.5).float()
-    accuracy = (pred_classes == tlabels).float().mean().item()
-
-    precision = precision_score(labels, pred_classes)
-    recall = recall_score(labels, pred_classes)
-    f1 = f1_score(labels, pred_classes)
-    Mcorc = matthews_corrcoef(labels, pred_classes)
-    
-    return bce, accuracy, precision, recall, f1, Mcorc
-
-# def direction_accuracy(predictions, labels, threshold=0.0000000):
-#     if threshold == 'mean':
-#         thresh_val = np.mean(labels)
-#     else:
-#         thresh_val = threshold
-
-#     pred_up = predictions > thresh_val
-#     label_up = labels > 0
-#     # print(pred_up)
-#     # print(label_up)
-#     print(f"Threshold: {thresh_val}")
-#     print("  === positieve ===")
-#     print(" positieve labels: ", np.sum(label_up))
-#     print(" positieve voorspellingen: ", np.sum(pred_up))
-#     print(" aantal positieve voorspellingen die ook positief zijn: ", np.sum(pred_up[label_up]))
-#     print("  === negatieve ===")
-#     print(" negatieve labels: ", np.sum(~label_up))
-#     print(" negatieve voorspellingen: ", np.sum(~pred_up))
-#     print(" aantal negatieve voorspellingen die ook negatief zijn: ", np.sum(~pred_up[~label_up]))
-          
-#     acc = np.mean(pred_up == label_up)
-#     return acc
-
-
 def check_labelsvsprediction(path):
     """ Controleer wat er in de eerste nr-aantal pkl-bestanden staat"""
 
@@ -153,20 +109,20 @@ def check_labelsvsprediction(path):
     print(tllabel_stats)
     print(pred_stats)
 
-    # # mae, mse , bce = evaluate_predictions(predictions, labels)
-    # if task == 'regression':
-    #     mae, mse, r2 = evaluate_reg_predictions(predictions, tllabels)
-    # if task == 'classification':
-    #     bce, acc= evaluate_reg_predictions(predictions, tllabels)
-    # d, p = ks_2samp(labels, predictions)
-    # print(f"KS-D distribution: {d:.4f} (p-value={p:.4g})")
+    # mae, mse , bce = evaluate_predictions(predictions, labels)
+    if task == 'regression':
+        mae, mse, r2 = evaluate_reg_predictions(predictions, tllabels)
+    if task == 'classification':
+        bce, acc= evaluate_reg_predictions(predictions, tllabels)
+    d, p = ks_2samp(labels, predictions)
+    print(f"KS-D distribution: {d:.4f} (p-value={p:.4g})")
 
-    # print(f"MAE: {mae:.6f}")
-    # print(f"MSE: {mse:.6f}")
-    # print(f"RMSE: {np.sqrt(mse):.6f}")
-    # print(f"R2: {r2:.6f}")
-    # # print(f"BCE: {bce:.6f}")
-    # print(f"Accuracy op richting: {acc:.2%}")
+    print(f"MAE: {mae:.6f}")
+    print(f"MSE: {mse:.6f}")
+    print(f"RMSE: {np.sqrt(mse):.6f}")
+    print(f"R2: {r2:.6f}")
+    # print(f"BCE: {bce:.6f}")
+    print(f"Accuracy op richting: {acc:.2%}")
 
     for horizon, name in [(1, 'day1'), (5, 'day5'), (20, 'day20')]:
         horizon_df = predictionsdf.groupby("code").head(horizon)
@@ -219,156 +175,147 @@ print(data_path)
 label_path = os.path.join(data_path, "stock_labels.csv")
 print(label_path)
 
-# labelsdf = pd.read_csv(label_path, index_col=0)
-# print(labelsdf['2024-10-09'].values)
-# label_up = labelsdf['2024-10-09'].values > 0
-# print(label_up)
-# for predictionmap in os.listdir(os.path.join(data_path)):
+labelsdf = pd.read_csv(label_path, index_col=0)
+print(labelsdf['2024-10-09'].values)
+label_up = labelsdf['2024-10-09'].values > 0
+print(label_up)
+for predictionmap in os.listdir(os.path.join(data_path)):
     
-#     if not predictionmap.startswith("prediction"):
-#         continue
+    if not predictionmap.startswith("prediction"):
+        continue
 
-#     print(f"\npredictionmap: {predictionmap}")
-#     parts = predictionmap[len("prediction_"):].split("_")
+    print(f"\npredictionmap: {predictionmap}")
+    parts = predictionmap[len("prediction_"):].split("_")
 
-#     if (parts[0] == "random1") or (parts[0] == "random2") or (parts[0] == "random3"):
-#         print("niet geselecteerd: ",predictionmap)
-#         print(parts)
-#         continue
+    if (parts[0] == "random1") or (parts[0] == "random2") or (parts[0] == "random3"):
+        print("niet geselecteerd: ",predictionmap)
+        print(parts)
+        continue
 
-#     print("wel geselecteerd: ",predictionmap)
-#     print(parts)
-#     input = ""
-#     task = ""
-#     times = ""
+    print("wel geselecteerd: ",predictionmap)
+    print(parts)
+    input = ""
+    task = ""
+    times = ""
 
-#     if len(parts) == 2:
-#         input = parts[0]
-#         task = "regression"
-#         times = parts[1]
+    if len(parts) == 2:
+        input = parts[0]
+        task = "regression"
+        times = parts[1]
 
-#     elif len(parts) == 3:
-#         input = parts[0]
-#         task = "classification"
-#         times = parts[2]
-
-
-#     print(f"Map: {predictionmap} → input: {input}, time: {times}, task: {task}")
-
-#     prediction_path = os.path.join(data_path, predictionmap)
-#     print(prediction_path)
-#     labels, corrpredictions = check_labelsvsprediction(prediction_path)
+    elif len(parts) == 3:
+        input = parts[0]
+        task = "classification"
+        times = parts[2]
 
 
-#     # distribution(corrpredictions, labels, dynamipredictions)
+    print(f"Map: {predictionmap} → input: {input}, time: {times}, task: {task}")
 
-# results_df = pd.DataFrame(results)
-# results_df.to_csv(os.path.join(data_path, "results_alltimes.csv"), index=False)
+    prediction_path = os.path.join(data_path, predictionmap)
+    print(prediction_path)
+    labels, corrpredictions = check_labelsvsprediction(prediction_path)
+
+
+    # distribution(corrpredictions, labels, dynamipredictions)
+
+results_df = pd.DataFrame(results)
+results_df.to_csv(os.path.join(data_path, "results_alltimes.csv"), index=False)
 
 # CSV inlezen
-# df = pd.read_csv(os.path.join(data_path, "results_alltimes.csv"))
+df = pd.read_csv(os.path.join(data_path, "results_alltimes.csv"))
 
-# # Drop de task-kolom
-# df = df.drop(columns=["task"])
+# Drop de task-kolom
+df = df.drop(columns=["task"])
 
-# # Groeperen per unieke combinatie en aggregatie toepassen
-# df_combined = df.groupby(["input", "time", "horizon"], as_index=False).agg({
-#     "mae": "max",  # max omdat maar één van de twee rijen een waarde heeft
-#     "mse": "max",
-#     "rmse": "max",
-#     "r2": "max",
-#     "accuracy": "max",
-#     "precission": "max",
-#     "recall": "max",
-#     "F1": "max",
-#     "MCC": "max",
-#     "bce": "max",
-#     "WS-dist": "max"
-# })
+# Groeperen per unieke combinatie en aggregatie toepassen
+df_combined = df.groupby(["input", "time", "horizon"], as_index=False).agg({
+    "mae": "max",  # max omdat maar één van de twee rijen een waarde heeft
+    "mse": "max",
+    "rmse": "max",
+    "r2": "max",
+    "accuracy": "max",
+    "precission": "max",
+    "recall": "max",
+    "F1": "max",
+    "MCC": "max",
+    "bce": "max",
+    "WS-dist": "max"
+})
 
-# time_order = [-120, -100, -80, -60, -40, -20, 0]
-# input_order = ["corr", "DSE"]
-# horizon_order = ["day1", "day5", "day20"]
+time_order = [-120, -100, -80, -60, -40, -20, 0]
+input_order = ["corr", "DSE"]
+horizon_order = ["day1", "day5", "day20"]
 
-# df_combined["time"] = pd.Categorical(df_combined["time"], categories=time_order, ordered=True)
-# df_combined["input"] = pd.Categorical(df_combined["input"], categories=input_order, ordered=True)
-# df_combined["horizon"] = pd.Categorical(df_combined["horizon"], categories=horizon_order, ordered=True)
+df_combined["time"] = pd.Categorical(df_combined["time"], categories=time_order, ordered=True)
+df_combined["input"] = pd.Categorical(df_combined["input"], categories=input_order, ordered=True)
+df_combined["horizon"] = pd.Categorical(df_combined["horizon"], categories=horizon_order, ordered=True)
 
-# # df_combined = df_combined.sort_values(by=["time", "input", "horizon"])
-# df_combined = df_combined.sort_values(by=["horizon", "input", "time"])
-# # Opslaan of printen
-# df_combined.to_csv(os.path.join(data_path, "results_alltimes_combined.csv"), index=False)
-
-
-
-
-# # results zijn er al
-# results_df = pd.read_csv(os.path.join(data_path, "results.csv"))
-# print(results_df.head())
-
-# # filtered_df = results_df[(results_df['threshold'] >= 0.3) & (results_df['threshold'] <= 0.8)]
-# # filtered_df = filtered_df[filtered_df['horizon'].isin(['day5', 'day20'])]
-
-# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
-
-# sns.lineplot(data=results_df, x="positive_threshold", y="rmse", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax1)
-# ax1.set_title("RMSE per negative and positive")
-# ax1.set_xlabel("Positive")
-# ax1.set_ylabel("RMSE")
-# ax1.grid(True)
-
-# sns.lineplot(data=results_df, x="positive_threshold", y="r2", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax2)
-# ax2.set_title("r2 per negative and positive")
-# ax2.set_xlabel("Positive")
-# ax2.set_ylabel("r2")
-# ax2.grid(True)
-
-# plt.tight_layout()
-# plt.show()
+# df_combined = df_combined.sort_values(by=["time", "input", "horizon"])
+df_combined = df_combined.sort_values(by=["horizon", "input", "time"])
+# Opslaan of printen
+df_combined.to_csv(os.path.join(data_path, "results_alltimes_combined.csv"), index=False)
 
 
 
-# import pandas as pd
-# import matplotlib.pyplot as plt
-# import seaborn as sns
 
-# # Data inladen
-# df = pd.read_csv(os.path.join(data_path, "results_combined.csv"))
-# df["horizon"] = pd.Categorical(df["horizon"], categories=["day1", "day5", "day20"], ordered=True)
-# # 1. Staafdiagram: Gemiddelde MAE per horizon en encoder
-# plt.figure(figsize=(10, 5))
-# sns.barplot(data=df, x="horizon", y="rmse", hue="input", ci=None)
-# plt.title("Gemiddelde RMSE: GRU vs. TE per horizon")
-# plt.ylabel("RMSE (lager = beter)")
-# plt.show()
+# results zijn er al
+results_df = pd.read_csv(os.path.join(data_path, "results.csv"))
+print(results_df.head())
 
-# # 2. Boxplot: Spreiding van R2-scores per model
-# plt.figure(figsize=(10, 5))
-# sns.boxplot(data=df, x="horizon", y="r2", hue="input")
-# plt.title("Spreiding van R²-scores per horizon")
-# plt.ylabel("R² (hoger = beter)")
-# plt.show()
+# filtered_df = results_df[(results_df['threshold'] >= 0.3) & (results_df['threshold'] <= 0.8)]
+# filtered_df = filtered_df[filtered_df['horizon'].isin(['day5', 'day20'])]
 
-# # 3. Lijngrafiek: Trend in Accuracy over horizons
-# plt.figure(figsize=(10, 5))
-# sns.lineplot(data=df, x="horizon", y="accuracy", hue="input", ci=None, marker="o")
-# plt.title("Accuracy over verschillende horizons")
-# plt.ylabel("Accuracy (hoger = beter)")
-# plt.show()
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
 
-# # 4. Samenvattende tabel (gemiddelden per groep)
-# summary_table = df.groupby(["input", "horizon"]).agg({
-#     "mae": "mean",
-#     "rmse": "mean",
-#     "r2": "mean",
-#     "accuracy": "mean",
-#     "bce": "mean"
-# }).round(3)
-# print(summary_table)
+sns.lineplot(data=results_df, x="positive_threshold", y="rmse", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax1)
+ax1.set_title("RMSE per negative and positive")
+ax1.set_xlabel("Positive")
+ax1.set_ylabel("RMSE")
+ax1.grid(True)
 
+sns.lineplot(data=results_df, x="positive_threshold", y="r2", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax2)
+ax2.set_title("r2 per negative and positive")
+ax2.set_xlabel("Positive")
+ax2.set_ylabel("r2")
+ax2.grid(True)
 
-# import pandas as pd
-# import matplotlib.pyplot as plt
+plt.tight_layout()
+plt.show()
+
+# Data inladen
+df = pd.read_csv(os.path.join(data_path, "results_combined.csv"))
+df["horizon"] = pd.Categorical(df["horizon"], categories=["day1", "day5", "day20"], ordered=True)
+# 1. Staafdiagram: Gemiddelde MAE per horizon en encoder
+plt.figure(figsize=(10, 5))
+sns.barplot(data=df, x="horizon", y="rmse", hue="input", ci=None)
+plt.title("Gemiddelde RMSE: GRU vs. TE per horizon")
+plt.ylabel("RMSE (lager = beter)")
+plt.show()
+
+# 2. Boxplot: Spreiding van R2-scores per model
+plt.figure(figsize=(10, 5))
+sns.boxplot(data=df, x="horizon", y="r2", hue="input")
+plt.title("Spreiding van R²-scores per horizon")
+plt.ylabel("R² (hoger = beter)")
+plt.show()
+
+# 3. Lijngrafiek: Trend in Accuracy over horizons
+plt.figure(figsize=(10, 5))
+sns.lineplot(data=df, x="horizon", y="accuracy", hue="input", ci=None, marker="o")
+plt.title("Accuracy over verschillende horizons")
+plt.ylabel("Accuracy (hoger = beter)")
+plt.show()
+
+# 4. Samenvattende tabel (gemiddelden per groep)
+summary_table = df.groupby(["input", "horizon"]).agg({
+    "mae": "mean",
+    "rmse": "mean",
+    "r2": "mean",
+    "accuracy": "mean",
+    "bce": "mean"
+}).round(3)
+print(summary_table)
+
 
 # Laad de data
 df = pd.read_csv(os.path.join(data_path, "results_alltimes_combined.csv"))
