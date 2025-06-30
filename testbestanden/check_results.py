@@ -9,14 +9,24 @@ import psutil
 import seaborn as sns
 import torch.nn as nn
 from sklearn.metrics import r2_score
-
 from scipy.stats import wasserstein_distance
 from sklearn.metrics import precision_score, recall_score, f1_score, matthews_corrcoef
 
-
-# Pad configuratie
+# region Pad configuratie
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
+""" uncomment de database die je wilt gebruiken"""
+# database = "CSI300"
+# database = "S&P500"
+# database = "NASDAQ_batches_5_200"
+# database = "testbatch1"
+# database = "testbatch2"
+database = "testbatch_mini"
+data_path = os.path.join(base_path, "data", database)
+print(data_path)
+label_path = os.path.join(data_path, "stock_labels.csv")
+print(label_path)
+# endregion
 
 def distribution(cpreds, labels, dpred):
     fig, axes = plt.subplots(1, 3, figsize=(15, 6))
@@ -168,12 +178,6 @@ def check_labelsvsprediction(path):
 
 
 # results = []
-
-data_path = os.path.join(base_path, "data", "CSI300")
-print(data_path)
-
-label_path = os.path.join(data_path, "stock_labels.csv")
-print(label_path)
 
 labelsdf = pd.read_csv(label_path, index_col=0)
 print(labelsdf['2024-10-09'].values)
