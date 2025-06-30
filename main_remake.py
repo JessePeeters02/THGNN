@@ -171,6 +171,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         daily_file = tmp_data["date"].replace(".pkl", ".csv")
         df = pd.read_csv(os.path.join(daily_stock_path, daily_file), dtype=object)
         df['score'] = pd.DataFrame({'score': result_new})
+        df['label'] = labels.cpu().numpy()
         df_score = pd.concat([df_score, df])
 
         # attention statistics, net zoals in jouw oorspronkelijke versie
@@ -213,25 +214,23 @@ if __name__ == "__main__":
     data_path = os.path.join(base_path, "data", "testbatch_mini")
     print(f"data_path: {data_path}")
 
-    data_train_predict_path = os.path.join(data_path, f"data_train_predict_mini") #gpu_wvt, oldway_0.6, gpu_wvt
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_DSE") #gpu_wvt, oldway_0.6, gpu_wvt
     print(f"data_train_predict_path: {data_train_predict_path}")
-    daily_stock_path = os.path.join(data_path, f"daily_stock_mini") #gpu_wvt, oldway, gpu_wvt
+    daily_stock_path = os.path.join(data_path, f"daily_stock_DSE") #gpu_wvt, oldway, gpu_wvt
     print(f"daily_stock_path: {daily_stock_path}")
     save_path = os.path.join(data_path, f"model_saved_rolingwindow_test")
     os.makedirs(save_path, exist_ok=True)
-    prediction_path = os.path.join(data_path, f"model_saved_rolingwindow_test")
-    os.makedirs(prediction_path, exist_ok=True)
-    print(prediction_path)
+    prediction_path = save_path
 
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
 
     val_len = 10
     window_len = 10
-    rolling_start = total_data_points - window_len - 1  # Laat genoeg ruimte over voor testdagen
-    rolling_end = total_data_points - 2                 # Laatste dag waarop je kan voorspellen
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
 
-    for T in range(rolling_start, rolling_end + 1):
+    for T in range(rolling_start, rolling_end):
         # Rolling setup per predictiedag T
         train_start = 0
         train_end = T - val_len - 1
