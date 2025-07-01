@@ -519,7 +519,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             # neg_ssa_count = neg_edges_ssa.shape[1]
             log_f.write(f"{current_date},{len(unique_stocks)},{pos_count},{neg_count}\n")
 
-def edges_to_adj_matrix(edges, num_nodFevas):
+def edges_to_adj_matrix(edges, num_nodes):
     """Converteer edges naar adjacency matrix"""
     adj = torch.zeros((num_nodes, num_nodes))
     if edges.size(1) > 0:
