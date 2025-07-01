@@ -422,18 +422,18 @@ def build_initial_edges_via_correlation(window_data, threshold):
 def evaluate_edges(model,snapshot, N, pred_pos, pred_neg):
     pos_edges_cos = snapshot['pos_edges_cos'].to(device)
     neg_edges_cos = snapshot['neg_edges_cos'].to(device)
-    pos_edges_ssa = snapshot['pos_edges_ssa'].to(device)
-    neg_edges_ssa = snapshot['neg_edges_ssa'].to(device)
+    # pos_edges_ssa = snapshot['pos_edges_ssa'].to(device)
+    # neg_edges_ssa = snapshot['neg_edges_ssa'].to(device)
 
     def edge_set(edges):
         return set(map(tuple, edges.T.cpu().numpy()))
 
     sets = {
         'cos_pos': edge_set(pos_edges_cos),
-        'ssa_pos': edge_set(pos_edges_ssa),
+        # 'ssa_pos': edge_set(pos_edges_ssa),
         'pred_pos': edge_set(pred_pos),
         'cos_neg': edge_set(neg_edges_cos),
-        'ssa_neg': edge_set(neg_edges_ssa),
+        # 'ssa_neg': edge_set(neg_edges_ssa),
         'pred_neg': edge_set(pred_neg),
     }
 
@@ -441,18 +441,18 @@ def evaluate_edges(model,snapshot, N, pred_pos, pred_neg):
         'date': snapshot['date'],
         'n_nodes': N,
         'cos_pos': len(sets['cos_pos']),
-        'ssa_pos': len(sets['ssa_pos']),
+        # 'ssa_pos': len(sets['ssa_pos']),
         'pred_pos': len(sets['pred_pos']),
         'overlap_cos_pred_pos': len(sets['cos_pos'] & sets['pred_pos']),
-        'overlap_ssa_pred_pos': len(sets['ssa_pos'] & sets['pred_pos']),
-        'overlap_cos_ssa_pos': len(sets['cos_pos'] & sets['ssa_pos']),
+        # 'overlap_ssa_pred_pos': len(sets['ssa_pos'] & sets['pred_pos']),
+        # 'overlap_cos_ssa_pos': len(sets['cos_pos'] & sets['ssa_pos']),
         'cos_neg': len(sets['cos_neg']),
-        'ssa_neg': len(sets['ssa_neg']),
+        # 'ssa_neg': len(sets['ssa_neg']),
         'pred_neg': len(sets['pred_neg']),
         'overlap_cos_pred_neg': len(sets['cos_neg'] & sets['pred_neg']),
-        'overlap_ssa_pred_neg': len(sets['ssa_neg'] & sets['pred_neg']),
-        'overlap_cos_ssa_neg': len(sets['cos_neg'] & sets['ssa_neg']),
-        'ssa_pos_neg_overlap': len(sets['ssa_pos'] & sets['ssa_neg']),
+        # 'overlap_ssa_pred_neg': len(sets['ssa_neg'] & sets['pred_neg']),
+        # 'overlap_cos_ssa_neg': len(sets['cos_neg'] & sets['ssa_neg']),
+        # 'ssa_pos_neg_overlap': len(sets['ssa_pos'] & sets['ssa_neg']),
         'cos_pos_to_pred_neg': len(sets['cos_pos'] & sets['pred_neg']),
         'cos_neg_to_pred_pos': len(sets['cos_neg'] & sets['pred_pos']),
     }
@@ -486,22 +486,22 @@ def prepare_dynamic_data(stock_data, window_size=20):
 
         pos_pairs, neg_pairs = build_initial_edges_via_cosine_similarity(window_data)
 
-        pos_pairs_tensor = pos_pairs.to(device)
-        neg_pairs_tensor = neg_pairs.to(device)
+        # pos_pairs_tensor = pos_pairs.to(device)
+        # neg_pairs_tensor = neg_pairs.to(device)
 
-        delta_A_pos, delta_A_neg = sign_semantics_aggregation(
-            len(unique_stocks), pos_pairs_tensor, neg_pairs_tensor
-        )
-        pos_edges_ssa = torch.nonzero(delta_A_pos).T.cpu()
-        neg_edges_ssa = torch.nonzero(delta_A_neg).T.cpu()
+        # delta_A_pos, delta_A_neg = sign_semantics_aggregation(
+        #     len(unique_stocks), pos_pairs_tensor, neg_pairs_tensor
+        # )
+        # pos_edges_ssa = torch.nonzero(delta_A_pos).T.cpu()
+        # neg_edges_ssa = torch.nonzero(delta_A_neg).T.cpu()
 
         snapshot_data = {
             'date': current_date,
             'features': feature_matrix,
             'pos_edges_cos': pos_pairs.cpu(),
             'neg_edges_cos': neg_pairs.cpu(),
-            'pos_edges_ssa': pos_edges_ssa,
-            'neg_edges_ssa': neg_edges_ssa,
+            # 'pos_edges_ssa': pos_edges_ssa,
+            # 'neg_edges_ssa': neg_edges_ssa,
             'tickers': unique_stocks,
             'full_window_data': window_data
         }
@@ -515,11 +515,11 @@ def prepare_dynamic_data(stock_data, window_size=20):
                 log_f.write("date,nodes,pos_edges_cos,neg_edges_cos,pos_edges_ssa,neg_edges_ssa\n")
             pos_count = pos_pairs.shape[1]
             neg_count = neg_pairs.shape[1]
-            pos_ssa_count = pos_edges_ssa.shape[1]
-            neg_ssa_count = neg_edges_ssa.shape[1]
-            log_f.write(f"{current_date},{len(unique_stocks)},{pos_count},{neg_count},{pos_ssa_count},{neg_ssa_count}\n")
+            # pos_ssa_count = pos_edges_ssa.shape[1]
+            # neg_ssa_count = neg_edges_ssa.shape[1]
+            log_f.write(f"{current_date},{len(unique_stocks)},{pos_count},{neg_count}\n")
 
-def edges_to_adj_matrix(edges, num_nodes):
+def edges_to_adj_matrix(edges, num_nodFevas):
     """Converteer edges naar adjacency matrix"""
     adj = torch.zeros((num_nodes, num_nodes))
     if edges.size(1) > 0:
@@ -557,17 +557,17 @@ def main1_generate():
 
             optimizer.zero_grad()
             features = torch.from_numpy(snapshot['features']).float().to(device)
-            edge_index_pos_ssa = snapshot['pos_edges_ssa'].to(device)
-            edge_index_neg_ssa = snapshot['neg_edges_ssa'].to(device)
+            edge_index_pos_cos = snapshot['pos_edges_cos'].to(device)
+            edge_index_neg_cos = snapshot['neg_edges_cos'].to(device)
             t = torch.tensor([0.0, 1.0], device=device)
 
             embeddings = model(
                 features,
-                edge_index_pos_ssa,
-                edge_index_neg_ssa,
+                edge_index_pos_cos,
+                edge_index_neg_cos,
                 t
             )
-            loss = model.full_loss(embeddings, edge_index_pos_ssa, edge_index_neg_ssa)
+            loss = model.full_loss(embeddings, edge_index_pos_cos, edge_index_neg_cos)
             if torch.isnan(loss):
                 print("NaN loss detected!")
                 for name, param in model.named_parameters():
