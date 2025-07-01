@@ -147,6 +147,7 @@ class StockHeteGAT(nn.Module):
         all_embedding, sem_attn_weights = self.sem_gat(all_embedding, requires_weight)
         all_embedding = self.pn(all_embedding)
         if requires_weight:
+            # print(f" pos_attn_weights shape: {pos_attn_weights.shape}, neg_attn_weights shape: {neg_attn_weights.shape}, sem_attn_weights shape: {sem_attn_weights.shape}")
             return (self.predictor(all_embedding), {"pos_attn_weights":pos_attn_weights, "neg_attn_weights":neg_attn_weights, "sem_attn_weights":sem_attn_weights})
         else:
             return self.predictor(all_embedding)

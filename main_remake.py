@@ -1,7 +1,8 @@
 from trainer.trainer import *
 from data_loader import *
 from model.Thgnn import *
-# from model.Thgnn_new import *
+# from model.Thgnn_no_beta import *
+# from model.Thgnn_no_alpha import *
 import warnings
 import torch
 import os
