@@ -9,8 +9,7 @@ import psutil
 import seaborn as sns
 import torch.nn as nn
 from sklearn.metrics import r2_score
-from scipy.stats import wasserstein_distance
-from sklearn.metrics import precision_score, recall_score, f1_score, matthews_corrcoef
+from scipy.stats import wasserstein_distance, ks_2samp
 
 # region Pad configuratie
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
@@ -25,9 +24,10 @@ database = "testbatch_mini"
 data_path = os.path.join(base_path, "data", database)
 print(data_path)
 prediction_path = os.path.join(data_path, "model_saved_rolingwindow_test")
-label_path = os.path.join(data_path, "labels.csv")
+output_path = prediction_path
 # endregion
 
+# region distributies
 def distribution(cpreds, labels, dpred):
     fig, axes = plt.subplots(1, 3, figsize=(15, 6))
     ax1, ax2, ax3 = axes.flatten()
@@ -79,7 +79,9 @@ def plot_distributions(predictions, labels):
     
     plt.tight_layout()
     plt.show()
+# endregion
 
+# region voorspellingen csv maken
 def evaluate_reg_predictions(predictions, labels):
     mae = np.mean(np.abs(predictions - labels))
     mse = np.mean((predictions - labels) ** 2)
@@ -94,10 +96,11 @@ def evaluate_reg_predictions(predictions, labels):
     # bce = BCE(tpredictions, tlabels)
     return mae, mse, r2, distance#, bce
 
-def check_labelsvsprediction(path):
-    predictionsdf = pd.read_csv(os.path.join(path, "pred.csv"))
+def check_labelsvsprediction():
+    predictionsdf = pd.read_csv(os.path.join(prediction_path, "pred.csv"))
     predictions = predictionsdf['score'].values
     labels = predictionsdf['label'].values
+    predictionsdf["dt"] = pd.to_datetime(predictionsdf["dt"])
 
     print(len(labels), len(predictions))
     tllabel_stats = f"Labels - Gemiddelde: {np.mean(labels):.4f}, Std: {np.std(labels):.4f}, Max: {np.max(labels):.4f}, Min: {np.min(labels):.4f}"
@@ -106,7 +109,7 @@ def check_labelsvsprediction(path):
     print(tllabel_stats)
     print(pred_stats)
 
-    mae, mse, r2 = evaluate_reg_predictions(predictions, labels)
+    mae, mse, r2, WS = evaluate_reg_predictions(predictions, labels)
     d, p = ks_2samp(labels, predictions)
     print(f"KS-D distribution: {d:.4f} (p-value={p:.4g})")
 
@@ -115,95 +118,97 @@ def check_labelsvsprediction(path):
     print(f"RMSE: {np.sqrt(mse):.6f}")
     print(f"R2: {r2:.6f}")
     # print(f"BCE: {bce:.6f}")
-    print(f"Accuracy op richting: {acc:.2%}")
+    # print(f"Accuracy op richting: {acc:.2%}")
 
-    for horizon, name in [(1, 'day1'), (5, 'day5'), (20, 'day20')]:
-        horizon_df = predictionsdf.groupby("code").head(horizon)
-        
-        preds = horizon_df["score"].values
-        if task == 'regression':
-            labs = np.tanh(np.log(horizon_df["true_score"].values + 1))
-        elif task == 'classification':
-            labs = (horizon_df["true_score"].values > 0).astype(float)
-
-        # print(preds[0:10])
-        # print(labs[0:10])
-        if task == 'regression':
-            mae, mse, r2, WS = evaluate_reg_predictions(preds, labs)
-            rmse = np.sqrt(mse)
-            bce, acc, precision, recall, f1, Mcorc = None, None, None, None, None, None
-        if task == 'classification':
-            bce, acc, precision, recall, f1, Mcorc = evaluate_cla_predictions(preds, labs)
-            bce = bce.item()
-            mae, mse, r2, rmse, WS = None, None, None, None, None
+    results = []
+    for day, group in predictionsdf.groupby("dt"):
+        preds = group["score"].values
+        labs = group["label"].values
+        mae, mse, r2, WS = evaluate_reg_predictions(preds, labs)
+        d, p = ks_2samp(labs, preds)
+        rmse = np.sqrt(mse)
 
         results.append({
-            # "positive_threshold": p,
-            # "negative_threshold": n,
-            "input": input,
-            "time": times,
-            "task": task,
-            "horizon": name,
+            "dt": day.strftime("%Y-%m-%d"),
             "mae": mae,
             "mse": mse,
             "rmse": rmse,
             "r2": r2,
-            "accuracy": acc,
-            "precission": precision,
-            "recall": recall,
-            "F1": f1,
-            "MCC": Mcorc,
-            "bce": bce,
-            "WS-dist": WS
+            "WS-dist": WS,
+            "KS-d": d,
+            "KS-p": p
         })
 
-    return tllabels, predictions
+    mae, mse, r2, WS = evaluate_reg_predictions(predictions, labels)
+    rmse = np.sqrt(mse)
+    d, p = ks_2samp(labels, predictions)
+    results.append({
+        "dt": "OVERALL",
+        "mae": mae,
+        "mse": mse,
+        "rmse": rmse,
+        "r2": r2,
+        "WS-dist": WS,
+        "KS-d": d,
+        "KS-p": p
+    })
+
+    result_df = pd.DataFrame(results)
+    os.makedirs(output_path, exist_ok=True)
+    save_name = os.path.join(output_path, "results_per_day.csv")
+    result_df.to_csv(save_name, index=False)
+    print(f"Dagresultaten opgeslagen naar: {save_name}")
+
+    return labels, predictions
+# endregion
+
+check_labelsvsprediction()
 
 
-# results = []
+""" oude code van grafieken maken, kan nog handig zijn ter inspiratie
+        # distribution(corrpredictions, labels, dynamipredictions)
 
-labelsdf = pd.read_csv(label_path, index_col=0)
-print(labelsdf['2024-10-09'].values)
-label_up = labelsdf['2024-10-09'].values > 0
-print(label_up)
-for predictionmap in os.listdir(os.path.join(data_path)):
-    
-    if not predictionmap.startswith("prediction"):
-        continue
+def nasdaq_batches():
+    for batchmap in os.listdir(os.path.join(data_path)):
+        if not batchmap.startswith("batch"):
+            continue
 
-    print(f"\npredictionmap: {predictionmap}")
-    parts = predictionmap[len("prediction_"):].split("_")
+        print(f"\nbatchmap: {batchmap}")
 
-    if (parts[0] == "random1") or (parts[0] == "random2") or (parts[0] == "random3"):
-        print("niet geselecteerd: ",predictionmap)
-        print(parts)
-        continue
+        for predictionmap in (os.path.join(data_path, batchmap)):
+            if not predictionmap.startswith("prediction_"):
+                continue
+            parts = predictionmap[len("prediction_"):].split("_")
 
-    print("wel geselecteerd: ",predictionmap)
-    print(parts)
-    input = ""
-    task = ""
-    times = ""
+            if (parts[0] == "random1") or (parts[0] == "random2") or (parts[0] == "random3"):
+                print("niet geselecteerd: ",batchmap)
+                print(parts)
+                continue
 
-    if len(parts) == 2:
-        input = parts[0]
-        task = "regression"
-        times = parts[1]
+            print("wel geselecteerd: ",batchmap)
+            print(parts)
+            input = ""
+            task = ""
+            times = ""
 
-    elif len(parts) == 3:
-        input = parts[0]
-        task = "classification"
-        times = parts[2]
+            if len(parts) == 2:
+                input = parts[0]
+                task = "regression"
+                times = parts[1]
 
-
-    print(f"Map: {predictionmap} → input: {input}, time: {times}, task: {task}")
-
-    prediction_path = os.path.join(data_path, predictionmap)
-    print(prediction_path)
-    labels, corrpredictions = check_labelsvsprediction(prediction_path)
+            elif len(parts) == 3:
+                input = parts[0]
+                task = "classification"
+                times = parts[2]
 
 
-    # distribution(corrpredictions, labels, dynamipredictions)
+            print(f"Map: {batchmap} → input: {input}, time: {times}, task: {task}")
+
+            prediction_path = os.path.join(data_path, batchmap)
+            print(prediction_path)
+            labels, corrpredictions = check_labelsvsprediction(prediction_path)
+
+
 
 results_df = pd.DataFrame(results)
 results_df.to_csv(os.path.join(data_path, "results_alltimes.csv"), index=False)
@@ -372,3 +377,5 @@ for i, horizon in enumerate(horizons):
 
 plt.tight_layout()
 plt.show()
+
+"""
