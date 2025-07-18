@@ -15,22 +15,6 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu') 
 print(f"Device: {device}")
 
-# alle paden relatief aanmaken
-base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(base_path, "data", "CSI300")
-daily_data_path = os.path.join(data_path, "normaliseddailydata")
-raw_data_path = os.path.join(data_path, "stockdata")
-# kies hieronder de map waarin je de resultaten wilt opslaan
-relation_path = os.path.join(data_path, "relation_DSE")
-os.makedirs(relation_path, exist_ok=True)
-snapshot_path= os.path.join(data_path, "intermediate_snapshots_DSE")
-os.makedirs(snapshot_path, exist_ok=True)
-data_train_predict_path = os.path.join(data_path, "data_train_predict_DSE")
-os.makedirs(data_train_predict_path, exist_ok=True)
-daily_stock_path = os.path.join(data_path, "daily_stock_DSE")
-os.makedirs(daily_stock_path, exist_ok=True)
-log_path = os.path.join(relation_path, f"snapshot_log.csv")
-
 # Hyperparameters
 prev_date_num = 20
 feature_cols1 = ['Open', 'High', 'Low', 'Close']
@@ -670,18 +654,142 @@ def main1_load():
                 os.path.join(daily_stock_path, f"{end_date}.csv"), index=False)
 
 
-# eenmalig inladen van alle data
-stock_data = load_all_stocks(daily_data_path)
-all_dates = sorted(stock_data['Date'].unique())
-date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
-raw_data = load_raw_stocks(raw_data_path, all_dates)
-unique_stocks = sorted(stock_data['Stock'].unique())
-stock_data = stock_data.sort_values(['Stock', 'Date'])
+def CSI300():
+    # alle paden relatief aanmaken
+    global base_path, data_path, daily_data_path, raw_data_path, relation_path, snapshot_path, data_train_predict_path, daily_stock_path, log_path, stock_data, all_dates, date_to_idx, raw_data, unique_stocks
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_path = os.path.join(base_path, "data", "CSI300")
+    daily_data_path = os.path.join(data_path, "normaliseddailydata")
+    raw_data_path = os.path.join(data_path, "stockdata")
+    # kies hieronder de map waarin je de resultaten wilt opslaan
+    relation_path = os.path.join(data_path, "relation_DSE")
+    os.makedirs(relation_path, exist_ok=True)
+    snapshot_path= os.path.join(data_path, "intermediate_snapshots_DSE")
+    os.makedirs(snapshot_path, exist_ok=True)
+    data_train_predict_path = os.path.join(data_path, "data_train_predict_DSE")
+    os.makedirs(data_train_predict_path, exist_ok=True)
+    daily_stock_path = os.path.join(data_path, "daily_stock_DSE")
+    os.makedirs(daily_stock_path, exist_ok=True)
+    log_path = os.path.join(relation_path, f"snapshot_log.csv")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
-# start model
-os.makedirs(os.path.dirname(log_path), exist_ok=True)
-prepare_dynamic_data(stock_data)
+    # eenmalig inladen van alle data
+    stock_data = load_all_stocks(daily_data_path)
+    all_dates = sorted(stock_data['Date'].unique())
+    date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
+    raw_data = load_raw_stocks(raw_data_path, all_dates)
+    unique_stocks = sorted(stock_data['Stock'].unique())
+    stock_data = stock_data.sort_values(['Stock', 'Date'])
+
+    # start model
+    prepare_dynamic_data(stock_data)
+
+    main1_generate()
+    main1_load()
+
+def SP500():
+    # alle paden relatief aanmaken
+    global base_path, data_path, daily_data_path, raw_data_path, relation_path, snapshot_path, data_train_predict_path, daily_stock_path, log_path, stock_data, all_dates, date_to_idx, raw_data, unique_stocks
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_path = os.path.join(base_path, "data", "S&P500")
+    daily_data_path = os.path.join(data_path, "normaliseddailydata")
+    raw_data_path = os.path.join(data_path, "stockdata")
+    # kies hieronder de map waarin je de resultaten wilt opslaan
+    relation_path = os.path.join(data_path, "relation_DSE")
+    os.makedirs(relation_path, exist_ok=True)
+    snapshot_path= os.path.join(data_path, "intermediate_snapshots_DSE")
+    os.makedirs(snapshot_path, exist_ok=True)
+    data_train_predict_path = os.path.join(data_path, "data_train_predict_DSE")
+    os.makedirs(data_train_predict_path, exist_ok=True)
+    daily_stock_path = os.path.join(data_path, "daily_stock_DSE")
+    os.makedirs(daily_stock_path, exist_ok=True)
+    log_path = os.path.join(relation_path, f"snapshot_log.csv")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+    # eenmalig inladen van alle data
+    stock_data = load_all_stocks(daily_data_path)
+    all_dates = sorted(stock_data['Date'].unique())
+    date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
+    raw_data = load_raw_stocks(raw_data_path, all_dates)
+    unique_stocks = sorted(stock_data['Stock'].unique())
+    stock_data = stock_data.sort_values(['Stock', 'Date'])
+
+    # start model
+    prepare_dynamic_data(stock_data)
+
+    main1_generate()
+    main1_load()
+
+def testbatch_mini():
+    # alle paden relatief aanmaken
+    global base_path, data_path, daily_data_path, raw_data_path, relation_path, snapshot_path, data_train_predict_path, daily_stock_path, log_path, stock_data, all_dates, date_to_idx, raw_data, unique_stocks
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_path = os.path.join(base_path, "data", "testbatch_mini")
+    daily_data_path = os.path.join(data_path, "normaliseddailydata")
+    raw_data_path = os.path.join(data_path, "stockdata")
+    # kies hieronder de map waarin je de resultaten wilt opslaan
+    relation_path = os.path.join(data_path, "relation_DSE")
+    os.makedirs(relation_path, exist_ok=True)
+    snapshot_path= os.path.join(data_path, "intermediate_snapshots_DSE")
+    os.makedirs(snapshot_path, exist_ok=True)
+    data_train_predict_path = os.path.join(data_path, "data_train_predict_DSE")
+    os.makedirs(data_train_predict_path, exist_ok=True)
+    daily_stock_path = os.path.join(data_path, "daily_stock_DSE")
+    os.makedirs(daily_stock_path, exist_ok=True)
+    log_path = os.path.join(relation_path, f"snapshot_log.csv")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+    # eenmalig inladen van alle data
+    stock_data = load_all_stocks(daily_data_path)
+    all_dates = sorted(stock_data['Date'].unique())
+    date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
+    raw_data = load_raw_stocks(raw_data_path, all_dates)
+    unique_stocks = sorted(stock_data['Stock'].unique())
+    stock_data = stock_data.sort_values(['Stock', 'Date'])
+
+    # start model
+    prepare_dynamic_data(stock_data)
+
+    main1_generate()
+    main1_load()
+
+def nasdaq5batches():
+    # alle paden relatief aanmaken
+    global base_path, data_path, daily_data_path, raw_data_path, relation_path, snapshot_path, data_train_predict_path, daily_stock_path, log_path, stock_data, all_dates, date_to_idx, raw_data, unique_stocks
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    for i in range(5):
+        data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
+        data_path = os.path.join(data_path, f"batch_{i+1}")
+        daily_data_path = os.path.join(data_path, "normaliseddailydata")
+        raw_data_path = os.path.join(data_path, "stockdata")
+        # kies hieronder de map waarin je de resultaten wilt opslaan
+        relation_path = os.path.join(data_path, "relation_DSE")
+        os.makedirs(relation_path, exist_ok=True)
+        snapshot_path= os.path.join(data_path, "intermediate_snapshots_DSE")
+        os.makedirs(snapshot_path, exist_ok=True)
+        data_train_predict_path = os.path.join(data_path, "data_train_predict_DSE")
+        os.makedirs(data_train_predict_path, exist_ok=True)
+        daily_stock_path = os.path.join(data_path, "daily_stock_DSE")
+        os.makedirs(daily_stock_path, exist_ok=True)
+        log_path = os.path.join(relation_path, f"snapshot_log.csv")
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+        # eenmalig inladen van alle data
+        stock_data = load_all_stocks(daily_data_path)
+        all_dates = sorted(stock_data['Date'].unique())
+        date_to_idx = {date: idx for idx, date in enumerate(all_dates)}
+        raw_data = load_raw_stocks(raw_data_path, all_dates)
+        unique_stocks = sorted(stock_data['Stock'].unique())
+        stock_data = stock_data.sort_values(['Stock', 'Date'])
+
+        # start model
+        prepare_dynamic_data(stock_data)
+
+        main1_generate()
+        main1_load()
 
 
-main1_generate()
-main1_load()
+# CSI300()
+# SP500()
+# testbatch_mini()
+nasdaq5batches()
