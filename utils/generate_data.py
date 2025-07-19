@@ -15,19 +15,6 @@ prev_date_num = 20
 threshold = 0.4
 min_neighbors = 3
 
-# Basis pad naar de data-map
-base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
-print(base_path)
-data_path = os.path.join(base_path, "data", "S&P500")
-print(data_path)
-relation_path = os.path.join(data_path, "correlations")
-print(relation_path)
-raw_data_path = os.path.join(data_path, "stockdata")
-print(raw_data_path)
-stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
-print(stock_data_path)
-
-
 # Functie om de CSV-bestanden in te lezen en om te zetten naar een DataFrame
 def load_stock_data(raw_stock_path, stock_data_path):
 
@@ -54,15 +41,6 @@ def calculate_label(raw_df, current_date):
     close_today = raw_df.iloc[date_idx]['Close']
     close_tomorrow = raw_df.iloc[date_idx+1]['Close']
     return (close_tomorrow / close_today) - 1
-
-# Laad de stock data
-raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
-# print(stock_data)
-
-# Bepaal de unieke datums uit de data
-all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
-# print(f"Unique dates determined: {len(all_dates)}")
-# print(all_dates)
 
 # def prepare_adjacencymatrix(enddt):
 #     relation_file = os.path.join(relation_path, f"{enddt}.csv")
@@ -269,7 +247,7 @@ def fun(iend, enddt, stock_data, pdn, tr, mn):
         raw_df = raw_data[stock_name]
         if len(df_window) == pdn:
             features.append(df_window[feature_cols].values)
-            label = calculate_label(raw_df, end_date)
+            label = calculate_label(raw_df, enddt)
             labels.append(label)
         else:
             print(' huh, len df window pdn????')
@@ -292,23 +270,109 @@ def fun(iend, enddt, stock_data, pdn, tr, mn):
 # fun('2022-11-30', '2022-11-01', '2022-11-30', stock_data)
 # fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
 
+def CSI300():
+    global base_path, data_path, relation_path, raw_data_path, stock_data_path, raw_data, stock_data, all_dates, data_train_predict_path, daily_stock_path
+    # Basis pad naar de data-map
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
+    print(base_path)
+    data_path = os.path.join(base_path, "data", "CSI300")
+    print(data_path)
+    relation_path = os.path.join(data_path, "correlations")
+    print(relation_path)
+    raw_data_path = os.path.join(data_path, "stockdata")
+    print(raw_data_path)
+    stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
+    print(stock_data_path)
 
-already_done = True
-for i in tqdm(range(prev_date_num-1, len(all_dates)), desc=f"Processing dates"):
-    end_date = all_dates[i]
-    if already_done:
-        if end_date == '2024-03-26':
-            already_done = False
-            continue
-    data_train_predict_path = os.path.join(data_path, "data_train_predict_corr")
-    os.makedirs(data_train_predict_path, exist_ok=True)
-    daily_stock_path = os.path.join(data_path, "daily_stock_corr")
-    os.makedirs(daily_stock_path, exist_ok=True)
-    fun(i, end_date, stock_data, prev_date_num, threshold, min_neighbors)
+    raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
+    all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
+    for i in tqdm(range(prev_date_num-1, len(all_dates)), desc=f"Processing dates"):
+        end_date = all_dates[i]
+        data_train_predict_path = os.path.join(data_path, "data_train_predict_correlation")
+        os.makedirs(data_train_predict_path, exist_ok=True)
+        daily_stock_path = os.path.join(data_path, "daily_stock_correlation")
+        os.makedirs(daily_stock_path, exist_ok=True)
+        fun(i, end_date, stock_data, prev_date_num, threshold, min_neighbors)
+
+def SP500():
+    global base_path, data_path, relation_path, raw_data_path, stock_data_path, raw_data, stock_data, all_dates, data_train_predict_path, daily_stock_path
+    # Basis pad naar de data-map
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
+    print(base_path)
+    data_path = os.path.join(base_path, "data", "S&P500")
+    print(data_path)
+    relation_path = os.path.join(data_path, "correlations")
+    print(relation_path)
+    raw_data_path = os.path.join(data_path, "stockdata")
+    print(raw_data_path)
+    stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
+    print(stock_data_path)
+
+    raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
+    all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
+    for i in tqdm(range(prev_date_num-1, len(all_dates)), desc=f"Processing dates"):
+        end_date = all_dates[i]
+        data_train_predict_path = os.path.join(data_path, "data_train_predict_correlation")
+        os.makedirs(data_train_predict_path, exist_ok=True)
+        daily_stock_path = os.path.join(data_path, "daily_stock_correlation")
+        os.makedirs(daily_stock_path, exist_ok=True)
+        fun(i, end_date, stock_data, prev_date_num, threshold, min_neighbors)
+
+def testbatch_mini():
+    global base_path, data_path, relation_path, raw_data_path, stock_data_path, raw_data, stock_data, all_dates, data_train_predict_path, daily_stock_path
+    # Basis pad naar de data-map
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
+    print(base_path)
+    data_path = os.path.join(base_path, "data", "testbatch_mini")
+    print(data_path)
+    relation_path = os.path.join(data_path, "correlations")
+    print(relation_path)
+    raw_data_path = os.path.join(data_path, "stockdata")
+    print(raw_data_path)
+    stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
+    print(stock_data_path)
+
+    raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
+    all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
+    for i in tqdm(range(prev_date_num-1, len(all_dates)), desc=f"Processing dates"):
+        end_date = all_dates[i]
+        data_train_predict_path = os.path.join(data_path, "data_train_predict_correlation")
+        os.makedirs(data_train_predict_path, exist_ok=True)
+        daily_stock_path = os.path.join(data_path, "daily_stock_correlation")
+        os.makedirs(daily_stock_path, exist_ok=True)
+        fun(i, end_date, stock_data, prev_date_num, threshold, min_neighbors)
+
+def nasdaq5batches():
+    global base_path, data_path, relation_path, raw_data_path, stock_data_path, raw_data, stock_data, all_dates, data_train_predict_path, daily_stock_path
+    # Basis pad naar de data-map
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
+    print(base_path)
+    for i in range(5):
+        data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
+        data_path = os.path.join(data_path, f"batch_{i+1}")
+        print(data_path)
+        relation_path = os.path.join(data_path, "correlations")
+        print(relation_path)
+        raw_data_path = os.path.join(data_path, "stockdata")
+        print(raw_data_path)
+        stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
+        print(stock_data_path)
+
+        raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
+        all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
+        for i in tqdm(range(prev_date_num-1, len(all_dates)-1), desc=f"Processing dates"):
+            end_date = all_dates[i]
+            data_train_predict_path = os.path.join(data_path, "data_train_predict_correlation")
+            os.makedirs(data_train_predict_path, exist_ok=True)
+            daily_stock_path = os.path.join(data_path, "daily_stock_correlation")
+            os.makedirs(daily_stock_path, exist_ok=True)
+            fun(i, end_date, stock_data, prev_date_num, threshold, min_neighbors)
 
 
-
-
+# CSI300()
+# SP500()
+testbatch_mini()
+# nasdaq5batches()
 
 
 # import os

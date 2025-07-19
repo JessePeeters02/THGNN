@@ -17,7 +17,7 @@ print(f"Using device: {device}")
 # Path setup
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print(base_path)
-data_path = os.path.join(base_path, "data", "testbatch_1000")
+data_path = os.path.join(base_path, "data", "testbatch_mini")
 print(data_path)
 relation_path = os.path.join(data_path, "correlations")
 os.makedirs(relation_path, exist_ok=True)
@@ -115,18 +115,18 @@ def main(asc):
 if __name__ == "__main__":
 
     # Path setup
-    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    print(base_path)
-    data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
-    print(data_path)
+    # base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # print(base_path)
+    # data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
+    # print(data_path)
 
-    for batchmap in os.listdir(data_path):
-        print(batchmap)
-        relation_path = os.path.join(data_path, batchmap, "correlations")
-        os.makedirs(relation_path, exist_ok=True)
-        print(relation_path)
-        stock_data_path = os.path.join(data_path, batchmap, "dailydata")
-        print(stock_data_path)
+    # for batchmap in os.listdir(data_path):
+        # print(batchmap)
+    # relation_path = os.path.join(data_path, "correlations")
+    # os.makedirs(relation_path, exist_ok=True)
+    # print(relation_path)
+    # stock_data_path = os.path.join(data_path, "dailydata")
+    # print(stock_data_path)
 
-        ascending = True
-        main(ascending)
+    ascending = True
+    main(ascending)
