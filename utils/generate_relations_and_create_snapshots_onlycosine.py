@@ -317,7 +317,7 @@ def nasdaq5batches():
         prepare_dynamic_data(stock_data)
 
 
-# CSI300()
-# SP500()
-# testbatch_mini()
+CSI300()
+SP500()
+testbatch_mini()
 nasdaq5batches()

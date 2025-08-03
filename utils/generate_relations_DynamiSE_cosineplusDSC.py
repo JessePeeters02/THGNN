@@ -789,7 +789,7 @@ def nasdaq5batches():
         main1_load()
 
 
-# CSI300()
-# SP500()
-# testbatch_mini()
+CSI300()
+SP500()
+testbatch_mini()
 nasdaq5batches()
