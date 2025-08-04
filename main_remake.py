@@ -207,30 +207,26 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     index=False,
     header=not os.path.exists(os.path.join(prediction_path, "attention_weights.csv"))
     )
-    
-if __name__ == "__main__":
 
+def CSI300_corr():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
-    data_path = os.path.join(base_path, "data", "testbatch_mini")
+    data_path = os.path.join(base_path, "data", "CSI300")
     print(f"data_path: {data_path}")
-
-    data_train_predict_path = os.path.join(data_path, f"data_train_predict_DSE") #gpu_wvt, oldway_0.6, gpu_wvt
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
     print(f"data_train_predict_path: {data_train_predict_path}")
-    daily_stock_path = os.path.join(data_path, f"daily_stock_DSE") #gpu_wvt, oldway, gpu_wvt
+    daily_stock_path = os.path.join(data_path, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
     print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, f"model_saved_rolingwindow_test")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_corr")
     os.makedirs(save_path, exist_ok=True)
     prediction_path = save_path
-
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
-
     val_len = 10
-    window_len = 10
+    window_len = 20
     rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
     rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
-
     for T in range(rolling_start, rolling_end):
         # Rolling setup per predictiedag T
         train_start = 0
@@ -238,17 +234,598 @@ if __name__ == "__main__":
         val_start = T - val_len
         val_end = T - 1
         predict_day = T
-
         data_start = train_start
         data_middle = val_start
         data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
-
         pre_data = f"rolling_T{T}"
-
         print(f"\n==== Rolling predictiedag: T={T} ====")
         print(f"Train: {train_start} - {train_end}")
         print(f"Val:   {val_start} - {val_end}")
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data) 
 
+def CSI300_onlycosine():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "CSI300")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_onlycosine") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_onlycosine") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_onlycosine")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+def CSI300_cosineDSC():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "CSI300")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_cosineDSC") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_cosineDSC") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_cosineDSC")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+def CSI300_full():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "CSI300")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_DSE") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_DSE") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+
+def SP500_corr():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "S&P500")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_corr")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data) 
+
+def SP500_onlycosine():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "S&P500")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_onlycosine") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_onlycosine") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_onlycosine")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+def SP500_cosineDSC():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "S&P500")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_cosineDSC") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_cosineDSC") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_cosineDSC")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+def SP500_full():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "S&P500")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_DSE") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_DSE") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+
+def testbatch_mini_corr():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "testbatch_mini")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_corr")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data) 
+
+def testbatch_mini_onlycosine():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "testbatch_mini")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_onlycosine") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_onlycosine") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_onlycosine")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+def testbatch_mini_cosineDSC():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "testbatch_mini")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_cosineDSC") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_cosineDSC") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_cosineDSC")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+def testbatch_mini_full():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "testbatch_mini")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_DSE") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_DSE") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+
+def nasdaq5batches_corr():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    for i in range(5):
+        data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
+        data_path = os.path.join(data_path, f"batch_{i+1}")
+        print(f"data_path: {data_path}")
+        data_train_predict_path = os.path.join(data_path, f"data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
+        print(f"data_train_predict_path: {data_train_predict_path}")
+        daily_stock_path = os.path.join(data_path, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
+        print(f"daily_stock_path: {daily_stock_path}")
+        save_path = os.path.join(data_path, f"model_saved_rolingwindow_corr")
+        os.makedirs(save_path, exist_ok=True)
+        prediction_path = save_path
+        total_data_points = len(os.listdir(data_train_predict_path))
+        print(f"Total data points: {total_data_points}")
+        val_len = 10
+        window_len = 20
+        rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+        rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+        for T in range(rolling_start, rolling_end):
+            # Rolling setup per predictiedag T
+            train_start = 0
+            train_end = T - val_len - 1
+            val_start = T - val_len
+            val_end = T - 1
+            predict_day = T
+            data_start = train_start
+            data_middle = val_start
+            data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+            pre_data = f"rolling_T{T}"
+            print(f"\n==== Rolling predictiedag: T={T} ====")
+            print(f"Train: {train_start} - {train_end}")
+            print(f"Val:   {val_start} - {val_end}")
+            print(f"Test:  {predict_day}")
+            print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+            fun_train_predict(data_start, data_middle, data_end, pre_data) 
+
+def nasdaq5batches_onlycosine():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    for i in range(5):
+        data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
+        data_path = os.path.join(data_path, f"batch_{i+1}")
+        print(f"data_path: {data_path}")
+        data_train_predict_path = os.path.join(data_path, f"data_train_predict_onlycosine") #gpu_wvt, oldway_0.6, gpu_wvt
+        print(f"data_train_predict_path: {data_train_predict_path}")
+        daily_stock_path = os.path.join(data_path, f"daily_stock_onlycosine") #gpu_wvt, oldway, gpu_wvt
+        print(f"daily_stock_path: {daily_stock_path}")
+        save_path = os.path.join(data_path, f"model_saved_rolingwindow_onlycosine")
+        os.makedirs(save_path, exist_ok=True)
+        prediction_path = save_path
+        total_data_points = len(os.listdir(data_train_predict_path))
+        print(f"Total data points: {total_data_points}")
+        val_len = 10
+        window_len = 20
+        rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+        rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+        for T in range(rolling_start, rolling_end):
+            # Rolling setup per predictiedag T
+            train_start = 0
+            train_end = T - val_len - 1
+            val_start = T - val_len
+            val_end = T - 1
+            predict_day = T
+            data_start = train_start
+            data_middle = val_start
+            data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+            pre_data = f"rolling_T{T}"
+            print(f"\n==== Rolling predictiedag: T={T} ====")
+            print(f"Train: {train_start} - {train_end}")
+            print(f"Val:   {val_start} - {val_end}")
+            print(f"Test:  {predict_day}")
+            print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+            fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+def nasdaq5batches_cosineDSC():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    for i in range(5):
+        data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
+        data_path = os.path.join(data_path, f"batch_{i+1}")
+        print(f"data_path: {data_path}")
+        data_train_predict_path = os.path.join(data_path, f"data_train_predict_cosineDSC") #gpu_wvt, oldway_0.6, gpu_wvt
+        print(f"data_train_predict_path: {data_train_predict_path}")
+        daily_stock_path = os.path.join(data_path, f"daily_stock_cosineDSC") #gpu_wvt, oldway, gpu_wvt
+        print(f"daily_stock_path: {daily_stock_path}")
+        save_path = os.path.join(data_path, f"model_saved_rolingwindow_cosineDSC")
+        os.makedirs(save_path, exist_ok=True)
+        prediction_path = save_path
+        total_data_points = len(os.listdir(data_train_predict_path))
+        print(f"Total data points: {total_data_points}")
+        val_len = 10
+        window_len = 20
+        rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+        rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+        for T in range(rolling_start, rolling_end):
+            # Rolling setup per predictiedag T
+            train_start = 0
+            train_end = T - val_len - 1
+            val_start = T - val_len
+            val_end = T - 1
+            predict_day = T
+            data_start = train_start
+            data_middle = val_start
+            data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+            pre_data = f"rolling_T{T}"
+            print(f"\n==== Rolling predictiedag: T={T} ====")
+            print(f"Train: {train_start} - {train_end}")
+            print(f"Val:   {val_start} - {val_end}")
+            print(f"Test:  {predict_day}")
+            print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+            fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+def nasdaq5batches_full():
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    for i in range(5):
+        data_path = os.path.join(base_path, "data", "NASDAQ_batches_5_200")
+        data_path = os.path.join(data_path, f"batch_{i+1}")
+        print(f"data_path: {data_path}")
+        data_train_predict_path = os.path.join(data_path, f"data_train_predict_DSE") #gpu_wvt, oldway_0.6, gpu_wvt
+        print(f"data_train_predict_path: {data_train_predict_path}")
+        daily_stock_path = os.path.join(data_path, f"daily_stock_DSE") #gpu_wvt, oldway, gpu_wvt
+        print(f"daily_stock_path: {daily_stock_path}")
+        save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE")
+        os.makedirs(save_path, exist_ok=True)
+        prediction_path = save_path
+        total_data_points = len(os.listdir(data_train_predict_path))
+        print(f"Total data points: {total_data_points}")
+        val_len = 10
+        window_len = 20
+        rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+        rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+        for T in range(rolling_start, rolling_end):
+            # Rolling setup per predictiedag T
+            train_start = 0
+            train_end = T - val_len - 1
+            val_start = T - val_len
+            val_end = T - 1
+            predict_day = T
+            data_start = train_start
+            data_middle = val_start
+            data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+            pre_data = f"rolling_T{T}"
+            print(f"\n==== Rolling predictiedag: T={T} ====")
+            print(f"Train: {train_start} - {train_end}")
+            print(f"Val:   {val_start} - {val_end}")
+            print(f"Test:  {predict_day}")
+            print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+            fun_train_predict(data_start, data_middle, data_end, pre_data)
+
+
+
+CSI300_corr()
+CSI300_onlycosine()
+CSI300_cosineDSC()
+CSI300_full()
+SP500_corr()
+SP500_onlycosine()
+SP500_cosineDSC()
+SP500_full()
+testbatch_mini_corr()
+testbatch_mini_onlycosine()
+testbatch_mini_cosineDSC()
+testbatch_mini_full()
+nasdaq5batches_corr()
+nasdaq5batches_onlycosine()
+nasdaq5batches_cosineDSC()
+nasdaq5batches_full()
