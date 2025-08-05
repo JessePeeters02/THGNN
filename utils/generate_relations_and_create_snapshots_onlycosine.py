@@ -147,7 +147,7 @@ def calculate_label(raw_df, current_date):
 
 def prepare_dynamic_data(stock_data, window_size=20):
 
-    for i in tqdm(range(window_size-1, len(date_to_idx)), desc="Preparing snapshots"):
+    for i in tqdm(range(window_size-1, len(date_to_idx)-1), desc="Preparing snapshots"):
 
         current_date = all_dates[i]
 
