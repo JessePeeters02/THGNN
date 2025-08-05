@@ -2,12 +2,12 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from tqdm import tqdm
-import pickle
-import torch
-import psutil
+# from tqdm import tqdm
+# import pickle
+# import torch
+# import psutil
 import seaborn as sns
-import torch.nn as nn
+# import torch.nn as nn
 from sklearn.metrics import r2_score
 from scipy.stats import wasserstein_distance, ks_2samp
 
@@ -17,11 +17,11 @@ print(base_path)
 """ uncomment de database die je wilt gebruiken"""
 # database = "CSI300"
 # database = "S&P500"
-# database = "NASDAQ_batches_5_200"
+database = "NASDAQ_batches_5_200", "batch_X"
 # database = "testbatch1"
 # database = "testbatch2"
-database = "testbatch_mini"
-data_path = os.path.join(base_path, "data", database)
+# database = "testbatch_mini"
+data_path = os.path.join(base_path, "data", *database)
 print(data_path)
 prediction_path = os.path.join(data_path, "model_saved_rolingwindow_test")
 output_path = prediction_path
