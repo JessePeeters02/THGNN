@@ -17,7 +17,7 @@ print(f"Using device: {device}")
 # Path setup
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print(base_path)
-data_path = os.path.join(base_path, "data", "testbatch_mini")
+data_path = os.path.join(base_path, "data", "S&P500")
 print(data_path)
 relation_path = os.path.join(data_path, "correlations")
 os.makedirs(relation_path, exist_ok=True)

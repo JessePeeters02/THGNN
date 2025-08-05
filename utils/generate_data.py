@@ -6,6 +6,7 @@ from tqdm import tqdm
 import networkx as nx
 import pandas as pd
 from torch.autograd import Variable
+import time
 
 # Definieer de kolommen die we willen gebruiken uit de CSV-bestanden
 # feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
@@ -271,6 +272,8 @@ def fun(iend, enddt, stock_data, pdn, tr, mn):
 # fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
 
 def CSI300():
+    print(f"Start CSI300: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, relation_path, raw_data_path, stock_data_path, raw_data, stock_data, all_dates, data_train_predict_path, daily_stock_path
     # Basis pad naar de data-map
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
@@ -286,15 +289,20 @@ def CSI300():
 
     raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
     all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
-    for i in tqdm(range(prev_date_num-1, len(all_dates)), desc=f"Processing dates"):
+    for i in tqdm(range(prev_date_num-1, len(all_dates)-1), desc=f"Processing dates"):
         end_date = all_dates[i]
-        data_train_predict_path = os.path.join(data_path, "data_train_predict_correlation")
+        data_train_predict_path = os.path.join(data_path, "data_train_predict_corr")
         os.makedirs(data_train_predict_path, exist_ok=True)
-        daily_stock_path = os.path.join(data_path, "daily_stock_correlation")
+        daily_stock_path = os.path.join(data_path, "daily_stock_corr")
         os.makedirs(daily_stock_path, exist_ok=True)
         fun(i, end_date, stock_data, prev_date_num, threshold, min_neighbors)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done CSI300. Time taken: {minutes_taken} minutes") 
 
 def SP500():
+    print(f"Start SP500: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, relation_path, raw_data_path, stock_data_path, raw_data, stock_data, all_dates, data_train_predict_path, daily_stock_path
     # Basis pad naar de data-map
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
@@ -310,15 +318,20 @@ def SP500():
 
     raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
     all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
-    for i in tqdm(range(prev_date_num-1, len(all_dates)), desc=f"Processing dates"):
+    for i in tqdm(range(prev_date_num-1, len(all_dates)-1), desc=f"Processing dates"):
         end_date = all_dates[i]
-        data_train_predict_path = os.path.join(data_path, "data_train_predict_correlation")
+        data_train_predict_path = os.path.join(data_path, "data_train_predict_corr")
         os.makedirs(data_train_predict_path, exist_ok=True)
-        daily_stock_path = os.path.join(data_path, "daily_stock_correlation")
+        daily_stock_path = os.path.join(data_path, "daily_stock_corr")
         os.makedirs(daily_stock_path, exist_ok=True)
         fun(i, end_date, stock_data, prev_date_num, threshold, min_neighbors)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done SP500. Time taken: {minutes_taken} minutes")
 
 def testbatch_mini():
+    print(f"Start testbatch_mini: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, relation_path, raw_data_path, stock_data_path, raw_data, stock_data, all_dates, data_train_predict_path, daily_stock_path
     # Basis pad naar de data-map
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
@@ -334,15 +347,21 @@ def testbatch_mini():
 
     raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
     all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
-    for i in tqdm(range(prev_date_num-1, len(all_dates)), desc=f"Processing dates"):
+    for i in tqdm(range(prev_date_num-1, len(all_dates)-1), desc=f"Processing dates"):
         end_date = all_dates[i]
-        data_train_predict_path = os.path.join(data_path, "data_train_predict_correlation")
+        data_train_predict_path = os.path.join(data_path, "data_train_predict_corr")
         os.makedirs(data_train_predict_path, exist_ok=True)
-        daily_stock_path = os.path.join(data_path, "daily_stock_correlation")
+        daily_stock_path = os.path.join(data_path, "daily_stock_corr")
         os.makedirs(daily_stock_path, exist_ok=True)
         fun(i, end_date, stock_data, prev_date_num, threshold, min_neighbors)
+    
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done testbatch_mini. Time taken: {minutes_taken} minutes")
 
 def nasdaq5batches():
+    print(f"Start nasdaq5batches: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, relation_path, raw_data_path, stock_data_path, raw_data, stock_data, all_dates, data_train_predict_path, daily_stock_path
     # Basis pad naar de data-map
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
@@ -362,17 +381,20 @@ def nasdaq5batches():
         all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
         for i in tqdm(range(prev_date_num-1, len(all_dates)-1), desc=f"Processing dates"):
             end_date = all_dates[i]
-            data_train_predict_path = os.path.join(data_path, "data_train_predict_correlation")
+            data_train_predict_path = os.path.join(data_path, "data_train_predict_corr")
             os.makedirs(data_train_predict_path, exist_ok=True)
-            daily_stock_path = os.path.join(data_path, "daily_stock_correlation")
+            daily_stock_path = os.path.join(data_path, "daily_stock_corr")
             os.makedirs(daily_stock_path, exist_ok=True)
             fun(i, end_date, stock_data, prev_date_num, threshold, min_neighbors)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done nasdaq5batches. Time taken: {minutes_taken} minutes")
 
 
 # CSI300()
 # SP500()
 testbatch_mini()
-# nasdaq5batches()
+nasdaq5batches()
 
 
 # import os
