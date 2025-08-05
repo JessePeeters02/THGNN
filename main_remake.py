@@ -13,6 +13,7 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 from tqdm import tqdm
 import numpy as np
+import time
 
 warnings.filterwarnings("ignore")
 t_float = torch.float64
@@ -209,6 +210,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     )
 
 def CSI300_corr():
+    print(f"Start CSI300_corr: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -243,9 +246,14 @@ def CSI300_corr():
         print(f"Val:   {val_start} - {val_end}")
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
-        fun_train_predict(data_start, data_middle, data_end, pre_data) 
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done CSI300_corr. Time taken: {minutes_taken} minutes") 
 
 def CSI300_onlycosine():
+    print(f"Start CSI300_onlycosine: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -281,8 +289,13 @@ def CSI300_onlycosine():
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done CSI300_onlycosine. Time taken: {minutes_taken} minutes") 
 
 def CSI300_cosineDSC():
+    print(f"Start CSI300_cosineDSC: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -318,8 +331,13 @@ def CSI300_cosineDSC():
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done CSI300_cosineDSC. Time taken: {minutes_taken} minutes") 
 
 def CSI300_full():
+    print(f"Start CSI300_full: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -355,9 +373,14 @@ def CSI300_full():
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done CSI300_full. Time taken: {minutes_taken} minutes") 
 
 
 def SP500_corr():
+    print(f"Start SP500_corr: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -393,8 +416,13 @@ def SP500_corr():
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data) 
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done SP500_corr. Time taken: {minutes_taken} minutes") 
 
 def SP500_onlycosine():
+    print(f"Start SP500_onlycosine: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -430,8 +458,13 @@ def SP500_onlycosine():
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done SP500_onlycosine. Time taken: {minutes_taken} minutes") 
 
 def SP500_cosineDSC():
+    print(f"Start SP500_cosineDSC: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -467,8 +500,13 @@ def SP500_cosineDSC():
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done SP500_cosineDSC. Time taken: {minutes_taken} minutes")
 
 def SP500_full():
+    print(f"Start SP500_full: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -504,9 +542,14 @@ def SP500_full():
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done SP500_full. Time taken: {minutes_taken} minutes")
 
 
 def testbatch_mini_corr():
+    print(f"Start testbatch_mini_corr: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -542,8 +585,13 @@ def testbatch_mini_corr():
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data) 
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done testbatch_mini_corr. Time taken: {minutes_taken} minutes")
 
 def testbatch_mini_onlycosine():
+    print(f"Start testbatch_mini_onlycosine: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -579,8 +627,13 @@ def testbatch_mini_onlycosine():
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done testbatch_mini_onlycosine. Time taken: {minutes_taken} minutes")
 
 def testbatch_mini_cosineDSC():
+    print(f"Start testbatch_mini_cosineDSC: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -616,8 +669,13 @@ def testbatch_mini_cosineDSC():
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done testbatch_mini_cosineDSC. Time taken: {minutes_taken} minutes")
 
 def testbatch_mini_full():
+    print(f"Start testbatch_mini_full: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -653,9 +711,14 @@ def testbatch_mini_full():
         print(f"Test:  {predict_day}")
         print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
         fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done testbatch_mini_full. Time taken: {minutes_taken} minutes")
 
 
 def nasdaq5batches_corr():
+    print(f"Start nasdaq5batches_corr: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -692,9 +755,14 @@ def nasdaq5batches_corr():
             print(f"Val:   {val_start} - {val_end}")
             print(f"Test:  {predict_day}")
             print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
-            fun_train_predict(data_start, data_middle, data_end, pre_data) 
+            fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done nasdaq5batches_corr. Time taken: {minutes_taken} minutes") 
 
 def nasdaq5batches_onlycosine():
+    print(f"Start nasdaq5batches_onlycosine: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -732,8 +800,13 @@ def nasdaq5batches_onlycosine():
             print(f"Test:  {predict_day}")
             print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
             fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done nasdaq5batches_onlycosine. Time taken: {minutes_taken} minutes") 
 
 def nasdaq5batches_cosineDSC():
+    print(f"Start nasdaq5batches_cosineDSC: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -771,8 +844,13 @@ def nasdaq5batches_cosineDSC():
             print(f"Test:  {predict_day}")
             print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
             fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done nasdaq5batches_cosineDSC. Time taken: {minutes_taken} minutes") 
 
 def nasdaq5batches_full():
+    print(f"Start nasdaq5batches_full: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
@@ -810,7 +888,9 @@ def nasdaq5batches_full():
             print(f"Test:  {predict_day}")
             print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
             fun_train_predict(data_start, data_middle, data_end, pre_data)
-
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done nasdaq5batches_full. Time taken: {minutes_taken} minutes") 
 
 
 CSI300_corr()
