@@ -182,7 +182,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         sem_weights = weights["sem_attn_weights"].cpu().numpy()
 
         df_weights = pd.concat([df_weights, pd.DataFrame({
-            "sample_id": i,
+            "sample_id": i+1,
+            "dt": tmp_data["date"].replace(".pkl", ""),
             "pos_weight_mean": np.mean(pos_weights),
             "neg_weight_mean": np.mean(neg_weights),
             "beta_self_mean": np.mean(sem_weights[:, 0]),
@@ -191,9 +192,11 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         }, index=[0])])
 
     # totaalmean toevoegen
-    total_means = df_weights.mean(numeric_only=True).to_dict()
-    total_means["sample_id"] = "TOTAAL"
-    df_weights = pd.concat([df_weights, pd.DataFrame([total_means])], ignore_index=True)
+    if len(df_weights) > 1:
+        total_means = df_weights.mean(numeric_only=True).to_dict()
+        total_means["sample_id"] = "TOTAAL"
+        total_means["dt"] = "/"
+        df_weights = pd.concat([df_weights, pd.DataFrame([total_means])], ignore_index=True)
 
     df_score.to_csv(
     os.path.join(prediction_path, "pred.csv"),
@@ -377,7 +380,6 @@ def CSI300_full():
     minutes_taken = round((end_time - start_time) / 60, 1)
     print(f"Done CSI300_full. Time taken: {minutes_taken} minutes") 
 
-
 def SP500_corr():
     print(f"Start SP500_corr: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     start_time = time.time()
@@ -546,7 +548,6 @@ def SP500_full():
     minutes_taken = round((end_time - start_time) / 60, 1)
     print(f"Done SP500_full. Time taken: {minutes_taken} minutes")
 
-
 def testbatch_mini_corr():
     print(f"Start testbatch_mini_corr: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     start_time = time.time()
@@ -714,7 +715,6 @@ def testbatch_mini_full():
     end_time = time.time()
     minutes_taken = round((end_time - start_time) / 60, 1)
     print(f"Done testbatch_mini_full. Time taken: {minutes_taken} minutes")
-
 
 def nasdaq5batches_corr():
     print(f"Start nasdaq5batches_corr: {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -893,19 +893,47 @@ def nasdaq5batches_full():
     print(f"Done nasdaq5batches_full. Time taken: {minutes_taken} minutes") 
 
 
-CSI300_corr()
-CSI300_onlycosine()
-CSI300_cosineDSC()
-CSI300_full()
-SP500_corr()
-SP500_onlycosine()
-SP500_cosineDSC()
-SP500_full()
-testbatch_mini_corr()
-testbatch_mini_onlycosine()
-testbatch_mini_cosineDSC()
+# nog te runnen:
+# CSI300_corr()
+# CSI300_onlycosine()
+# CSI300_cosineDSC()
+# CSI300_full()
+# SP500_corr()
+# SP500_onlycosine()
+# SP500_cosineDSC()
+# SP500_full()
+# testbatch_mini_corr()
+# testbatch_mini_onlycosine()
+# testbatch_mini_cosineDSC()
+# testbatch_mini_full()
+# nasdaq5batches_corr()
+# nasdaq5batches_onlycosine()
+# nasdaq5batches_cosineDSC()
+# nasdaq5batches_full()
+
+
+# bezig met runnen:
 testbatch_mini_full()
-nasdaq5batches_corr()
-nasdaq5batches_onlycosine()
-nasdaq5batches_cosineDSC()
-nasdaq5batches_full()
+testbatch_mini_corr()
+
+
+# succesvol gerund:
+
+
+# # al de functies klaar om te runnen
+# CSI300_corr()
+# CSI300_onlycosine()
+# CSI300_cosineDSC()
+# CSI300_full()
+# SP500_corr()
+# SP500_onlycosine()
+# SP500_cosineDSC()
+# SP500_full()
+# testbatch_mini_corr()
+# testbatch_mini_onlycosine()
+# testbatch_mini_cosineDSC()
+# testbatch_mini_full()
+# nasdaq5batches_corr()
+# nasdaq5batches_onlycosine()
+# nasdaq5batches_cosineDSC()
+# nasdaq5batches_full()
