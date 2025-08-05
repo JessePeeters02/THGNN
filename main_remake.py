@@ -894,27 +894,24 @@ def nasdaq5batches_full():
 
 
 # nog te runnen:
-# CSI300_corr()
-# CSI300_onlycosine()
-# CSI300_cosineDSC()
-# CSI300_full()
-# SP500_corr()
-# SP500_onlycosine()
-# SP500_cosineDSC()
-# SP500_full()
 # testbatch_mini_corr()
 # testbatch_mini_onlycosine()
 # testbatch_mini_cosineDSC()
 # testbatch_mini_full()
-# nasdaq5batches_corr()
-# nasdaq5batches_onlycosine()
-# nasdaq5batches_cosineDSC()
-# nasdaq5batches_full()
-
 
 # bezig met runnen:
-testbatch_mini_full()
-testbatch_mini_corr()
+CSI300_full()
+CSI300_corr()
+SP500_full()
+SP500_corr()
+nasdaq5batches_full()
+nasdaq5batches_corr()
+CSI300_onlycosine()
+CSI300_cosineDSC()
+SP500_onlycosine()
+SP500_cosineDSC()
+nasdaq5batches_onlycosine()
+nasdaq5batches_cosineDSC()
 
 
 # succesvol gerund:
