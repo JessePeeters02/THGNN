@@ -35,12 +35,13 @@ edge_evaluation = True
 
 def load_all_stocks(stock_data_path):
     all_stock_data = []
-    for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
+    # for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
+    for file in os.listdir(stock_data_path):
         if file.endswith('.csv'):
             df = pd.read_csv(os.path.join(stock_data_path, file))
             all_stock_data.append(df[['Date', 'Stock'] + feature_cols2])
     all_stock_data = pd.concat(all_stock_data, ignore_index=True)
-    print(all_stock_data.head()) # kleine test om te zien of data deftig is ingeladen
+    # print(all_stock_data.head()) # kleine test om te zien of data deftig is ingeladen
 
         # Enkel laatste X dagen
     if restrict_last_n_days is not None:
@@ -48,14 +49,15 @@ def load_all_stocks(stock_data_path):
         last_dates = all_dates[-restrict_last_n_days:]
         all_stock_data = all_stock_data[all_stock_data['Date'].isin(last_dates)]
 
-    print(all_stock_data.head())  # test of data deftig is
+    # print(all_stock_data.head())  # test of data deftig is
 
     return all_stock_data
 
 def load_raw_stocks(raw_stock_path, all_dates):
     raw_files = [f for f in os.listdir(raw_stock_path) if f.endswith('.csv')]
     raw_data = {}
-    for file in tqdm(raw_files, desc="Loading raw data for label creation"):
+    # for file in tqdm(raw_files, desc="Loading raw data for label creation"):
+    for file in raw_files:
         stock_name = file.split('.')[0]
         df = pd.read_csv(os.path.join(raw_stock_path, file), parse_dates=['Date'])
         # if restrict_last_n_days is not None:
@@ -347,7 +349,8 @@ def build_initial_edges_via_correlation(window_data, threshold):
     corr_matrix = np.zeros((n_stocks, n_stocks))
 
     # Bereken correlaties tussen alle paren van stocks
-    for i in tqdm(range(n_stocks), desc="Calculating correlations"):
+    # for i in tqdm(range(n_stocks), desc="Calculating correlations"):
+    for i in range(n_stocks):
         for j in range(i+1, n_stocks):
             feature_correlations = []
             for f in range(len(feature_cols1)):
@@ -452,7 +455,8 @@ def prepare_dynamic_data(stock_data, window_size=20):
     # bool_eerste = True
     already_done = set(fname.replace('.pkl', '') for fname in os.listdir(snapshot_path) if fname.endswith('.pkl'))
 
-    for i in tqdm(range(window_size-1, len(date_to_idx)), desc="Preparing snapshots"):
+    # for i in tqdm(range(window_size-1, len(date_to_idx)), desc="Preparing snapshots"):
+    for i in range(window_size-1, len(date_to_idx)):
 
         current_date = all_dates[i]
 
@@ -519,19 +523,20 @@ def calculate_label(raw_df, current_date):
 
 def main1_generate():
     num_snapshots = len([fname for fname in os.listdir(snapshot_path) if fname.endswith('.pkl')])
-    print(f"Aantal snapshots: {num_snapshots}")
 
     model = DynamiSE(num_features=len(feature_cols2), hidden_dim=hidden_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    
+
     best_loss = float('inf')
     training_results = []
 
     for epoch in range(num_epochs):
         model.train()
         epoch_losses = []
+        early_stop_due_to_nan = False  # voeg deze flag toe
 
-        for date in tqdm(all_dates[prev_date_num-1:], desc=f"Epoch {epoch+1} van de {num_epochs}"):
+        # for date in tqdm(all_dates[prev_date_num-1:], desc=f"Epoch {epoch+1} van de {num_epochs}"):
+        for date in all_dates[prev_date_num-1:]:
             snapshot_file = os.path.join(snapshot_path, f"{date}.pkl")
             if not os.path.exists(snapshot_file):
                 print(f"Error: {snapshot_file} for date {date} not found.")
@@ -545,37 +550,47 @@ def main1_generate():
             edge_index_neg_cos = snapshot['neg_edges_cos'].to(device)
             t = torch.tensor([0.0, 1.0], device=device)
 
-            embeddings = model(
-                features,
-                edge_index_pos_cos,
-                edge_index_neg_cos,
-                t
-            )
-            loss = model.full_loss(embeddings, edge_index_pos_cos, edge_index_neg_cos)
-            if torch.isnan(loss):
-                print("NaN loss detected!")
-                for name, param in model.named_parameters():
-                    if torch.isnan(param.grad).any():
-                        print(f"NaN in gradients of {name}")
-                raise ValueError("NaN in loss")
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()
+            try:
+                embeddings = model(features, edge_index_pos_cos, edge_index_neg_cos, t)
+                loss = model.full_loss(embeddings, edge_index_pos_cos, edge_index_neg_cos)
 
-            epoch_losses.append(loss.item())
+                if torch.isnan(loss):
+                    print(f" NaN loss detected during epoch {epoch+1}, date {date}.")
+                    raise ValueError("NaN in loss")
+
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                optimizer.step()
+
+                epoch_losses.append(loss.item())
+
+            except ValueError as e:
+                print(f" Training stopped early due to numerical issue: {e}")
+                print(" Saving best model so far and exiting training loop.")
+                early_stop_due_to_nan = True
+                break  # verlaat binnenste loop
+
+        if early_stop_due_to_nan:
+            training_results.append("NaN detected")
+            break  # verlaat de outer loop
+
+        if not epoch_losses:
+            break
 
         avg_loss = np.average(epoch_losses, weights=np.arange(1, len(epoch_losses)+1))
-        print(f"Epoch {epoch+1}, Avg Loss: {avg_loss}")
         training_results.append(avg_loss)
 
         if avg_loss < best_loss:
             best_loss = avg_loss
             torch.save(model.state_dict(), os.path.join(relation_path, "best_model.pth"))
-            print(f"Beste model opgeslagen in {relation_path} met loss {best_loss}")
+            print(f" Best model so far saved with loss {best_loss:.4f} (epoch {epoch+1})")
+        else:
+            print(f"Epoch {epoch+1} completed — avg loss: {avg_loss:.4f}")
 
+    # log resultaten zelfs als training vroegtijdig stopt
     results_df = pd.DataFrame({'epoch': range(1, len(training_results)+1), 'loss': training_results})
     results_df.to_csv(os.path.join(relation_path, "training_results.csv"), index=False)
-    print(f"Trainingsresultaten opgeslagen.")
+    print(" Training results saved.")
 
             
 def main1_load():
@@ -583,7 +598,8 @@ def main1_load():
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth"), map_location=device))
     model.eval()
 
-    for date in tqdm(all_dates[prev_date_num-1:-1], desc="Generating outputs"):
+    # for date in tqdm(all_dates[prev_date_num-1:-1], desc="Generating outputs"):
+    for date in all_dates[prev_date_num-1:-1]:
         snapshot_file = os.path.join(snapshot_path, f"{date}.pkl")
         if not os.path.exists(snapshot_file):
             print(f"Error: {snapshot_file} for date {date} not found.")
