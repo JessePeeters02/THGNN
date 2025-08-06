@@ -17,14 +17,24 @@ print(base_path)
 """ uncomment de database die je wilt gebruiken"""
 # database = "CSI300"
 # database = "S&P500"
-database = "NASDAQ_batches_5_200", "batch_X"
+database = "NASDAQ_batches_5_200", "batch_1"
+# database = "NASDAQ_batches_5_200", "batch_2"
+# database = "NASDAQ_batches_5_200", "batch_3"
+# database = "NASDAQ_batches_5_200", "batch_4"
+# database = "NASDAQ_batches_5_200", "batch_5"
 # database = "testbatch1"
 # database = "testbatch2"
 # database = "testbatch_mini"
+if isinstance(database, str):
+    database = [database]
 data_path = os.path.join(base_path, "data", *database)
 print(data_path)
-prediction_path = os.path.join(data_path, "model_saved_rolingwindow_test")
-output_path = prediction_path
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_test")
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_corr")
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_onlycosine")
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_cosineDSC")
+prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSE")
+output_path = os.path.join(data_path, "results")
 # endregion
 
 # region distributies
@@ -152,10 +162,11 @@ def check_labelsvsprediction():
         "KS-d": d,
         "KS-p": p
     })
-
+    plot_distributions(predictions, labels)
     result_df = pd.DataFrame(results)
     os.makedirs(output_path, exist_ok=True)
-    save_name = os.path.join(output_path, "results_per_day.csv")
+    prediction_type = os.path.basename(prediction_path).replace("model_saved_rolingwindow_", "")
+    save_name = os.path.join(output_path, f"results_{prediction_type}.csv")
     result_df.to_csv(save_name, index=False)
     print(f"Dagresultaten opgeslagen naar: {save_name}")
 
