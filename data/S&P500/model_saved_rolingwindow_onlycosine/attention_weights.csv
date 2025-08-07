@@ -1,0 +1,2 @@
+sample_id,dt,pos_weight_mean,neg_weight_mean,beta_self_mean,beta_pos_mean,beta_neg_mean
+1,2024-05-10,0.0020576133,0.0020576133,0.04110179,0.001968129,0.95693004
