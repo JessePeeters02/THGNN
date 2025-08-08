@@ -110,6 +110,7 @@ def check_labelsvsprediction():
     predictionsdf = pd.read_csv(os.path.join(prediction_path, "pred.csv"))
     predictions = predictionsdf['score'].values
     labels = predictionsdf['label'].values
+    # labels = np.tanh(np.log(labels + 1))
     predictionsdf["dt"] = pd.to_datetime(predictionsdf["dt"])
 
     print(len(labels), len(predictions))

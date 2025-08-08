@@ -60,7 +60,7 @@ class Args:
         self.max_epochs = 20
         self.epochs_eval = 10
         # learning rate settings
-        self.lr = 0.001
+        self.lr = 0.0005
         self.gamma = 0.3
         # model settings
         self.hidden_dim = 128
@@ -68,8 +68,8 @@ class Args:
         self.out_features = 32
         self.model_name = "StockHeteGAT"
         self.loss_fcn = mse_loss
+        # self.loss_fcn = mae_loss
         # save model settings
-        #self.save_path = os.path.join(os.path.abspath('.'), "/home/THGNN-main/data/model_saved/")
         self.save_path = save_path
         self.load_path = self.save_path
         self.save_name = self.model_name + "_hidden_" + str(self.hidden_dim) + "_head_" + str(self.num_heads) + \
@@ -81,6 +81,7 @@ class Args:
     def regression(self):
         self.save_name = self.save_name + "_reg_rank_"
         self.loss_fcn = mse_loss
+        # self.loss_fcn = mae_loss
         self.label_dir = self.label_dir + "_regression"
         self.mask_dir = self.mask_dir + "_regression"
 
@@ -393,6 +394,48 @@ def SP500_corr():
     daily_stock_path = os.path.join(data_path, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
     print(f"daily_stock_path: {daily_stock_path}")
     save_path = os.path.join(data_path, f"model_saved_rolingwindow_corr")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data) 
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done SP500_corr. Time taken: {minutes_taken} minutes") 
+
+def SP500_corr_log():
+    print(f"Start SP500_corr_log: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "S&P500")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_corr_log") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_corr_log") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_corr_log")
     os.makedirs(save_path, exist_ok=True)
     prediction_path = save_path
     total_data_points = len(os.listdir(data_train_predict_path))
@@ -900,18 +943,19 @@ def nasdaq5batches_full():
 # testbatch_mini_full()
 
 # bezig met runnen:
-CSI300_full()
-CSI300_corr()
-SP500_full()
+# CSI300_full()
+# CSI300_corr()
+# SP500_full()
+# SP500_corr_log()
 SP500_corr()
-nasdaq5batches_full()
-nasdaq5batches_corr()
-CSI300_onlycosine()
-CSI300_cosineDSC()
-SP500_onlycosine()
-SP500_cosineDSC()
-nasdaq5batches_onlycosine()
-nasdaq5batches_cosineDSC()
+# nasdaq5batches_full()
+# nasdaq5batches_corr()
+# CSI300_onlycosine()
+# CSI300_cosineDSC()
+# SP500_onlycosine()
+# SP500_cosineDSC()
+# nasdaq5batches_onlycosine()
+# nasdaq5batches_cosineDSC()
 
 
 # succesvol gerund:

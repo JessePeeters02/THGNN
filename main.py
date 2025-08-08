@@ -235,25 +235,25 @@ if __name__ == "__main__":
     data_path = os.path.join(base_path, "data", "CSI300")
     print(f"data_path: {data_path}")
 
-    for i in [1,2,3]:
 
-        data_train_predict_path = os.path.join(data_path, f"data_train_predict_random{i}") #gpu_wvt, oldway_0.6, gpu_wvt
-        print(f"data_train_predict_path: {data_train_predict_path}")
-        daily_stock_path = os.path.join(data_path, f"daily_stock_random{i}") #gpu_wvt, oldway, gpu_wvt
-        print(f"daily_stock_path: {daily_stock_path}")
-        save_path = os.path.join(data_path, f"model_saved_random_{i}_-120")
-        os.makedirs(save_path, exist_ok=True)
-        prediction_path = os.path.join(data_path, f"prediction_random_{i}_-120")
-        os.makedirs(prediction_path, exist_ok=True)
-        print(prediction_path)
 
-        total_data_points = len(os.listdir(data_train_predict_path))
-        print(f"Total data points: {total_data_points}")
-        data_start = 0
-        data_middle = total_data_points-20 - 120
-        data_end = total_data_points -120
-        pre_data = '2025-03-07'
-        fun_train_predict(data_start, data_middle, data_end, pre_data)
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_corr") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_test")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = os.path.join(data_path, f"prediction_test")
+    os.makedirs(prediction_path, exist_ok=True)
+    print(prediction_path)
+
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    data_start = 0
+    data_middle = total_data_points-20 - 120
+    data_end = total_data_points -120
+    pre_data = '2025-03-07'
+    fun_train_predict(data_start, data_middle, data_end, pre_data)
 
             # data_train_predict_path = os.path.join(data_path, f"data_train_predict_csi300") #gpu_wvt, oldway_0.6, gpu_wvt
             # print(f"data_train_predict_path: {data_train_predict_path}")
