@@ -522,36 +522,3 @@ def SP500log():
 # #         fun(stock_m[-1], stock_m[0], stock_m[-1], df1)
 # fun('2022-11-30','2022-11-01','2022-11-30',df1)
 # fun('2022-12-30','2022-12-01','2022-12-30',df1)
-
-
-
-def SP500logwl():
-    print(f"Start SP500: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-    start_time = time.time()
-    global base_path, data_path, relation_path, raw_data_path, stock_data_path, raw_data, stock_data, all_dates, data_train_predict_path, daily_stock_path
-    # Basis pad naar de data-map
-    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
-    print(base_path)
-    data_path = os.path.join(base_path, "data", "S&P500")
-    print(data_path)
-    relation_path = os.path.join(data_path, "correlations")
-    print(relation_path)
-    raw_data_path = os.path.join(data_path, "stockdata")
-    print(raw_data_path)
-    stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
-    print(stock_data_path)
-
-    raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
-    all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
-    for i in tqdm(range(prev_date_num-1, len(all_dates)-1), desc=f"Processing dates"):
-        end_date = all_dates[i]
-        data_train_predict_path = os.path.join(data_path, "data_train_predict_corr_wl")
-        os.makedirs(data_train_predict_path, exist_ok=True)
-        daily_stock_path = os.path.join(data_path, "daily_stock_corr_wl")
-        os.makedirs(daily_stock_path, exist_ok=True)
-        fun(i, end_date, stock_data, prev_date_num, threshold, min_neighbors)
-    end_time = time.time()
-    minutes_taken = round((end_time - start_time) / 60, 1)
-    print(f"Done SP500. Time taken: {minutes_taken} minutes")
-    
-    SP500logwl()
