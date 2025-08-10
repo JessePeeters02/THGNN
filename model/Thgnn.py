@@ -35,19 +35,34 @@ class GraphAttnMultiHead(Module):
         self.weight_v.data.uniform_(-stdv, stdv)
 
     def forward(self, inputs, adj_mat, requires_weight=False):
-        # print("Adj density:", adj_mat.sum().item() / adj_mat.numel())
         support = torch.mm(inputs, self.weight)
-        support = support.reshape(-1, self.num_heads, self.out_features).permute(dims=(1, 0, 2))
+        support = support.reshape(-1, self.num_heads, self.out_features).permute(1, 0, 2)
         f_1 = torch.matmul(support, self.weight_u).reshape(self.num_heads, 1, -1)
         f_2 = torch.matmul(support, self.weight_v).reshape(self.num_heads, -1, 1)
         logits = f_1 + f_2
-        # print("Logits voor leaky_relu min/max/mean/std:", logits.min().item(), logits.max().item(), logits.mean().item(), logits.std().item())
         weight = self.leaky_relu(logits)
-        masked_weight = torch.mul(weight, adj_mat).to_sparse()
-        # print("Masked logits mean/std/min/max:", masked_weight.coalesce().values().mean().item(), masked_weight.coalesce().values().std().item(), masked_weight.coalesce().values().min().item(), masked_weight.coalesce().values().max().item())
-        attn_weights = torch.sparse.softmax(masked_weight, dim=2).to_dense()
+
+        # Kies snelste pad o.b.v. dichtheid
+        with torch.no_grad():
+            # adj_mat kan [N,N] of [H,N,N] zijn; we nemen mean over laatste 2 dims
+            if adj_mat.dim() == 2:
+                density = (adj_mat != 0).float().mean()
+            else:
+                density = (adj_mat != 0).float().mean(dim=(-2, -1)).mean()
+        use_sparse = adj_mat.is_sparse and float(density.item()) < 0.15
+
+        if use_sparse:
+            masked_weight = torch.mul(weight, adj_mat).to_sparse()
+            attn_weights = torch.sparse.softmax(masked_weight, dim=2).to_dense()
+        else:
+            # Dense: mask wegvullen met zeer negatieve waarde en softmax over dim=2
+            mask = (adj_mat > 0)
+            very_neg = torch.finfo(weight.dtype).min
+            logits_masked = weight.masked_fill(~mask, very_neg)
+            attn_weights = torch.softmax(logits_masked, dim=2)
+
         support = torch.matmul(attn_weights, support)
-        support = support.permute(dims=(1, 0, 2)).reshape(-1, self.num_heads * self.out_features)
+        support = support.permute(1, 0, 2).reshape(-1, self.num_heads * self.out_features)
         if self.bias is not None:
             support = support + self.bias
         if self.residual:
@@ -100,7 +115,7 @@ class GraphAttnSemIndividual(Module):
 
 
 class StockHeteGAT(nn.Module):
-    def __init__(self, in_features=4, out_features=8, num_heads=8, hidden_dim=64, num_layers=1):
+    def __init__(self, in_features=6, out_features=8, num_heads=8, hidden_dim=64, num_layers=1):
         super(StockHeteGAT, self).__init__()
         self.encoding = nn.GRU(
             input_size=in_features,

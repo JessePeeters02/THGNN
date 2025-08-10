@@ -31,10 +31,11 @@ def evaluate(model, features, adj_pos, adj_neg, labels, mask, loss_func):
 
 
 def extract_data(data_dict, device):
-    pos_adj = data_dict['pos_adj'].to(device).squeeze()
-    neg_adj = data_dict['neg_adj'].to(device).squeeze()
-    features = data_dict['features'].to(device).squeeze()
-    labels = data_dict['labels'].to(device).squeeze()
+    to_dev = lambda t: t.to(device, non_blocking=True)
+    pos_adj = to_dev(data_dict['pos_adj']).squeeze()
+    neg_adj = to_dev(data_dict['neg_adj']).squeeze()
+    features = to_dev(data_dict['features']).squeeze()
+    labels = to_dev(data_dict['labels']).squeeze()
 
     # print(f'features mean: {features.mean(dim=(0,1))}, features std: {features.std(dim=(0,1))}')
     # print(f"features std: {features.std().item()}, labels std: {labels.std().item()}")
