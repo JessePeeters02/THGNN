@@ -231,7 +231,7 @@ def CSI300_corr():
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
     val_len = 10
-    window_len = 20
+    window_len = 120
     rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
     rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
     for T in range(rolling_start, rolling_end):
@@ -357,7 +357,7 @@ def CSI300_full():
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
     val_len = 10
-    window_len = 20
+    window_len = 120
     rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
     rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
     for T in range(rolling_start, rolling_end):
@@ -943,19 +943,18 @@ def nasdaq5batches_full():
 # testbatch_mini_full()
 
 # bezig met runnen:
-# CSI300_full()
-# CSI300_corr()
-# SP500_full()
-# SP500_corr_log()
+SP500_full()
 SP500_corr()
-# nasdaq5batches_full()
-# nasdaq5batches_corr()
-# CSI300_onlycosine()
-# CSI300_cosineDSC()
-# SP500_onlycosine()
-# SP500_cosineDSC()
-# nasdaq5batches_onlycosine()
-# nasdaq5batches_cosineDSC()
+CSI300_full()
+CSI300_corr()
+nasdaq5batches_full()
+nasdaq5batches_corr()
+CSI300_onlycosine()
+CSI300_cosineDSC()
+SP500_onlycosine()
+SP500_cosineDSC()
+nasdaq5batches_onlycosine()
+nasdaq5batches_cosineDSC()
 
 
 # succesvol gerund:
@@ -967,6 +966,7 @@ SP500_corr()
 # CSI300_cosineDSC()
 # CSI300_full()
 # SP500_corr()
+# SP500_corr_log()
 # SP500_onlycosine()
 # SP500_cosineDSC()
 # SP500_full()

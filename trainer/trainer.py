@@ -105,7 +105,7 @@ def train_epoch(epoch, args, model, dataset_train, optimizer, scheduler, loss_fc
             model.zero_grad()
             pos_adj, neg_adj, features, labels, mask = extract_data(data, args.device)
             logits,*_ = model(features, pos_adj, neg_adj)
-            print("corr pred-label:", np.corrcoef(logits.detach().cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten())[0,1])
+            # print("corr pred-label:", np.corrcoef(logits.detach().cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten())[0,1])
             loss = loss_fcn(logits[mask], labels[mask])
             # print(f"loss: {loss}")
             loss.backward()
