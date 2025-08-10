@@ -44,15 +44,16 @@ def extract_data(data_dict, device):
     # voor log data
     # labels = torch.log(labels+1)/0.025
     # labels = torch.tanh(torch.log(labels +1)/0.025)
-    
+
     # voor niet log data
-    features = features/2
-    features = torch.clip(features, -5, 5)
+    # features = features/2
+    # features = torch.clip(features, -5, 5)
     # print(f"features shape: {features.shape}")
     # feature_norm = nn.LayerNorm(features.size()[1:]).to(device)
     # features = feature_norm(features)
     # labels = torch.log(labels+1)/0.025
-    labels = torch.tanh(torch.log(labels +1)/0.025)
+    labels = torch.tanh(torch.log(labels +1))
+    # labels = torch.tanh(torch.log(labels +1)/0.025)
     # print(f'features mean: {features.mean(dim=(0,1))}, features std: {features.std(dim=(0,1))}')
     # print(f"features std: {features.std().item()}, labels std: {labels.std().item()}")
     # print(f"features min: {features.min().item()}, labels min: {labels.min().item()}")

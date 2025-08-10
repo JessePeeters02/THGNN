@@ -28,8 +28,8 @@ class GraphAttnMultiHead(Module):
         stdv = 1. / math.sqrt(self.weight.size(-1))
         if self.bias is not None:
             self.bias.data.uniform_(-stdv, stdv)
-        # self.weight.data.uniform_(-stdv, stdv)
-        self.weight.data.uniform_(-1, 1)
+        self.weight.data.uniform_(-stdv, stdv)
+        # self.weight.data.uniform_(-1, 1)
         stdv = 1. / math.sqrt(self.weight_u.size(-1))
         self.weight_u.data.uniform_(-stdv, stdv)
         self.weight_v.data.uniform_(-stdv, stdv)
@@ -123,15 +123,15 @@ class StockHeteGAT(nn.Module):
         self.mlp_self = nn.Linear(hidden_dim, hidden_dim)
         self.mlp_pos = nn.Linear(out_features*num_heads, hidden_dim)
         self.mlp_neg = nn.Linear(out_features*num_heads, hidden_dim)
-        # self.pn = PairNorm(mode='PN-SI')
+        self.pn = PairNorm(mode='PN-SI')
         # self.pn = PairNorm(mode='PN')
-        self.pn = PairNorm(mode='None')
+        # self.pn = PairNorm(mode='None')
         self.sem_gat = GraphAttnSemIndividual(in_features=hidden_dim,
                                               hidden_size=hidden_dim,
                                               act=nn.Tanh())
         self.predictor = nn.Sequential(
             nn.Linear(hidden_dim, 1),
-            # nn.Tanh()  
+            nn.Tanh()  
             # nn.Sigmoid()
         )
 
