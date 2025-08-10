@@ -60,7 +60,7 @@ class Args:
         self.max_epochs = 20
         self.epochs_eval = 10
         # learning rate settings
-        self.lr = 0.0005
+        self.lr = 0.001
         self.gamma = 0.3
         # model settings
         self.hidden_dim = 128

@@ -34,10 +34,6 @@ def extract_data(data_dict, device):
     pos_adj = data_dict['pos_adj'].to(device).squeeze()
     neg_adj = data_dict['neg_adj'].to(device).squeeze()
     features = data_dict['features'].to(device).squeeze()
-    mask1 = torch.ones(features.shape[2], dtype=torch.bool)
-    mask1[5] = False
-    mask1[4] = False
-    features = features[:, :, mask1]
     labels = data_dict['labels'].to(device).squeeze()
 
     # print(f'features mean: {features.mean(dim=(0,1))}, features std: {features.std(dim=(0,1))}')
@@ -48,8 +44,7 @@ def extract_data(data_dict, device):
     # voor log data
     # labels = torch.log(labels+1)/0.025
     # labels = torch.tanh(torch.log(labels +1)/0.025)
-
-
+    
     # voor niet log data
     features = features/2
     features = torch.clip(features, -5, 5)
