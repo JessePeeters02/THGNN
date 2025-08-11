@@ -1029,18 +1029,18 @@ def nasdaq5batches_full():
 # CSI300_STATIC()
 
 # bezig met runnen:
-SP500_full()
-SP500_corr()
-CSI300_full()
-CSI300_corr()
-nasdaq5batches_full()
-nasdaq5batches_corr()
-CSI300_onlycosine()
-CSI300_cosineDSC()
+# SP500_full()
+# SP500_corr()
+# CSI300_full()
+# CSI300_corr()
+# nasdaq5batches_full()
+# nasdaq5batches_corr()
+# CSI300_onlycosine()
+# CSI300_cosineDSC()
 SP500_onlycosine()
 SP500_cosineDSC()
-nasdaq5batches_onlycosine()
-nasdaq5batches_cosineDSC()
+# nasdaq5batches_onlycosine()
+# nasdaq5batches_cosineDSC()
 
 
 # succesvol gerund:
