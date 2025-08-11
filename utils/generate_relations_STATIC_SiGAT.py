@@ -374,7 +374,7 @@ if __name__ == "__main__":
         pass
     args = Args()
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    data_path = os.path.join(base_path, "data", "S&P500")
+    data_path = os.path.join(base_path, "data", "CSI300")
     args.dataset_dir = data_path  # <-- pad naar jouw S&P500 map
 
     main(args)
