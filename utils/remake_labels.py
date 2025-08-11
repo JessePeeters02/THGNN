@@ -130,5 +130,3 @@ if __name__ == "__main__":
             end_time = time.time()
             minutes_taken = round((end_time - start_time) / 60, 1)
             print(f"Done {database}, {datatype}. Time taken: {minutes_taken} minutes")
-
-

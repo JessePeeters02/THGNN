@@ -2,18 +2,13 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-# from tqdm import tqdm
-# import pickle
-import torch
-# import psutil
 import seaborn as sns
-# import torch.nn as nn
-from sklearn.metrics import r2_score
-from scipy.stats import wasserstein_distance, ks_2samp
 
-# region Pad configuratie
+# region configuratie
+
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
+
 """ uncomment de database die je wilt gebruiken"""
 # database = "CSI300"
 database = "S&P500"
@@ -25,158 +20,111 @@ database = "S&P500"
 # database = "testbatch1"
 # database = "testbatch2"
 # database = "testbatch_mini"
+
 if isinstance(database, str):
     database = [database]
+
 data_path = os.path.join(base_path, "data", *database)
 print(data_path)
-# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_test")
-# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_corr")
-# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_onlycosine")
-# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_cosineDSC")
-prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSE")
-output_path = os.path.join(data_path, "results")
+
+input_path = os.path.join(data_path, "results")
+
+"""select de metrics en modellen die je wilt vergelijken"""
+metrics = ["rmse", "mae", "r2"]                  # pas aan: "mae", "mse", "rmse", "r2", "WS-dist", "KS-d", "KS-p"
+models = ["corr", "DSE"]  # pas aan: "corr", "DSE", "onlycosine", "cosineDSC", "noBeta", "STATIC"
+
+
+"""Plot-opties"""
+use_seaborn_theme = True                     # zet op False als je pure matplotlib wil
+figsize = (12, 6)
+save_png = True
+output_path = os.path.join(base_path, "plots")
+os.makedirs(output_path, exist_ok=True)
+
 # endregion
 
-# region distributies
-def distribution(cpreds, labels, dpred):
-    fig, axes = plt.subplots(1, 3, figsize=(15, 6))
-    ax1, ax2, ax3 = axes.flatten()
 
-    # Find overall min and max values for x and y axes
-    all_data = np.concatenate([cpreds, labels, dpred])
-    x_min, x_max = np.min(all_data), np.max(all_data)
+# region plots
+def line_plots(xtick_rotation: int = 60):
 
-    # Create histograms and store the return values
-    h1 = sns.histplot(cpreds, bins=100, kde=True, color='blue', label='voorspellingen', ax=ax1)
-    h2 = sns.histplot(labels, bins=100, kde=True, color='orange', label='Labels', ax=ax2)
-    h3 = sns.histplot(dpred, bins=100, kde=True, color='blue', label='voorspellingen', ax=ax3)
+    # -- 1) X-as labels afleiden uit het eerste model --
+    first = models[0]
+    df0 = pd.read_csv(os.path.join(input_path, f"results_{first}.csv"))
+    df0["dt"] = df0["dt"].astype(str)
 
-    # Find the maximum y value across all plots
-    y_max = max([ax.get_ylim()[1] for ax in [ax1, ax2, ax3]])
+    date_mask0 = df0["dt"].str.upper() != "OVERALL"
+    date_labels = df0.loc[date_mask0, "dt"].tolist()      # alle dagen in volgorde
+    x_overall   = len(date_labels)                         # index voor OVERALL
+    x_labels    = date_labels + ["OVERALL"]
 
-    # Set titles and labels
-    ax1.set_title("Distributie van Correlatie voorspellingen")
-    ax2.set_title("Distributie van labels")
-    ax3.set_title("Distributie van Dynami voorspellingen")
+    # offsets voor OVERALL-punten zodat ze niet overlappen
+    n = len(models)
+    offsets = np.linspace(-0.15, 0.15, n) if n > 1 else [0.0]
 
-    # Set same x and y limits for all plots
-    for ax in [ax1, ax2, ax3]:
-        ax.set_xlabel("Waarde")
-        ax.set_ylabel("Frequentie")
-        ax.set_xlim(x_min, x_max)
-        ax.set_ylim(0, y_max)  # Set same y limits
-        ax.legend()
+    # -- 2) Plot per metric --
+    for metric in metrics:
+        plt.figure(figsize=(12, 6))
 
-    plt.tight_layout()
-    plt.show()
+        for i, mo in enumerate(models):
+            df = pd.read_csv(os.path.join(input_path, f"results_{mo}.csv"))
+            df["dt"] = df["dt"].astype(str)
 
-def plot_distributions(predictions, labels):
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    
-    # Combineer data voor consistente x-as limieten
-    combined = np.concatenate([predictions, labels])
-    x_min, x_max = np.min(combined), np.max(combined)
-    
-    # Plot voorspellingen
-    sns.histplot(predictions, bins=50, kde=True, color='blue', ax=ax1)
-    ax1.set_title("Distributie van voorspellingen")
-    ax1.set_xlim(x_min, x_max)
-    
-    # Plot labels
-    sns.histplot(labels, bins=50, kde=True, color='orange', ax=ax2)
-    ax2.set_title("Distributie van labels")
-    ax2.set_xlim(x_min, x_max)
-    
-    plt.tight_layout()
-    plt.show()
+            # lijn: alle dagen
+            date_mask = df["dt"].str.upper() != "OVERALL"
+            y_line = df.loc[date_mask, metric].to_numpy()
+            x_line = range(len(date_labels))  # aanname: zelfde volgorde/ aantal dagen
+            plt.plot(x_line, y_line, marker="o", linewidth=1.8, label=mo)
+
+            # los punt: OVERALL (laatste rij)
+            y_overall = df.loc[~date_mask, metric].iloc[0]
+            plt.scatter(x_overall + offsets[i], y_overall,
+                        marker="D", s=80, edgecolors="black", linewidths=0.6, zorder=5)
+
+        # simpele x-as: labels schuin
+        plt.xticks(range(len(x_labels)), x_labels, rotation=xtick_rotation, ha="right")
+
+        # visuele scheiding voor OVERALL
+        plt.axvline(x_overall - 0.5, linestyle="--", alpha=0.5)
+
+        plt.xlabel("Date")
+        plt.ylabel(metric)
+        plt.title(f"{metric} over time per model")
+        plt.legend()
+        plt.tight_layout()
+
+        if save_png:
+            out_dir = os.path.join(input_path, "..", "plots")
+            os.makedirs(out_dir, exist_ok=True)
+            plt.savefig(os.path.join(out_dir, f"{metric}.png"), dpi=160, bbox_inches="tight")
+            plt.close()
+        else:
+            plt.show()
 # endregion
 
-# region voorspellingen csv maken
-def evaluate_reg_predictions(predictions, labels):
-    mae = np.mean(np.abs(predictions - labels))
-    mse = np.mean((predictions - labels) ** 2)
-    r2 = r2_score(labels, predictions)
-    distance = wasserstein_distance(predictions, labels)
-    # tpredictions = torch.tensor(predictions, dtype=torch.float32)
-    # tlabels = torch.tensor(labels, dtype=torch.float32)
-    # print('tlabels: ', tlabels)
-    # print('tpredictions: ', tpredictions)
-    # print(type(tpredictions), type(tlabels))
-    # BCE = nn.BCELoss(reduction='mean')
-    # bce = BCE(tpredictions, tlabels)
-    return mae, mse, r2, distance#, bce
 
-def check_labelsvsprediction():
-    predictionsdf = pd.read_csv(os.path.join(prediction_path, "pred.csv"))
-    predictions = predictionsdf['score'].values
-    labels = predictionsdf['label'].values
-    labels = torch.tanh(torch.log(labels + 1))
-    predictionsdf["dt"] = pd.to_datetime(predictionsdf["dt"])
+# region functies en mappen kiezen
 
-    print(len(labels), len(predictions))
-    tllabel_stats = f"Labels - Gemiddelde: {np.mean(labels):.4f}, Std: {np.std(labels):.4f}, Max: {np.max(labels):.4f}, Min: {np.min(labels):.4f}"
-    pred_stats = f"Voorspellingen - Gemiddelde: {np.mean(predictions):.4f}, Std: {np.std(predictions):.4f}, Max: {np.max(predictions):.4f}, Min: {np.min(predictions):.4f}"
-    print("Statistieken:")
-    print(tllabel_stats)
-    print(pred_stats)
+line_plots()
 
-    mae, mse, r2, WS = evaluate_reg_predictions(predictions, labels)
-    d, p = ks_2samp(labels, predictions)
-    print(f"KS-D distribution: {d:.4f} (p-value={p:.4g})")
 
-    print(f"MAE: {mae:.6f}")
-    print(f"MSE: {mse:.6f}")
-    print(f"RMSE: {np.sqrt(mse):.6f}")
-    print(f"R2: {r2:.6f}")
-    # print(f"BCE: {bce:.6f}")
-    # print(f"Accuracy op richting: {acc:.2%}")
 
-    results = []
-    for day, group in predictionsdf.groupby("dt"):
-        preds = group["score"].values
-        labs = group["label"].values
-        mae, mse, r2, WS = evaluate_reg_predictions(preds, labs)
-        d, p = ks_2samp(labs, preds)
-        rmse = np.sqrt(mse)
-
-        results.append({
-            "dt": day.strftime("%Y-%m-%d"),
-            "mae": mae,
-            "mse": mse,
-            "rmse": rmse,
-            "r2": r2,
-            "WS-dist": WS,
-            "KS-d": d,
-            "KS-p": p
-        })
-
-    mae, mse, r2, WS = evaluate_reg_predictions(predictions, labels)
-    rmse = np.sqrt(mse)
-    d, p = ks_2samp(labels, predictions)
-    results.append({
-        "dt": "OVERALL",
-        "mae": mae,
-        "mse": mse,
-        "rmse": rmse,
-        "r2": r2,
-        "WS-dist": WS,
-        "KS-d": d,
-        "KS-p": p
-    })
-    plot_distributions(predictions, labels)
-    result_df = pd.DataFrame(results)
-    os.makedirs(output_path, exist_ok=True)
-    prediction_type = os.path.basename(prediction_path).replace("model_saved_rolingwindow_", "")
-    save_name = os.path.join(output_path, f"results_{prediction_type}.csv")
-    result_df.to_csv(save_name, index=False)
-    print(f"Dagresultaten opgeslagen naar: {save_name}")
-
-    return labels, predictions
 # endregion
 
-check_labelsvsprediction()
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+# region oude code
 """ oude code van grafieken maken, kan nog handig zijn ter inspiratie
         # distribution(corrpredictions, labels, dynamipredictions)
 
@@ -391,3 +339,4 @@ plt.tight_layout()
 plt.show()
 
 """
+# endregion
