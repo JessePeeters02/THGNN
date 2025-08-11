@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 # from tqdm import tqdm
 # import pickle
-# import torch
+import torch
 # import psutil
 import seaborn as sns
 # import torch.nn as nn
@@ -16,8 +16,8 @@ base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidi
 print(base_path)
 """ uncomment de database die je wilt gebruiken"""
 # database = "CSI300"
-# database = "S&P500"
-database = "NASDAQ_batches_5_200", "batch_1"
+database = "S&P500"
+# database = "NASDAQ_batches_5_200", "batch_1"
 # database = "NASDAQ_batches_5_200", "batch_2"
 # database = "NASDAQ_batches_5_200", "batch_3"
 # database = "NASDAQ_batches_5_200", "batch_4"
@@ -110,7 +110,7 @@ def check_labelsvsprediction():
     predictionsdf = pd.read_csv(os.path.join(prediction_path, "pred.csv"))
     predictions = predictionsdf['score'].values
     labels = predictionsdf['label'].values
-    # labels = np.tanh(np.log(labels + 1))
+    labels = torch.tanh(torch.log(labels + 1))
     predictionsdf["dt"] = pd.to_datetime(predictionsdf["dt"])
 
     print(len(labels), len(predictions))
