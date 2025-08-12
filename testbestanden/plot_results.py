@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from itertools import combinations
+from scipy.stats import ttest_rel, wilcoxon
 
 # region configuratie
 
@@ -31,7 +33,7 @@ input_path = os.path.join(data_path, "results")
 
 """select de metrics en modellen die je wilt vergelijken"""
 metrics = ["rmse", "mae", "r2"]                  # pas aan: "mae", "mse", "rmse", "r2", "WS-dist", "KS-d", "KS-p"
-models = ["corr", "DSE", "onlycosine", "cosineDSC", "noBeta"]  # pas aan: "corr", "DSE", "onlycosine", "cosineDSC", "noBeta", "STATIC"
+models = ["corr", "DSE", "onlycosine", "cosineDSC", "STATIC"]  # pas aan: "corr", "DSE", "onlycosine", "cosineDSC", "noBeta", "STATIC", "DSE_gericht"
 
 
 """Plot-opties"""
@@ -101,12 +103,90 @@ def line_plots(xtick_rotation: int = 60):
             plt.show()
 # endregion
 
+# region plots
+def significantieverschil(test_type="wilcoxon", alpha=0.05):
+    """
+    Voer pairwise significantietesten uit op daggemiddelde metrics van de modellen.
+
+    Parameters
+    ----------
+    test_type : str
+        "ttest"    -> Paired t-test
+        "wilcoxon" -> Wilcoxon signed-rank test
+    alpha : float
+        Significantie-niveau (bv. 0.05)
+
+    Returns
+    -------
+    results_df : pd.DataFrame
+        DataFrame met metric, model_a, model_b, p_value en significant-boolean
+    """
+
+    results = []
+
+    # alle data per model inladen
+    model_data = {}
+    for mo in models:
+        df = pd.read_csv(os.path.join(input_path, f"results_{mo}.csv"))
+        # enkel de rijen met echte dagen (geen OVERALL)
+        df = df[df["dt"].str.upper() != "OVERALL"].reset_index(drop=True)
+        model_data[mo] = df
+
+    # pairwise combinaties
+    for metric in metrics:
+        for m1, m2 in combinations(models, 2):
+            y1 = model_data[m1][metric].to_numpy()
+            y2 = model_data[m2][metric].to_numpy()
+
+            # Kies test
+            if test_type == "ttest":
+                stat, pval = ttest_rel(y1, y2)
+            elif test_type == "wilcoxon":
+                stat, pval = wilcoxon(y1, y2)
+            else:
+                raise ValueError("test_type moet 'ttest' of 'wilcoxon' zijn")
+
+            results.append({
+                "metric": metric,
+                "model_a": m1,
+                "model_b": m2,
+                "p_value": pval,
+                "significant": pval < alpha
+            })
+
+    results_df = pd.DataFrame(results)
+    return results_df
+# endregion
+
+# region heatmap significantieverschil
+def plot_significance_heatmap(df_sig, metric):
+    """Maak een heatmap van p-waarden voor een bepaalde metric."""
+    df_metric = df_sig[df_sig["metric"] == metric]
+    all_models = sorted(set(df_metric["model_a"]) | set(df_metric["model_b"]))
+
+    # matrix vullen
+    mat = pd.DataFrame(np.nan, index=all_models, columns=all_models)
+    for _, row in df_metric.iterrows():
+        mat.loc[row["model_a"], row["model_b"]] = row["p_value"]
+        mat.loc[row["model_b"], row["model_a"]] = row["p_value"]
+
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(mat, annot=True, fmt=".3f", cmap="coolwarm_r",
+                cbar_kws={"label": "p-value"}, linewidths=0.5)
+    plt.title(f"P-waarden (Wilcoxon) voor metric: {metric}")
+    plt.show()
+# endregion
+
+
 
 # region functies en mappen kiezen
 
 line_plots()
-
-
+# df_sig = significantieverschil(test_type="wilcoxon", alpha=0.05)
+# print(df_sig)
+# plot_significance_heatmap(df_sig, metric="rmse")
+# plot_significance_heatmap(df_sig, metric="mae")
+# plot_significance_heatmap(df_sig, metric="r2")
 
 # endregion
 
