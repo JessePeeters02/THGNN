@@ -30,6 +30,7 @@ min_neighbors = 3
 sim_threshold_pos = 0.4
 sim_threshold_neg = -0.4
 threshold = 0.4
+margin = 2
 
 edge_evaluation = True
 
@@ -241,7 +242,8 @@ def sign_semantics_aggregation(num_nodes, edge_list_pos, edge_list_neg, balance_
         A_pos[edge_list_pos[0], edge_list_pos[1]] = 1.0
     if edge_list_neg.numel() > 0:
         A_neg[edge_list_neg[0], edge_list_neg[1]] = 1.0
-
+    A_pos.fill_diagonal_(0.0)
+    A_neg.fill_diagonal_(0.0)
     if not balance_theory_triads:
         return A_pos, A_neg
 
@@ -254,19 +256,30 @@ def sign_semantics_aggregation(num_nodes, edge_list_pos, edge_list_neg, balance_
 
     # Nieuwe kandidaten (nog geen directe verbinding)
     existing = (A_pos + A_neg) > 0
-    suggested_pos = ((P1 + P2) > 0) & (~existing)
-    suggested_neg = ((P3 + P4) > 0) & (~existing)
+    suggested_pos = P1 + P2
+    suggested_neg = P3 + P4
+    delta = suggested_pos - suggested_neg
+    cand_pos = (delta > margin) & (~existing)
+    cand_neg = (delta < -margin) & (~existing)
+
 
     # Maak uiteindelijke delta-matrices
     delta_A_pos = A_pos.clone()
     delta_A_neg = A_neg.clone()
 
-    delta_A_pos[suggested_pos] = 1.0
-    delta_A_neg[suggested_neg] = 1.0
+    delta_A_pos[cand_pos] = 1.0
+    delta_A_neg[cand_neg] = 1.0
 
     # Zorg dat de matrices symmetrisch zijn (zoals jouw origineel)
     delta_A_pos = torch.maximum(delta_A_pos, delta_A_pos.T)
     delta_A_neg = torch.maximum(delta_A_neg, delta_A_neg.T)
+    delta_A_pos.fill_diagonal_(0.0)
+    delta_A_neg.fill_diagonal_(0.0)
+
+    overlap = (delta_A_pos > 0) & (delta_A_neg > 0)
+    if overlap.any():
+        print(f"Waarschuwing: Er zijn {overlap.sum().item()} overlappingen tussen positieve en negatieve edges!")
+        print("Overlapping indices:", torch.nonzero(overlap, as_tuple=True))
 
     return delta_A_pos, delta_A_neg
 
@@ -284,6 +297,8 @@ def build_initial_edges_via_cosine_similarity(window_data):
             sim_f = torch.mm(feat_f, feat_f.T)  # (n_stocks, n_stocks)
             sims.append(sim_f)
         mean_sim = sum(sims) / len(sims)  # gemiddelde over features
+        # Zet de diagonalen op 0
+        mean_sim.fill_diagonal_(0)
         return mean_sim
 
     # Data preparatie
@@ -302,7 +317,7 @@ def build_initial_edges_via_cosine_similarity(window_data):
     # Garandeer minimum aantal buren
     for i in range(n_stocks):
         # Positieve edges
-        strong_pos = np.where(cos_matrix[i] > sim_threshold_pos)[0]
+        strong_pos = np.where((cos_matrix[i] > sim_threshold_pos) & (np.arange(n_stocks) != i))[0]
         if len(strong_pos) < min_neighbors:
             # Voeg extra buren toe als er te weinig zijn
             cos_vals = cos_matrix[i].copy()
@@ -318,7 +333,7 @@ def build_initial_edges_via_cosine_similarity(window_data):
                 pos_edges.append((j, i))
         
         # Negatieve edges
-        strong_neg = np.where(cos_matrix[i] < sim_threshold_neg)[0]
+        strong_neg = np.where((cos_matrix[i] < sim_threshold_neg) & (np.arange(n_stocks) != i))[0]
         if len(strong_neg) < min_neighbors:
             # Voeg extra buren toe als er te weinig zijn
             cos_vals = cos_matrix[i].copy()
@@ -512,14 +527,17 @@ def edges_to_adj_matrix(edges, num_nodes):
     adj = torch.zeros((num_nodes, num_nodes))
     if edges.size(1) > 0:
         adj[edges[0], edges[1]] = 1.0
+        adj[edges[1], edges[0]] = 1.0
     return adj
 
 def calculate_label(raw_df, current_date):
     date_idx = raw_df[raw_df['Date'] == current_date].index[0]
+    # close_today = raw_df.iloc[date_idx]['Close']
+    # close_tomorrow = raw_df.iloc[date_idx+1]['Close']
+    # return (close_tomorrow / close_today) - 1
     close_today = raw_df.iloc[date_idx]['Close']
-    close_tomorrow = raw_df.iloc[date_idx+1]['Close']
-    return (close_tomorrow / close_today) - 1
-
+    close_yesterday = raw_df.iloc[date_idx-1]['Close']
+    return (close_today / close_yesterday) - 1
 
 def main1_generate():
     num_snapshots = len([fname for fname in os.listdir(snapshot_path) if fname.endswith('.pkl')])
@@ -615,24 +633,29 @@ def main1_load():
             features = torch.from_numpy(snapshot['features']).float().to(device)
             t = torch.tensor([0.0, 1.0], device=device)
 
-            empty_edges = torch.empty((2, 0), dtype=torch.long).to(device)
-            embeddings = model(features, empty_edges, empty_edges, t)
+            # Gebruik de bestaande edges uit de snapshot voor initialisatie
+            edge_index_pos_ssa = snapshot['pos_edges_ssa'].to(device)
+            edge_index_neg_ssa = snapshot['neg_edges_ssa'].to(device)
+            embeddings = model(features, edge_index_pos_ssa, edge_index_neg_ssa, t)
 
             # Combineer originele edges en voorspel w_hat
-            N = embeddings.shape[0]
             candidate_edges = torch.combinations(torch.arange(N), r=2).T.to(device)
             edge_scores = model.predict_edge_weight(embeddings, candidate_edges) # is deze gemaakt voor negatief en positief tesamen te doen?
 
             # Filter edges op basis van model-output
             pos_mask = edge_scores > threshold
-            neg_mask = edge_scores < threshold
+            neg_mask = edge_scores < -threshold
 
             new_pos_edges = candidate_edges[:, pos_mask]
             new_neg_edges = candidate_edges[:, neg_mask]
 
+            #symmetrie
+            pos_pairs = torch.cat([new_pos_edges, new_pos_edges[[1, 0], :]], dim=1)
+            neg_pairs = torch.cat([new_neg_edges, new_neg_edges[[1, 0], :]], dim=1)
+
             # Maak refined adjacencymatrices
-            pos_adj = edges_to_adj_matrix(new_pos_edges, N).to(device)
-            neg_adj = edges_to_adj_matrix(new_neg_edges, N).to(device)
+            pos_adj = edges_to_adj_matrix(pos_pairs, N).to(device)
+            neg_adj = edges_to_adj_matrix(neg_pairs, N).to(device)
 
             if edge_evaluation == True:
                 evaluate_edges(model, snapshot, N, new_pos_edges, new_neg_edges)
@@ -680,13 +703,13 @@ def CSI300():
     daily_data_path = os.path.join(data_path, "normaliseddailydata")
     raw_data_path = os.path.join(data_path, "stockdata")
     # kies hieronder de map waarin je de resultaten wilt opslaan
-    relation_path = os.path.join(data_path, "relation_DSE")
+    relation_path = os.path.join(data_path, "relation_DSE_t1")
     os.makedirs(relation_path, exist_ok=True)
-    snapshot_path= os.path.join(data_path, "intermediate_snapshots_DSE")
+    snapshot_path= os.path.join(data_path, "intermediate_snapshots_DSE_t1")
     os.makedirs(snapshot_path, exist_ok=True)
-    data_train_predict_path = os.path.join(data_path, "data_train_predict_DSE")
+    data_train_predict_path = os.path.join(data_path, "data_train_predict_DSE_t1")
     os.makedirs(data_train_predict_path, exist_ok=True)
-    daily_stock_path = os.path.join(data_path, "daily_stock_DSE")
+    daily_stock_path = os.path.join(data_path, "daily_stock_DSE_t1")
     os.makedirs(daily_stock_path, exist_ok=True)
     log_path = os.path.join(relation_path, f"snapshot_log.csv")
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
@@ -808,6 +831,6 @@ def nasdaq5batches():
 
 
 CSI300()
-SP500()
-testbatch_mini()
-nasdaq5batches()
+# SP500()
+# testbatch_mini()
+# nasdaq5batches()
