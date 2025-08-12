@@ -8,7 +8,6 @@ import pickle
 from tqdm import tqdm
 import os
 import torch.nn.functional as F
-import time
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -22,8 +21,6 @@ feature_cols2 = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 hidden_dim = 32
 num_epochs = 30
 restrict_last_n_days= None # None of bv 80 om da laatse 60 dagen te nemen (20-day time window geraak je in begin altijd kwijt)
-relevance_threshold = 0
-max_age = 5
 learning_rate = 0.0001
 
 min_neighbors = 3
@@ -357,23 +354,34 @@ def build_initial_edges_via_cosine_similarity(window_data):
 
     return pos_edges, neg_edges
 
-def build_initial_edges_via_correlation(window_data, threshold):
+def build_initial_edges_via_correlation(window_data):
+    # Zet window_data om naar een 3D tensor: (n_stocks, n_features, n_days)
     grouped = window_data.groupby('Stock')[feature_cols1]
-    stock_arrays = np.array([group.values.T for name, group in grouped])
+    stock_arrays = np.array([group.values.T for name, group in grouped])  # (n_stocks, n_features, n_days)
     n_stocks = stock_arrays.shape[0]
-    corr_matrix = np.zeros((n_stocks, n_stocks))
 
-    # Bereken correlaties tussen alle paren van stocks
-    for i in tqdm(range(n_stocks), desc="Calculating correlations"):
-    # for i in range(n_stocks):
-        for j in range(i+1, n_stocks):
-            feature_correlations = []
-            for f in range(len(feature_cols1)):
-                corr = np.corrcoef(stock_arrays[i,f,:], stock_arrays[j,f,:])[0,1]
-                feature_correlations.append(corr)           
-            avg_corr = np.nanmean(feature_correlations)
-            corr_matrix[i,j] = avg_corr
-            corr_matrix[j,i] = avg_corr
+    # Zet om naar torch tensor op GPU
+    stock_tensor = torch.tensor(stock_arrays, dtype=torch.float32, device=device)  # (n_stocks, n_features, n_days)
+
+    # Normaliseer per feature per stock
+    stock_tensor = stock_tensor - stock_tensor.mean(dim=2, keepdim=True)
+    stock_tensor = stock_tensor / (stock_tensor.std(dim=2, keepdim=True) + 1e-8)
+
+    # Bereken correlatiematrix per feature: (n_stocks, n_stocks, n_features)
+    corr_matrices = []
+    for f in range(stock_tensor.shape[1]):
+        X = stock_tensor[:, f, :]  # (n_stocks, n_days)
+        # Corr = (X @ X.T) / (n_days - 1)
+        corr = torch.matmul(X, X.T) / (X.shape[1] - 1)
+        corr_matrices.append(corr)
+    corr_stack = torch.stack(corr_matrices, dim=2)  # (n_stocks, n_stocks, n_features)
+    corr_matrix = corr_stack.mean(dim=2)  # (n_stocks, n_stocks)
+
+    # Zet diagonaal op 0
+    corr_matrix.fill_diagonal_(0)
+
+    # Zet terug naar numpy voor compatibiliteit met bestaande code
+    corr_matrix = corr_matrix.cpu().numpy()
 
     # Bouw edges op basis van drempelwaarde
     pos_edges = []
