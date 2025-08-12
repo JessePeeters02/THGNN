@@ -57,8 +57,8 @@ class Args:
         self.data_end = data_end
         self.pre_data = pre_data
         # epoch settings
-        self.max_epochs = 20
-        self.epochs_eval = 10
+        self.max_epochs = 21
+        self.epochs_eval = 3
         # learning rate settings
         self.lr = 0.001
         self.gamma = 0.3
@@ -139,7 +139,7 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     for epoch in range(args.max_epochs):
         train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
                                  optimizer=optimizer, scheduler=default_scheduler, loss_fcn=args.loss_fcn)
-        if (epoch+1) % args.epochs_eval == 0:
+        if ((epoch + 1) % args.epochs_eval == 0) and (epoch + 1 >= 9):
             val_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader, loss_fcn=args.loss_fcn)
             print('Epoch: {}/{}, train loss: {:.6f}, val loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss, val_loss))
             if val_loss < best_val_loss:
@@ -315,7 +315,7 @@ def CSI300_cosineDSC():
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
     val_len = 10
-    window_len = 20
+    window_len = 8
     rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
     rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
     for T in range(rolling_start, rolling_end):
@@ -423,6 +423,132 @@ def CSI300_STATIC():
     minutes_taken = round((end_time - start_time) / 60, 1)
     print(f"Done CSI300_STATIC. Time taken: {minutes_taken} minutes")
 
+def CSI300_full_gericht():
+    print(f"Start CSI300_full_gericht: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "CSI300")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_DSE_gericht") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_DSE_gericht") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE_gericht")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done CSI300_full_gericht. Time taken: {minutes_taken} minutes")
+
+def CSI300_full_ct():
+    print(f"Start CSI300_full_ct: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "CSI300")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_DSE_ct") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_DSE_ct") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE_ct")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done CSI300_full_ct. Time taken: {minutes_taken} minutes")
+
+def CSI300_full_t1():
+    print(f"Start CSI300_full_t1: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = time.time()
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    print(f"base_path: {base_path}")
+    data_path = os.path.join(base_path, "data", "CSI300")
+    print(f"data_path: {data_path}")
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_DSE_t1") #gpu_wvt, oldway_0.6, gpu_wvt
+    print(f"data_train_predict_path: {data_train_predict_path}")
+    daily_stock_path = os.path.join(data_path, f"daily_stock_DSE_t1") #gpu_wvt, oldway, gpu_wvt
+    print(f"daily_stock_path: {daily_stock_path}")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE_t1")
+    os.makedirs(save_path, exist_ok=True)
+    prediction_path = save_path
+    total_data_points = len(os.listdir(data_train_predict_path))
+    print(f"Total data points: {total_data_points}")
+    val_len = 10
+    window_len = 20
+    rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
+    rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
+    for T in range(rolling_start, rolling_end):
+        # Rolling setup per predictiedag T
+        train_start = 0
+        train_end = T - val_len - 1
+        val_start = T - val_len
+        val_end = T - 1
+        predict_day = T
+        data_start = train_start
+        data_middle = val_start
+        data_end = val_end + 1  # data_end is exclusive, dus +1 om val-set af te sluiten
+        pre_data = f"rolling_T{T}"
+        print(f"\n==== Rolling predictiedag: T={T} ====")
+        print(f"Train: {train_start} - {train_end}")
+        print(f"Val:   {val_start} - {val_end}")
+        print(f"Test:  {predict_day}")
+        print(f"Data start: {data_start}, middle: {data_middle}, end: {data_end}, pre_data: {pre_data}")
+        fun_train_predict(data_start, data_middle, data_end, pre_data)
+    end_time = time.time()
+    minutes_taken = round((end_time - start_time) / 60, 1)
+    print(f"Done CSI300_full_t1. Time taken: {minutes_taken} minutes")
+
 def SP500_corr():
     print(f"Start SP500_corr: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     start_time = time.time()
@@ -435,7 +561,7 @@ def SP500_corr():
     print(f"data_train_predict_path: {data_train_predict_path}")
     daily_stock_path = os.path.join(data_path, f"daily_stock_corr") #gpu_wvt, oldway, gpu_wvt
     print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, f"model_saved_rolingwindow_corr")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_corr1")
     os.makedirs(save_path, exist_ok=True)
     prediction_path = save_path
     total_data_points = len(os.listdir(data_train_predict_path))
@@ -603,7 +729,7 @@ def SP500_full():
     print(f"data_train_predict_path: {data_train_predict_path}")
     daily_stock_path = os.path.join(data_path, f"daily_stock_DSE") #gpu_wvt, oldway, gpu_wvt
     print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE1")
     os.makedirs(save_path, exist_ok=True)
     prediction_path = save_path
     total_data_points = len(os.listdir(data_train_predict_path))
@@ -651,7 +777,7 @@ def SP500_STATIC():
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
     val_len = 10
-    window_len = 20
+    window_len = 10
     rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
     rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
     for T in range(rolling_start, rolling_end):
@@ -1026,23 +1152,26 @@ def nasdaq5batches_full():
 # testbatch_mini_cosineDSC()
 # testbatch_mini_full()
 # SP500_STATIC()
-# CSI300_STATIC()
+
 
 # bezig met runnen:
-# SP500_full()
-# SP500_corr()
+CSI300_full_t1()
+# CSI300_full_gericht()
 # CSI300_full()
-# CSI300_corr()
+# CSI300_full_ct()
 # nasdaq5batches_full()
 # nasdaq5batches_corr()
 # CSI300_onlycosine()
 # CSI300_cosineDSC()
-SP500_onlycosine()
-SP500_cosineDSC()
+# CSI300_corr()
+# CSI300_STATIC()
+# SP500_onlycosine()
+# SP500_cosineDSC()
 # nasdaq5batches_onlycosine()
 # nasdaq5batches_cosineDSC()
-
-
+# SP500_full()
+# SP500_corr()
+# CSI300_onlycosine()
 # succesvol gerund:
 
 
@@ -1066,3 +1195,4 @@ SP500_cosineDSC()
 # nasdaq5batches_full()
 # SP500_STATIC()
 # CSI300_STATIC()
+
