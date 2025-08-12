@@ -31,13 +31,13 @@ input_path = os.path.join(data_path, "results")
 
 """select de metrics en modellen die je wilt vergelijken"""
 metrics = ["rmse", "mae", "r2"]                  # pas aan: "mae", "mse", "rmse", "r2", "WS-dist", "KS-d", "KS-p"
-models = ["corr", "DSE"]  # pas aan: "corr", "DSE", "onlycosine", "cosineDSC", "noBeta", "STATIC"
+models = ["corr", "DSE", "onlycosine", "cosineDSC", "noBeta"]  # pas aan: "corr", "DSE", "onlycosine", "cosineDSC", "noBeta", "STATIC"
 
 
 """Plot-opties"""
 use_seaborn_theme = True                     # zet op False als je pure matplotlib wil
 figsize = (12, 6)
-save_png = True
+save_png = False
 output_path = os.path.join(base_path, "plots")
 os.makedirs(output_path, exist_ok=True)
 
