@@ -302,7 +302,7 @@ def main(args):
             continue
 
         # Cosine edges op window_data (gebruik alleen feature_cols1 zoals DynamiSE)
-        pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, device=device)
+        pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data)
 
         # Balance theory (SSA) voor triad closure (identiek aan DynamiSE)
         pos_pairs_t = pos_pairs.to(device)
