@@ -47,6 +47,8 @@ min_neighbors = 3
 sim_threshold_pos = 0.4
 sim_threshold_neg = -0.4
 margin = 2
+threshold = 0.4
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # ====== Helpers ======
 
@@ -87,80 +89,80 @@ def load_raw_stocks(raw_dir, all_dates):
     return raw_data
 
 
-@torch.no_grad()
-def gpu_featurewise_cosine(stock_tensor: torch.Tensor):
-    """
-    stock_tensor: (n_stocks, n_features, n_days)
-    Retourneert mean cosine similarity over features: (n_stocks, n_stocks)
-    Identiek principe als in DynamiSE (gemiddelde over feature-dimensie).
-    """
-    n_stocks, n_feat, _ = stock_tensor.shape
-    sims = []
-    for f in range(n_feat):
-        feat_f = stock_tensor[:, f, :]           # (N, D)
-        feat_f = F.normalize(feat_f, p=2, dim=1) # row-wise
-        sim_f = feat_f @ feat_f.t()              # (N, N)
-        sims.append(sim_f)
-    mean_sim = sum(sims) / len(sims)
-    return mean_sim
-
-
-def build_initial_edges_via_cosine_similarity(window_data, device):
-    """
-    Volgt de logica uit jouw DynamiSE:
-    - groepeer per stock
-    - per-feature cosine similarity
-    - minimum neighbors boosten
-    - drempels voor pos/neg
-    """
+def build_initial_edges_via_correlation(window_data):
+    # Zet window_data om naar een 3D tensor: (n_stocks, n_features, n_days)
     grouped = window_data.groupby('Stock')[feature_cols1]
-    stock_arrays = np.array([group.values.T for _, group in grouped])  # (N, F1, D)
+    stock_arrays = np.array([group.values.T for name, group in grouped])  # (n_stocks, n_features, n_days)
     n_stocks = stock_arrays.shape[0]
 
-    stock_tensor = torch.tensor(stock_arrays, dtype=torch.float32, device=device)
-    cos_matrix = gpu_featurewise_cosine(stock_tensor).cpu().numpy()  # (N, N)
+    # Zet om naar torch tensor op GPU
+    stock_tensor = torch.tensor(stock_arrays, dtype=torch.float32, device=device)  # (n_stocks, n_features, n_days)
 
+    # Normaliseer per feature per stock
+    stock_tensor = stock_tensor - stock_tensor.mean(dim=2, keepdim=True)
+    stock_tensor = stock_tensor / (stock_tensor.std(dim=2, keepdim=True) + 1e-8)
+
+    # Bereken correlatiematrix per feature: (n_stocks, n_stocks, n_features)
+    corr_matrices = []
+    for f in range(stock_tensor.shape[1]):
+        X = stock_tensor[:, f, :]  # (n_stocks, n_days)
+        # Corr = (X @ X.T) / (n_days - 1)
+        corr = torch.matmul(X, X.T) / (X.shape[1] - 1)
+        corr_matrices.append(corr)
+    corr_stack = torch.stack(corr_matrices, dim=2)  # (n_stocks, n_stocks, n_features)
+    corr_matrix = corr_stack.mean(dim=2)  # (n_stocks, n_stocks)
+
+    # Zet diagonaal op 0
+    corr_matrix.fill_diagonal_(0)
+
+    # Zet terug naar numpy voor compatibiliteit met bestaande code
+    corr_matrix = corr_matrix.cpu().numpy()
+
+    # Bouw edges op basis van drempelwaarde
     pos_edges = []
     neg_edges = []
 
+    # Garandeer minimum aantal buren
     for i in range(n_stocks):
         # Positieve edges
-        strong_pos = np.where(cos_matrix[i] > sim_threshold_pos)[0]
+        strong_pos = np.where(corr_matrix[i] > threshold)[0]
         if len(strong_pos) < min_neighbors:
-            cos_vals = cos_matrix[i].copy()
-            top_pos = np.argsort(-cos_vals)[:min_neighbors]
+            # Voeg extra buren toe als er te weinig zijn
+            corrs = corr_matrix[i].copy()
+            top_pos = np.argsort(-corrs)[:min_neighbors]
             for j in top_pos:
-                if i != j and cos_matrix[i, j] > 0:
+                if corr_matrix[i,j] > 0:  # Alleen positieve correlaties toevoegen
                     pos_edges.append((i, j))
                     pos_edges.append((j, i))
         else:
+            # Gebruik alleen de sterke correlaties
             for j in strong_pos:
-                if i != j:
-                    pos_edges.append((i, j))
-                    pos_edges.append((j, i))
-
+                pos_edges.append((i, j))
+                pos_edges.append((j, i))
+        
         # Negatieve edges
-        strong_neg = np.where(cos_matrix[i] < sim_threshold_neg)[0]
+        strong_neg = np.where(corr_matrix[i] < -threshold)[0]
         if len(strong_neg) < min_neighbors:
-            cos_vals = cos_matrix[i].copy()
-            top_neg = np.argsort(cos_vals)[:min_neighbors]
+            # Voeg extra buren toe als er te weinig zijn
+            corrs = corr_matrix[i].copy()
+            top_neg = np.argsort(corrs)[:min_neighbors]
             for j in top_neg:
-                if i != j and cos_matrix[i, j] < 0:
+                if corr_matrix[i,j] < 0:  # Alleen negatieve correlaties toevoegen
                     neg_edges.append((i, j))
                     neg_edges.append((j, i))
         else:
+            # Gebruik alleen de sterke correlaties
             for j in strong_neg:
-                if i != j:
-                    neg_edges.append((i, j))
-                    neg_edges.append((j, i))
+                neg_edges.append((i, j))
+                neg_edges.append((j, i))
 
-    # Uniek maken
+    # Converteer naar torch Tensors
     pos_edges = list(set(pos_edges))
     neg_edges = list(set(neg_edges))
+    pos_edges = torch.LongTensor(list(zip(*pos_edges))) if pos_edges else torch.empty((2, 0), dtype=torch.long)
+    neg_edges = torch.LongTensor(list(zip(*neg_edges))) if neg_edges else torch.empty((2, 0), dtype=torch.long)
 
-    pos_edges_t = torch.LongTensor(list(zip(*pos_edges))) if pos_edges else torch.empty((2, 0), dtype=torch.long)
-    neg_edges_t = torch.LongTensor(list(zip(*neg_edges))) if neg_edges else torch.empty((2, 0), dtype=torch.long)
-    return pos_edges_t, neg_edges_t
+    return pos_edges, neg_edges
 
 
 def sign_semantics_aggregation(num_nodes, edge_list_pos, edge_list_neg, device):
@@ -244,10 +246,10 @@ def main(args):
     raw_dir = os.path.join(dataset_dir, "stockdata")
 
     # Output directories (STATIC, om verwarring te vermijden)
-    relation_dir = os.path.join(dataset_dir, "relation_STATIC_t1")                 # log e.d.
-    snapshot_dir = os.path.join(dataset_dir, "intermediate_snapshots_STATIC_t1")   # optioneel, hier niet gebruikt
-    out_pkl_dir = os.path.join(dataset_dir, "data_train_predict_STATIC_t1")
-    out_daily_dir = os.path.join(dataset_dir, "daily_stock_STATIC_t1")
+    relation_dir = os.path.join(dataset_dir, "relation_STATICcorr_t1")                 # log e.d.
+    snapshot_dir = os.path.join(dataset_dir, "intermediate_snapshots_STATICcorr_t1")   # optioneel, hier niet gebruikt
+    out_pkl_dir = os.path.join(dataset_dir, "data_train_predict_STATICcorr_t1")
+    out_daily_dir = os.path.join(dataset_dir, "daily_stock_STATICcorr_t1")
 
     os.makedirs(relation_dir, exist_ok=True)
     os.makedirs(snapshot_dir, exist_ok=True)
@@ -300,7 +302,7 @@ def main(args):
             continue
 
         # Cosine edges op window_data (gebruik alleen feature_cols1 zoals DynamiSE)
-        pos_pairs, neg_pairs = build_initial_edges_via_cosine_similarity(window_data, device=device)
+        pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data, device=device)
 
         # Balance theory (SSA) voor triad closure (identiek aan DynamiSE)
         pos_pairs_t = pos_pairs.to(device)
