@@ -1694,13 +1694,15 @@ def SP500_full_corr_t1():
 # CSI300_full_corr_t1()
 
 # # nog te doen
+# SP500_full_t1()
+# SP500_STATIC_t1
+# SP500_cosineDSC_t1()
 # CSI300_cosineDSC_t1()
 # CSI300_corrDSC_t1()
 # CSI300_STATIC_t1
 # CSI300_STATICcorr_t1
-# SP500_cosineDSC_t1()
+
 # SP500_corrDSC_t1()
-# SP500_STATIC_t1
+
 # SP500_STATICcorr_t1
-# SP500_full_t1()
 # SP500_full_corr_t1()
