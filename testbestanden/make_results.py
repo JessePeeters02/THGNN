@@ -27,10 +27,17 @@ print(data_path)
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_test")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_corr")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_noBeta")
-prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATIC")
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATIC")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_onlycosine")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_cosineDSC")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSE")
+# nieuwe paden
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_cosineDSC_t1")
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_corrDSC_t1")
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSEcorr_t1")
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSE_t1")
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATIC_t1")
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATICcorr_t1")
 output_path = os.path.join(data_path, "results")
 # endregion
 
