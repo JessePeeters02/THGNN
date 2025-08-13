@@ -32,7 +32,7 @@ print(data_path)
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_cosineDSC")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSE")
 # nieuwe paden
-# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_cosineDSC_t1")
+prediction_path = os.path.join(data_path, "model_saved_rolingwindow_cosineDSC_t1")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_corrDSC_t1")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSEcorr_t1")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSE_t1")
