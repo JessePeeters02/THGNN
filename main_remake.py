@@ -1431,7 +1431,7 @@ def SP500_cosineDSC_t1():
     total_data_points = len(os.listdir(data_train_predict_path))
     print(f"Total data points: {total_data_points}")
     val_len = 10
-    window_len = 6
+    window_len = 20
     rolling_start = total_data_points - window_len  # Laat genoeg ruimte over voor testdagen #inclusief
     rolling_end = total_data_points                 # Laatste dag waarop je kan voorspellen #exclusief
     for T in range(rolling_start, rolling_end):
@@ -1692,18 +1692,17 @@ def SP500_full_corr_t1():
 # SP500_corr()
 # CSI300_full_t1()
 # CSI300_full_corr_t1()
+# SP500_full_t1()
+# SP500_cosineDSC_t1()
+# SP500_STATIC_t1()
 
 # # nog te doen
-# SP500_full_t1()
 
-# SP500_cosineDSC_t1()
-SP500_STATIC_t1()
-# CSI300_cosineDSC_t1()
+CSI300_cosineDSC_t1()
 # CSI300_corrDSC_t1()
-# CSI300_STATIC_t1
-# CSI300_STATICcorr_t1
+CSI300_STATIC_t1()
+# CSI300_STATICcorr_t1()
 
 # SP500_corrDSC_t1()
-
-# SP500_STATICcorr_t1
+# SP500_STATICcorr_t1()
 # SP500_full_corr_t1()
