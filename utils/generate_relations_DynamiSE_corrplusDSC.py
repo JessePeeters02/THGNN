@@ -342,7 +342,7 @@ def build_initial_edges_via_cosine_similarity(window_data):
 
     return pos_edges, neg_edges
 
-def build_initial_edges_via_correlation(window_data, threshold):
+def build_initial_edges_via_correlation(window_data):
     grouped = window_data.groupby('Stock')[feature_cols1]
     stock_arrays = np.array([group.values.T for name, group in grouped])
     n_stocks = stock_arrays.shape[0]
@@ -472,7 +472,7 @@ def prepare_dynamic_data(stock_data, window_size=20):
             grouped.get_group(stock)[feature_cols2].values[0] for stock in unique_stocks
         ])
 
-        pos_pairs, neg_pairs = build_initial_edges_via_cosine_similarity(window_data)
+        pos_pairs, neg_pairs = build_initial_edges_via_correlation(window_data)
 
         # pos_pairs_tensor = pos_pairs.to(device)
         # neg_pairs_tensor = neg_pairs.to(device)
@@ -683,13 +683,13 @@ def CSI300():
     daily_data_path = os.path.join(data_path, "normaliseddailydata")
     raw_data_path = os.path.join(data_path, "stockdata")
     # kies hieronder de map waarin je de resultaten wilt opslaan
-    relation_path = os.path.join(data_path, "relation_cosineDSC_t1")
+    relation_path = os.path.join(data_path, "relation_corrDSC_t1")
     os.makedirs(relation_path, exist_ok=True)
-    snapshot_path= os.path.join(data_path, "intermediate_snapshots_cosineDSC_t1")
+    snapshot_path= os.path.join(data_path, "intermediate_snapshots_corrDSC_t1")
     os.makedirs(snapshot_path, exist_ok=True)
-    data_train_predict_path = os.path.join(data_path, "data_train_predict_cosineDSC_t1")
+    data_train_predict_path = os.path.join(data_path, "data_train_predict_corrDSC_t1")
     os.makedirs(data_train_predict_path, exist_ok=True)
-    daily_stock_path = os.path.join(data_path, "daily_stock_cosineDSC_t1")
+    daily_stock_path = os.path.join(data_path, "daily_stock_corrDSC_t1")
     os.makedirs(daily_stock_path, exist_ok=True)
     log_path = os.path.join(relation_path, f"snapshot_log.csv")
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
@@ -716,13 +716,13 @@ def SP500():
     daily_data_path = os.path.join(data_path, "normaliseddailydata")
     raw_data_path = os.path.join(data_path, "stockdata")
     # kies hieronder de map waarin je de resultaten wilt opslaan
-    relation_path = os.path.join(data_path, "relation_cosineDSC_t1")
+    relation_path = os.path.join(data_path, "relation_corrDSC_t1")
     os.makedirs(relation_path, exist_ok=True)
-    snapshot_path= os.path.join(data_path, "intermediate_snapshots_cosineDSC_t1")
+    snapshot_path= os.path.join(data_path, "intermediate_snapshots_corrDSC_t1")
     os.makedirs(snapshot_path, exist_ok=True)
-    data_train_predict_path = os.path.join(data_path, "data_train_predict_cosineDSC_t1")
+    data_train_predict_path = os.path.join(data_path, "data_train_predict_corrDSC_t1")
     os.makedirs(data_train_predict_path, exist_ok=True)
-    daily_stock_path = os.path.join(data_path, "daily_stock_cosineDSC_t1")
+    daily_stock_path = os.path.join(data_path, "daily_stock_corrDSC_t1")
     os.makedirs(daily_stock_path, exist_ok=True)
     log_path = os.path.join(relation_path, f"snapshot_log.csv")
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
