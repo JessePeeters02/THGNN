@@ -35,8 +35,8 @@ edge_evaluation = True
 
 def load_all_stocks(stock_data_path):
     all_stock_data = []
-    # for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
-    for file in os.listdir(stock_data_path):
+    for file in tqdm(os.listdir(stock_data_path), desc="Loading normalised data"):
+    # for file in os.listdir(stock_data_path):
         if file.endswith('.csv'):
             df = pd.read_csv(os.path.join(stock_data_path, file))
             all_stock_data.append(df[['Date', 'Stock'] + feature_cols2])
@@ -56,8 +56,8 @@ def load_all_stocks(stock_data_path):
 def load_raw_stocks(raw_stock_path, all_dates):
     raw_files = [f for f in os.listdir(raw_stock_path) if f.endswith('.csv')]
     raw_data = {}
-    # for file in tqdm(raw_files, desc="Loading raw data for label creation"):
-    for file in raw_files:
+    for file in tqdm(raw_files, desc="Loading raw data for label creation"):
+    # for file in raw_files:
         stock_name = file.split('.')[0]
         df = pd.read_csv(os.path.join(raw_stock_path, file), parse_dates=['Date'])
         # if restrict_last_n_days is not None:
@@ -349,8 +349,8 @@ def build_initial_edges_via_correlation(window_data, threshold):
     corr_matrix = np.zeros((n_stocks, n_stocks))
 
     # Bereken correlaties tussen alle paren van stocks
-    # for i in tqdm(range(n_stocks), desc="Calculating correlations"):
-    for i in range(n_stocks):
+    for i in tqdm(range(n_stocks), desc="Calculating correlations"):
+    # for i in range(n_stocks):
         for j in range(i+1, n_stocks):
             feature_correlations = []
             for f in range(len(feature_cols1)):
@@ -455,8 +455,8 @@ def prepare_dynamic_data(stock_data, window_size=20):
     # bool_eerste = True
     already_done = set(fname.replace('.pkl', '') for fname in os.listdir(snapshot_path) if fname.endswith('.pkl'))
 
-    # for i in tqdm(range(window_size-1, len(date_to_idx)), desc="Preparing snapshots"):
-    for i in range(window_size-1, len(date_to_idx)):
+    for i in tqdm(range(window_size-1, len(date_to_idx)), desc="Preparing snapshots"):
+    # for i in range(window_size-1, len(date_to_idx)):
 
         current_date = all_dates[i]
 
@@ -538,8 +538,8 @@ def main1_generate():
         epoch_losses = []
         early_stop_due_to_nan = False  # voeg deze flag toe
 
-        # for date in tqdm(all_dates[prev_date_num-1:], desc=f"Epoch {epoch+1} van de {num_epochs}"):
-        for date in all_dates[prev_date_num-1:]:
+        for date in tqdm(all_dates[prev_date_num-1:], desc=f"Epoch {epoch+1} van de {num_epochs}"):
+        # for date in all_dates[prev_date_num-1:]:
             snapshot_file = os.path.join(snapshot_path, f"{date}.pkl")
             if not os.path.exists(snapshot_file):
                 print(f"Error: {snapshot_file} for date {date} not found.")
@@ -601,8 +601,8 @@ def main1_load():
     model.load_state_dict(torch.load(os.path.join(relation_path, "best_model.pth"), map_location=device))
     model.eval()
 
-    # for date in tqdm(all_dates[prev_date_num-1:-1], desc="Generating outputs"):
-    for date in all_dates[prev_date_num-1:-1]:
+    for date in tqdm(all_dates[prev_date_num-1:-1], desc="Generating outputs"):
+    # for date in all_dates[prev_date_num-1:-1]:
         snapshot_file = os.path.join(snapshot_path, f"{date}.pkl")
         if not os.path.exists(snapshot_file):
             print(f"Error: {snapshot_file} for date {date} not found.")
@@ -809,8 +809,7 @@ def nasdaq5batches():
         main1_generate()
         main1_load()
 
-
-CSI300()
 SP500()
+CSI300()
 # testbatch_mini()
 # nasdaq5batches()
