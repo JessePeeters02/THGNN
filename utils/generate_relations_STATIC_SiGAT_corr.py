@@ -56,7 +56,8 @@ def load_all_stocks(normalised_dir, restrict_last_n_days=None):
     """Laad alle genormaliseerde dagelijkse data (zelfde als DynamiSE)."""
     all_stock_data = []
     files = [f for f in os.listdir(normalised_dir) if f.endswith('.csv')]
-    for file in tqdm(files, desc="Loading normalised data"):
+    # for file in tqdm(files, desc="Loading normalised data"):
+    for file in files:
         df = pd.read_csv(os.path.join(normalised_dir, file))
         # Verwacht kolommen: Date, Stock, + feature_cols2
         all_stock_data.append(df[['Date', 'Stock'] + feature_cols2])
@@ -80,7 +81,8 @@ def load_raw_stocks(raw_dir, all_dates):
     if not raw_files:
         raise FileNotFoundError(f"Geen .csv bestanden gevonden in {raw_dir}")
     raw_data = {}
-    for file in tqdm(raw_files, desc="Loading raw data for labels"):
+    # for file in tqdm(raw_files, desc="Loading raw data for labels"):
+    for file in raw_files:
         stock_name = file.split('.')[0]
         df = pd.read_csv(os.path.join(raw_dir, file), parse_dates=['Date'])
         # Filter op dezelfde datums
@@ -280,7 +282,8 @@ def main(args):
             f.write("date,nodes,pos_edges_cos,neg_edges_cos,pos_edges_ssa,neg_edges_ssa\n")
 
     # 2) Itereer over alle mogelijke windows
-    for i in tqdm(range(prev_date_num - 1, len(all_dates)), desc="Building static snapshots"):
+    # for i in tqdm(range(prev_date_num - 1, len(all_dates)), desc="Building static snapshots"):
+    for i in range(prev_date_num - 1, len(all_dates)):
         end_date = all_dates[i]
         start_i = i - prev_date_num + 1
         if start_i < 0:
