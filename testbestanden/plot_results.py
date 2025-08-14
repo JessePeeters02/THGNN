@@ -12,8 +12,8 @@ base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidi
 print(base_path)
 
 """ uncomment de database die je wilt gebruiken"""
-# database = "CSI300"
-database = "S&P500"
+database = "CSI300"
+# database = "S&P500"
 # database = "NASDAQ_batches_5_200", "batch_1"
 # database = "NASDAQ_batches_5_200", "batch_2"
 # database = "NASDAQ_batches_5_200", "batch_3"
@@ -34,8 +34,12 @@ input_path = os.path.join(data_path, "results")
 """select de metrics en modellen die je wilt vergelijken"""
 metrics = ["rmse", "mae", "r2"]                  # pas aan: "mae", "mse", "rmse", "r2", "WS-dist", "KS-d", "KS-p"
 models = ["corr_t2", "onlycosine_t2", "STATIC_t2", "cosineDSC_t2", "DSE_t2"]  # pas aan: "corr", "DSE", "onlycosine", "cosineDSC", "noBeta", "STATIC", "DSE_gericht"
-
-
+models = ["corr", "onlycosine", "cosineDSC_t1", "DSE_t1", "corr_t2", "onlycosine_t2", "STATIC_t2", "cosineDSC_t2", "DSE_t2"]
+models = ["corr", "corr_t2", "DSE_t1", "DSE_t2"]
+models = ["corr_t2", "onlycosine_t2", "STATIC_t2", "cosineDSC_t2", "DSE_t2"]
+models = ["corr", "onlycosine", "cosineDSC_t1", "DSE_t1"]
+models = ["corr", "onlycosine", "STATIC_t1", "cosineDSC_t1", "DSE_t1", "DSEcorr_t1"]
+# models = ["corr_t2", "onlycosine_t2", "STATIC_t2", "cosineDSC_t2", "DSE_t2"]
 """Plot-opties"""
 use_seaborn_theme = True                     # zet op False als je pure matplotlib wil
 figsize = (12, 6)
@@ -78,6 +82,7 @@ def line_plots(xtick_rotation: int = 60):
             plt.plot(x_line, y_line, marker="o", linewidth=1.8, label=mo)
 
             # los punt: OVERALL (laatste rij)
+            # y_overall = y_line.mean()
             y_overall = df.loc[~date_mask, metric].iloc[0]
             plt.scatter(x_overall + offsets[i], y_overall,
                         marker="D", s=80, edgecolors="black", linewidths=0.6, zorder=5)

@@ -10,8 +10,8 @@ from scipy.stats import wasserstein_distance, ks_2samp
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
 print(base_path)
 """ uncomment de database die je wilt gebruiken"""
-# database = "CSI300"
-database = "S&P500"
+database = "CSI300"
+# database = "S&P500"
 # database = "NASDAQ_batches_5_200", "batch_1"
 # database = "NASDAQ_batches_5_200", "batch_2"
 # database = "NASDAQ_batches_5_200", "batch_3"
@@ -27,7 +27,7 @@ print(data_path)
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_test")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_corr")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_noBeta")
-# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATIC")
+prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATIC_t1")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_onlycosine")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_cosineDSC")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSE")
@@ -38,7 +38,7 @@ print(data_path)
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_corrDSC_t1")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSEcorr_t1")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSE_t2")
-prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATIC_t2")
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATIC_t2")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATICcorr_t1")
 output_path = os.path.join(data_path, "results")
 # endregion
