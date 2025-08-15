@@ -36,10 +36,10 @@ print(data_path)
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_onlycosine_t2")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_cosineDSC_t2")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_corrDSC_t2")
-prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSEcorr_t12")
+# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSEcorr_t12")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_DSE_t12")
 # prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATIC_t2")
-# prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATICcorr_t1")
+prediction_path = os.path.join(data_path, "model_saved_rolingwindow_STATICcorr_t11")
 output_path = os.path.join(data_path, "results")
 # endregion
 

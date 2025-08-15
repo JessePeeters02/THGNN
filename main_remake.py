@@ -58,7 +58,7 @@ class Args:
         self.data_end = data_end
         self.pre_data = pre_data
         # epoch settings
-        self.max_epochs = 30
+        self.max_epochs = 25
         self.epochs_eval = 5
         # learning rate settings
         self.lr = 0.001
@@ -1251,7 +1251,7 @@ def CSI300_STATICcorr_t1():
     print(f"data_train_predict_path: {data_train_predict_path}")
     daily_stock_path = os.path.join(data_path, f"daily_stock_STATICcorr_t1") #gpu_wvt, oldway, gpu_wvt
     print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, f"model_saved_rolingwindow_STATICcorr_t1")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_STATICcorr_t11")
     os.makedirs(save_path, exist_ok=True)
     prediction_path = save_path
     total_data_points = len(os.listdir(data_train_predict_path))
@@ -1708,11 +1708,11 @@ def SP500_full_corr_t1():
 # CSI300_onlycosine()
 # CSI300_corr()
 # CSI300_cosineDSC_t1()
-# CSI300_corrDSC_t1()
+CSI300_corrDSC_t1()
 # CSI300_STATIC_t1
-# CSI300_STATICcorr_t1
+# CSI300_STATICcorr_t1()
 # CSI300_full_t1()
-CSI300_full_corr_t1()
+# CSI300_full_corr_t1()
 # SP500_onlycosine()
 # SP500_corr()
 # SP500_cosineDSC_t1()
