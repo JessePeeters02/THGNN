@@ -14,7 +14,7 @@ import seaborn as sns
 # Pad configuratie
 base_path = os.path.dirname(os.path.abspath(__file__))
 # print(base_path)
-data_path = os.path.join(base_path, "data", "testbatch2")
+data_path = os.path.join(base_path, "data", "CSI300")
 # print(data_path)
 labels_path = os.path.join(data_path, "stock_labels.csv")
 labelsdf = pd.read_csv(labels_path, index_col=0)

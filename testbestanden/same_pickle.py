@@ -76,13 +76,41 @@ def compare_label_dirs(dir_a: str, dir_b: str, tol: float = TOL):
         for fn, msg in examples[:MAX_SHOW]:
             print(f"  - {fn}: {msg}")
 
+def print_all_labels_from_dir(pkl_dir: str):
+    files = sorted([f for f in os.listdir(pkl_dir) if f.endswith(".pkl")])
+    for fname in files:
+        path = os.path.join(pkl_dir, fname)
+        with open(path, "rb") as f:
+            obj = pickle.load(f)
+        labels = obj.get("mask", None)
+        print(f"{fname}:")
+        print(labels)
+        print("-" * 40)
+
+
+
 if __name__ == "__main__":
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    data_sp = os.path.join(base_path, "data", "S&P500")
+    data_sp = os.path.join(base_path, "data", "CSI300")
 
-    dir_new = os.path.join(data_sp, "data_train_predict_corr_wl")        # jouw herlabelde set
-    dir_good = os.path.join(data_sp, "data_train_predict_corr_wl_good")  # referentie
+    dir_new = os.path.join(data_sp, "data_train_predict_STATICcorr_t1")        # jouw herlabelde set
+    dir_good = os.path.join(data_sp, "data_train_predict_onlycosine")  # referentie
 
     start = time.time()
     compare_label_dirs(dir_new, dir_good, tol=TOL)
     print(f"\nKlaar in {time.time()-start:.1f}s")
+
+
+
+
+
+def print_all_labels_from_dir(pkl_dir: str):
+    files = sorted([f for f in os.listdir(pkl_dir) if f.endswith(".pkl")])
+    for fname in files:
+        path = os.path.join(pkl_dir, fname)
+        with open(path, "rb") as f:
+            obj = pickle.load(f)
+        labels = obj.get("labels", None)
+        print(f"{fname}:")
+        print(labels)
+        print("-" * 40)

@@ -1,7 +1,7 @@
 from trainer.trainer import *
 from data_loader import *
 from model.Thgnn import *
-from model.Thgnn_t2 import *
+# from model.Thgnn_t2 import *
 # from model.Thgnn_no_beta import *
 # from model.Thgnn_no_alpha import *
 import warnings
@@ -58,8 +58,8 @@ class Args:
         self.data_end = data_end
         self.pre_data = pre_data
         # epoch settings
-        self.max_epochs = 20
-        self.epochs_eval = 10
+        self.max_epochs = 30
+        self.epochs_eval = 5
         # learning rate settings
         self.lr = 0.001
         self.gamma = 0.3
@@ -132,12 +132,40 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     cold_scheduler = StepLR(optimizer=optimizer, step_size=5000, gamma=0.9, last_epoch=-1)
     default_scheduler = cold_scheduler
 
-    print('start training')
+    # Resume from the highest available checkpoint (10, 15, 20, 25)
+    start_epoch = 0
     best_val_loss = float('inf')
     best_model_state = None
     best_epoch = 0
 
-    for epoch in range(args.max_epochs):
+    # Find highest epoch checkpoint
+    max_epoch = 0
+    for e in [10, 15, 20, 25]:
+        checkpoint_path = os.path.join(args.save_path, pre_data + f"_epoch_{e}.dat")
+        if os.path.exists(checkpoint_path):
+            max_epoch = e
+
+    if max_epoch > 0:
+        checkpoint_path = os.path.join(args.save_path, pre_data + f"_epoch_{max_epoch}.dat")
+        print(f"Loading checkpoint from {checkpoint_path}")
+        checkpoint = torch.load(checkpoint_path, map_location=args.device)
+        model.load_state_dict(checkpoint['model'])
+        start_epoch = checkpoint['epoch']
+        best_epoch = start_epoch
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        batches_per_epoch = len(dataset_loader)  # pas aan aan jouw loader
+        steps_done = start_epoch * batches_per_epoch  # als step_size in stappen is
+        cold_scheduler = StepLR(optimizer, step_size=5000, gamma=0.9, last_epoch=steps_done - 1)
+        default_scheduler = cold_scheduler
+        # Try to restore best_val_loss and best_model_state if present
+        val_loss, _ = eval_epoch(args=args, model=model, dataset_eval=val_dataset_loader, loss_fcn=args.loss_fcn)
+        best_val_loss = val_loss
+        print(f"Best validation loss updated to {best_val_loss}")
+        print(f"Resuming training from epoch {start_epoch}")
+
+    print('start training')
+
+    for epoch in range(start_epoch, args.max_epochs):
         train_loss = train_epoch(epoch=epoch, args=args, model=model, dataset_train=dataset_loader,
                                  optimizer=optimizer, scheduler=default_scheduler, loss_fcn=args.loss_fcn)
         if ((epoch + 1) % args.epochs_eval == 0) and (epoch + 1 >= 9):
@@ -150,6 +178,10 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
                 print("save model!")
                 state = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': epoch + 1}
                 torch.save(state, os.path.join(args.save_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))
+            else:
+                print("not best model, but saving")
+                state = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': epoch + 1}
+                torch.save(state, os.path.join(args.save_path, pre_data + "_epoch_" + str(epoch + 1) + ".dat"))   
         else:
             print('Epoch: {}/{}, train loss: {:.6f}'.format(epoch + 1, args.max_epochs, train_loss))
 
@@ -1594,7 +1626,7 @@ def SP500_full_t1():
     print(f"data_train_predict_path: {data_train_predict_path}")
     daily_stock_path = os.path.join(data_path, f"daily_stock_DSE_t1") #gpu_wvt, oldway, gpu_wvt
     print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE_t1")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE_t11")
     os.makedirs(save_path, exist_ok=True)
     prediction_path = save_path
     total_data_points = len(os.listdir(data_train_predict_path))
@@ -1693,7 +1725,7 @@ def SP500_full_corr_t1():
 # SP500_corr()
 # CSI300_full_t1()
 # CSI300_full_corr_t1()
-# SP500_full_t1()
+SP500_full_t1()
 # SP500_cosineDSC_t1()
 # SP500_STATIC_t1()
 
@@ -1707,7 +1739,7 @@ def SP500_full_corr_t1():
 
 # SP500_corrDSC_t1()
 # SP500_STATICcorr_t1()
-SP500_full_corr_t1()
+# SP500_full_corr_t1()
 
 
 # endregion
@@ -2410,29 +2442,26 @@ def SP500_full_corr_t2():
 
 
 # # already done
+# SP500_corr_t2()
+# SP500_onlycosine_t2()
+# SP500_STATICcorr_t2()
+# SP500_STATIC_t2()
+# SP500_corrDSC_t2()
+# SP500_cosineDSC_t2()
+# SP500_full_corr_t2()
+# SP500_full_t2()
+# CSI300_full_t2()
+# CSI300_cosineDSC_t2()
+# CSI300_STATIC_t2()
+# CSI300_full_corr_t2()
+# CSI300_corr_t2()
+# CSI300_corrDSC_t2()
+# CSI300_STATICcorr_t2()
+# CSI300_onlycosine_t2()
+# SP500_STATICcorr_t1()
+# SP500_corrDSC_t1()
+# CSI300_corrDSC_t1()
+# CSI300_STATICcorr_t1()
 
 
 # # nog te doen
-SP500_full_t2()
-# SP500_onlycosine_t2()
-# SP500_corr_t2()
-# SP500_STATIC_t2()
-# SP500_cosineDSC_t2()
-
-# CSI300_cosineDSC_t2()
-# CSI300_STATIC_t2()
-
-# CSI300_corrDSC_t2()
-# CSI300_STATICcorr_t2()
-
-# SP500_corrDSC_t2()
-# SP500_STATICcorr_t2()
-# SP500_full_corr_t2()
-
-# CSI300_onlycosine_t2()
-# CSI300_corr_t2()
-
-# CSI300_full_t2()
-# CSI300_full_corr_t2()
-
-
