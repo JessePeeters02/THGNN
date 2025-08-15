@@ -71,6 +71,7 @@ class Args:
         self.loss_fcn = mse_loss
         # self.loss_fcn = mae_loss
         # save model settings
+        self.reload_path = reload_path
         self.save_path = save_path
         self.load_path = self.save_path
         self.save_name = self.model_name + "_hidden_" + str(self.hidden_dim) + "_head_" + str(self.num_heads) + \
@@ -141,12 +142,12 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
     # Find highest epoch checkpoint
     max_epoch = 0
     for e in [10, 15, 20, 25]:
-        checkpoint_path = os.path.join(args.save_path, pre_data + f"_epoch_{e}.dat")
+        checkpoint_path = os.path.join(args.reload_path, pre_data + f"_epoch_{e}.dat")
         if os.path.exists(checkpoint_path):
             max_epoch = e
 
     if max_epoch > 0:
-        checkpoint_path = os.path.join(args.save_path, pre_data + f"_epoch_{max_epoch}.dat")
+        checkpoint_path = os.path.join(args.reload_path, pre_data + f"_epoch_{max_epoch}.dat")
         print(f"Loading checkpoint from {checkpoint_path}")
         checkpoint = torch.load(checkpoint_path, map_location=args.device)
         model.load_state_dict(checkpoint['model'])
@@ -162,6 +163,8 @@ def fun_train_predict(data_start, data_middle, data_end, pre_data):
         best_val_loss = val_loss
         print(f"Best validation loss updated to {best_val_loss}")
         print(f"Resuming training from epoch {start_epoch}")
+        state = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': best_epoch}
+        torch.save(state, os.path.join(args.save_path, pre_data + "_epoch_" + str(best_epoch) + ".dat"))  
 
     print('start training')
 
@@ -1323,7 +1326,7 @@ def CSI300_full_t1():
 def CSI300_full_corr_t1():
     print(f"Start CSI300_full_corr_t1: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     start_time = time.time()
-    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, reload_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
     data_path = os.path.join(base_path, "data", "CSI300")
@@ -1332,7 +1335,8 @@ def CSI300_full_corr_t1():
     print(f"data_train_predict_path: {data_train_predict_path}")
     daily_stock_path = os.path.join(data_path, f"daily_stock_DSEcorr_t1") #gpu_wvt, oldway, gpu_wvt
     print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSEcorr_t1")
+    reload_path = os.path.join(data_path, f"model_saved_rolingwindow_DSEcorr_t11")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSEcorr_t12")
     os.makedirs(save_path, exist_ok=True)
     prediction_path = save_path
     total_data_points = len(os.listdir(data_train_predict_path))
@@ -1617,7 +1621,7 @@ def SP500_STATICcorr_t1():
 def SP500_full_t1():
     print(f"Start SP500_full_t1: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     start_time = time.time()
-    global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
+    global base_path, data_path, data_train_predict_path, daily_stock_path, reload_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
     base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
     print(f"base_path: {base_path}")
     data_path = os.path.join(base_path, "data", "S&P500")
@@ -1626,7 +1630,8 @@ def SP500_full_t1():
     print(f"data_train_predict_path: {data_train_predict_path}")
     daily_stock_path = os.path.join(data_path, f"daily_stock_DSE_t1") #gpu_wvt, oldway, gpu_wvt
     print(f"daily_stock_path: {daily_stock_path}")
-    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE_t11")
+    reload_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE_t11")
+    save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE_t12")
     os.makedirs(save_path, exist_ok=True)
     prediction_path = save_path
     total_data_points = len(os.listdir(data_train_predict_path))
@@ -1707,7 +1712,7 @@ def SP500_full_corr_t1():
 # CSI300_STATIC_t1
 # CSI300_STATICcorr_t1
 # CSI300_full_t1()
-# CSI300_full_corr_t1()
+CSI300_full_corr_t1()
 # SP500_onlycosine()
 # SP500_corr()
 # SP500_cosineDSC_t1()
@@ -1725,7 +1730,7 @@ def SP500_full_corr_t1():
 # SP500_corr()
 # CSI300_full_t1()
 # CSI300_full_corr_t1()
-SP500_full_t1()
+# SP500_full_t1()
 # SP500_cosineDSC_t1()
 # SP500_STATIC_t1()
 

@@ -34,8 +34,8 @@ input_path = os.path.join(data_path, "results")
 """select de metrics en modellen die je wilt vergelijken"""
 metrics = ["rmse", "mae", "r2"]                  # pas aan: "mae", "mse", "rmse", "r2", "WS-dist", "KS-d", "KS-p"
 
-# models = ["corr", "onlycosine", "STATIC_t1", "cosineDSC_t1", "DSE_t11"]
-models = ["corr", "STATICcorr_t1", "corrDSC_t1", "DSEcorr_t1"]
+# models = ["corr", "onlycosine", "STATIC_t1", "cosineDSC_t1", "DSE_t1"]
+models = ["corr", "STATICcorr_t1", "corrDSC_t1", "DSEcorr_t1", "DSEcorr_t11", "DSEcorr_t12"]
 # models = ["corr_t2", "onlycosine_t2", "STATIC_t2", "cosineDSC_t2", "DSE_t2"]
 # models = ["corr_t2", "STATICcorr_t2", "corrDSC_t2", "DSEcorr_t2"]
 
