@@ -35,7 +35,7 @@ input_path = os.path.join(data_path, "results")
 metrics = ["rmse", "mae", "r2"]                  # pas aan: "mae", "mse", "rmse", "r2", "WS-dist", "KS-d", "KS-p"
 
 # models = ["corr", "onlycosine", "STATIC_t1", "cosineDSC_t1", "DSE_t1"]
-models = ["corr", "STATICcorr_t11", "corrDSC_t1", "DSEcorr_t12"]
+models = ["corr", "STATICcorr_t1", "corrDSC_t1", "DSEcorr_t1", "DSEcorr_t11", "DSEcorr_t12"]
 # models = ["corr_t2", "onlycosine_t2", "STATIC_t2", "cosineDSC_t2", "DSE_t2"]
 # models = ["corr_t2", "STATICcorr_t2", "corrDSC_t2", "DSEcorr_t2"]
 
@@ -47,7 +47,7 @@ models = ["corr", "STATICcorr_t11", "corrDSC_t1", "DSEcorr_t12"]
 
 """Plot-opties"""
 use_seaborn_theme = True                     # zet op False als je pure matplotlib wil
-figsize = (12, 6)
+figsize = (10, 8)
 save_png = False
 output_path = os.path.join(base_path, "plots")
 os.makedirs(output_path, exist_ok=True)
@@ -57,6 +57,8 @@ os.makedirs(output_path, exist_ok=True)
 
 # region plots
 def line_plots(xtick_rotation: int = 60):
+    # Different markers for each model
+    markers = ['o', 's', '^', 'D', 'v', '<', '>', 'p', 'h', '8']
 
     # -- 1) X-as labels afleiden uit het eerste model --
     first = models[0]
@@ -65,49 +67,70 @@ def line_plots(xtick_rotation: int = 60):
 
     date_mask0 = df0["dt"].str.upper() != "OVERALL"
     date_labels = df0.loc[date_mask0, "dt"].tolist()      # alle dagen in volgorde
-    x_overall   = len(date_labels)                         # index voor OVERALL
-    x_labels    = date_labels + ["OVERALL"]
-
-    # offsets voor OVERALL-punten zodat ze niet overlappen
-    n = len(models)
-    offsets = np.linspace(-0.5, 0.5, n) if n > 1 else [0.0]
+    x_overall = len(date_labels)                          # index voor OVERALL
 
     # -- 2) Plot per metric --
     for metric in metrics:
-        plt.figure(figsize=(12, 6))
+        plt.figure(figsize=(16, 6))
 
+        # Get all values to determine y-axis limits
+        all_values = []
+        overall_values = []
+        for mo in models:
+            df = pd.read_csv(os.path.join(input_path, f"results_{mo}.csv"))
+            df["dt"] = df["dt"].astype(str)
+            daily_mask = df["dt"].str.upper() != "OVERALL"
+            all_values.extend(df.loc[daily_mask, metric].tolist())
+            overall_values.append(df.loc[~daily_mask, metric].iloc[0])
+
+        # First create line plots for daily values
         for i, mo in enumerate(models):
             df = pd.read_csv(os.path.join(input_path, f"results_{mo}.csv"))
             df["dt"] = df["dt"].astype(str)
+            
+            # Split daily and overall values
+            daily_mask = df["dt"].str.upper() != "OVERALL"
+            daily_values = df.loc[daily_mask, metric].to_numpy()
+            overall_value = df.loc[~daily_mask, metric].iloc[0]
+            
+            # Line plot for daily values
+            plt.plot(range(len(date_labels)), daily_values, 
+                    marker=markers[i % len(markers)], 
+                    linewidth=1.8, label=mo, markersize=5,
+                    markeredgewidth=1)
+            
+            # Bar plot for OVERALL value with wider bars
+            bar_width = 1.2 / len(models)
+            bar_pos = x_overall -0.3 + (i * bar_width)
+            plt.bar(bar_pos, overall_value, width=bar_width, 
+                   alpha=1, color=plt.gca().lines[-1].get_color())
 
-            # lijn: alle dagen
-            date_mask = df["dt"].str.upper() != "OVERALL"
-            y_line = df.loc[date_mask, metric].to_numpy()
-            x_line = range(len(date_labels))  # aanname: zelfde volgorde/ aantal dagen
-            plt.plot(x_line, y_line, marker="o", linewidth=1.8, label=mo)
+        # Set y-axis limits based on data, but keep 0 as minimum if data goes below 0
+        min_val = min(min(all_values), min(overall_values))
+        max_val = max(max(all_values), max(overall_values))
+        margin = (max_val - min_val) * 0.05  # 5% margin
+        
+        # Set bottom limit to 0 if any values are negative
+        y_min = 0 if min_val < 0 else min_val - margin
+        plt.ylim(y_min, max_val + margin)
 
-            # los punt: OVERALL (laatste rij)
-            y_overall = y_line.mean()
-            # y_overall = df.loc[~date_mask, metric].iloc[0]
-            plt.scatter(x_overall + offsets[i], y_overall,
-                        marker="D", s=80, edgecolors="black", linewidths=0.6, zorder=5)
-
-        # simpele x-as: labels schuin
-        plt.xticks(range(len(x_labels)), x_labels, rotation=xtick_rotation, ha="right")
-
-        # visuele scheiding voor OVERALL
-        plt.axvline(x_overall - 0.5, linestyle="--", alpha=0.5)
-
+        # Set x-ticks for both daily values and OVERALL
+        plt.xticks(list(range(len(date_labels))) + [x_overall], 
+                  date_labels + ["OVERALL"], 
+                  rotation=xtick_rotation, ha="right")
+        
         plt.xlabel("Date")
         plt.ylabel(metric)
         plt.title(f"{metric} over time per model")
         plt.legend()
+        plt.grid(False)
         plt.tight_layout()
 
         if save_png:
-            out_dir = os.path.join(input_path, "..", "plots")
-            os.makedirs(out_dir, exist_ok=True)
-            plt.savefig(os.path.join(out_dir, f"{metric}.png"), dpi=160, bbox_inches="tight")
+            # out_dir = os.path.join(input_path, "..", "plots")
+            # os.makedirs(out_dir, exist_ok=True)
+            plt.savefig(os.path.join(output_path, f"{database}_{metric}_{models}.png"), dpi=160, bbox_inches=None)
+            # plt.show()
             plt.close()
         else:
             plt.show()
@@ -193,10 +216,10 @@ def plot_significance_heatmap(df_sig, metric):
 
 line_plots()
 df_sig = significantieverschil(test_type="wilcoxon", alpha=0.05)
-print(df_sig)
-plot_significance_heatmap(df_sig, metric="rmse")
-plot_significance_heatmap(df_sig, metric="mae")
-plot_significance_heatmap(df_sig, metric="r2")
+# print(df_sig)
+# plot_significance_heatmap(df_sig, metric="rmse")
+# plot_significance_heatmap(df_sig, metric="mae")
+# plot_significance_heatmap(df_sig, metric="r2")
 
 # endregion
 
