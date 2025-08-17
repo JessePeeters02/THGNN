@@ -1,35 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-generate_relations_STATIC_SiGAT.py
-
-Doel:
-- Bouw statische gesigneerde graaf-snapshots vanuit genormaliseerde dagdata
-  m.b.v. *dezelfde* cosine-similarity + thresholds als in jouw DynamiSE.
-- Voeg balance theory (triad closure) toe via identieke SSA stap.
-- Exporteer per datum THGNN-compatibele .pkl samples:
-    {
-        "pos_adj": Tensor [N, N] (float),
-        "neg_adj": Tensor [N, N] (float),
-        "features": Tensor [N, prev_date_num, F],
-        "labels": Tensor [N],
-        "mask": BoolTensor [N]
-    }
-- Schrijf alles weg in aparte mappen:
-    <dataset_dir>/data_train_predict_STATIC/
-    <dataset_dir>/daily_stock_STATIC/
-  zodat er geen conflict is met DynamiSE-uitvoer.
-
-Run:
-    python generate_relations_STATIC_SiGAT.py --dataset_dir ./data/CSI300
-
-Vereisten:
-    pip install torch numpy pandas tqdm
-"""
-
 import os
-import argparse
 import pickle
 from tqdm import tqdm
 import numpy as np
@@ -387,22 +356,20 @@ def main(args):
 
 
 if __name__ == "__main__":
-    # Hardcoded dataset directory zoals DynamiSE
     class Args:
         pass
     args = Args()
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_path = os.path.join(base_path, "data", "CSI300")
-    args.dataset_dir = data_path  # <-- pad naar jouw S&P500 map
+    args.dataset_dir = data_path
 
     main(args)
 
-    # Hardcoded dataset directory zoals DynamiSE
     class Args:
         pass
     args = Args()
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_path = os.path.join(base_path, "data", "S&P500")
-    args.dataset_dir = data_path  # <-- pad naar jouw S&P500 map
+    args.dataset_dir = data_path
 
     main(args)

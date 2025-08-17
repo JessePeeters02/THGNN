@@ -2,8 +2,7 @@ import os
 import pandas as pd
 from tqdm import tqdm
 
-# Basis pad naar de data-map
-base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
+base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print(base_path)
 data_path = os.path.join(base_path, "data", "S&P500")
 print(data_path)
@@ -54,7 +53,6 @@ def create_labels_csv(raw_data, all_dates, output_path):
     labels_df.to_csv(output_path)
     print(f"Labels saved to {output_path}")
 
-# [Na het laden van de data...]
 stock_data = load_stock_data(raw_data_path)
 all_dates = sorted({date.strftime('%Y-%m-%d') for df in stock_data.values() for date in df['Date'].tolist()})
 

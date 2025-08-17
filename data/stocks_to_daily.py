@@ -3,7 +3,6 @@ import pandas as pd
 from tqdm import tqdm
 
 # Configuratie
-# FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume']
 FEATURE_COLS = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 
 # Pad configuratie
