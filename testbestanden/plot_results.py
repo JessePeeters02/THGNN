@@ -34,21 +34,20 @@ input_path = os.path.join(data_path, "results")
 """select de metrics en modellen die je wilt vergelijken"""
 metrics = ["rmse", "mae", "r2"]                  # pas aan: "mae", "mse", "rmse", "r2", "WS-dist", "KS-d", "KS-p"
 
-# models = ["corr", "onlycosine", "STATIC_t1", "cosineDSC_t1", "DSE_t1"]
-models = ["corr", "STATICcorr_t1", "corrDSC_t1", "DSEcorr_t1", "DSEcorr_t11", "DSEcorr_t12"]
+models = ["CS", "SSA-CS", "DSC-CS", "DSE-CS"]
+# models = ["PC", "SSA-PC", "DSC-PC", "DSE-PC"]
 # models = ["corr_t2", "onlycosine_t2", "STATIC_t2", "cosineDSC_t2", "DSE_t2"]
 # models = ["corr_t2", "STATICcorr_t2", "corrDSC_t2", "DSEcorr_t2"]
 
 
 # models = ["corr", "onlycosine", "STATICcorr_t1", "corrDSC_t1", "DSEcorr_t1", "DSE_t1"]
-# models = ["corr", "onlycosine", "DSEcorr_t1", "DSE_t1"]
+# models = ["PC", "CS", "DSE-PC", "DSE-CS"]
 # models = ["corr_t2", "onlycosine_t2", "DSEcorr_t2", "DSE_t2"]
 
 
 """Plot-opties"""
 use_seaborn_theme = True                     # zet op False als je pure matplotlib wil
-figsize = (10, 8)
-save_png = False
+save_png = True
 output_path = os.path.join(base_path, "plots")
 os.makedirs(output_path, exist_ok=True)
 
@@ -56,7 +55,21 @@ os.makedirs(output_path, exist_ok=True)
 
 
 # region plots
-def line_plots(xtick_rotation: int = 60):
+def line_plots(xtick_rotation: int = 45):
+    # Set font sizes twice as large
+    plt.rcParams.update({'font.size': 20})          # Default font size
+    SMALL_SIZE = 20*0.9                                 # Small font size
+    MEDIUM_SIZE = 24*0.9                                # Medium font size
+    BIGGER_SIZE = 28*0.9                                # Bigger font size
+
+    plt.rc('font', size=SMALL_SIZE)                # controls default text sizes
+    plt.rc('axes', titlesize=BIGGER_SIZE)          # fontsize of the axes title
+    plt.rc('axes', labelsize=MEDIUM_SIZE)          # fontsize of the x and y labels
+    plt.rc('xtick', labelsize=SMALL_SIZE)          # fontsize of the tick labels
+    plt.rc('ytick', labelsize=SMALL_SIZE)          # fontsize of the tick labels
+    plt.rc('legend', fontsize=SMALL_SIZE)          # legend fontsize
+    plt.rc('figure', titlesize=BIGGER_SIZE)        # fontsize of the figure title
+
     # Different markers for each model
     markers = ['o', 's', '^', 'D', 'v', '<', '>', 'p', 'h', '8']
 
@@ -121,7 +134,7 @@ def line_plots(xtick_rotation: int = 60):
         
         plt.xlabel("Date")
         plt.ylabel(metric)
-        plt.title(f"{metric} over time per model")
+        plt.title(f"{database[0]}: {metric} over time per model")
         plt.legend()
         plt.grid(False)
         plt.tight_layout()
@@ -134,9 +147,57 @@ def line_plots(xtick_rotation: int = 60):
             plt.close()
         else:
             plt.show()
+
+        # # Reset font sizes to default after plotting
+        # plt.rcParams.update({'font.size': 10})
+        # plt.rc('font', size=10)
+        # plt.rc('axes', titlesize=12)
+        # plt.rc('axes', labelsize=10)
+        # plt.rc('xtick', labelsize=10)
+        # plt.rc('ytick', labelsize=10)
+        # plt.rc('legend', fontsize=10)
+        # plt.rc('figure', titlesize=12)
 # endregion
 
-# region plots
+# region overall plot
+
+def overall_barplots():
+    fig, axes = plt.subplots(1, len(metrics), figsize=(4.5 * len(metrics), 6))
+
+    if len(metrics) == 1:
+        axes = [axes]  # zorgen dat het altijd een lijst is
+
+    for i, metric in enumerate(metrics):
+        overall_values = []
+        for mo in models:
+            df = pd.read_csv(os.path.join(input_path, f"results_{mo}.csv"))
+            df["dt"] = df["dt"].astype(str)
+            daily_mask = df["dt"].str.upper() != "OVERALL"
+            overall_value = df.loc[~daily_mask, metric].iloc[0]
+            overall_values.append(overall_value)
+
+        x = range(len(models))
+        bars = axes[i].bar(x, overall_values, tick_label=models)
+
+        # Kleuren consistent houden
+        for bar, color in zip(bars, plt.cm.tab10.colors):
+            bar.set_color(color)
+
+        axes[i].set_ylabel(metric)
+        axes[i].set_title(f"Overall {metric}")
+
+    plt.tight_layout()
+
+    if save_png:
+        plt.savefig(os.path.join(output_path, f"{database}_overall_barplots.png"), dpi=160)
+        plt.close()
+    else:
+        plt.show()
+
+
+# endregion
+
+# region significantie plot
 def significantieverschil(test_type="wilcoxon", alpha=0.05):
     """
     Voer pairwise significantietesten uit op daggemiddelde metrics van de modellen.
@@ -215,7 +276,8 @@ def plot_significance_heatmap(df_sig, metric):
 # region functies en mappen kiezen
 
 line_plots()
-df_sig = significantieverschil(test_type="wilcoxon", alpha=0.05)
+# overall_barplots()
+# df_sig = significantieverschil(test_type="wilcoxon", alpha=0.05)
 # print(df_sig)
 # plot_significance_heatmap(df_sig, metric="rmse")
 # plot_significance_heatmap(df_sig, metric="mae")
