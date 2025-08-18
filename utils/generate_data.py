@@ -3,13 +3,9 @@ import torch
 import pickle
 import numpy as np
 from tqdm import tqdm
-import networkx as nx
 import pandas as pd
-from torch.autograd import Variable
 import time
 
-# Definieer de kolommen die we willen gebruiken uit de CSV-bestanden
-# feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 feature_cols = ['Open', 'High', 'Low', 'Close', 'Volume', 'Turnover']
 prev_date_num = 20
 
@@ -38,40 +34,9 @@ def load_stock_data(raw_stock_path, stock_data_path):
 
 def calculate_label(raw_df, current_date):
     date_idx = raw_df[raw_df['Date'] == current_date].index[0]
-    # print(date_idx)
     close_today = raw_df.iloc[date_idx]['Close']
     close_tomorrow = raw_df.iloc[date_idx+1]['Close']
     return (close_tomorrow / close_today) - 1
-
-# def prepare_adjacencymatrix(enddt):
-#     relation_file = os.path.join(relation_path, f"{enddt}.csv")
-#     adj_all = pd.read_csv(relation_file, index_col=0)
-
-#     pos_adj = nx.adjacency_matrix(nx.Graph(adj_all > threshold)).toarray().astype(float)
-#     pos_adj = torch.FloatTensor(pos_adj - np.diag(np.diag(pos_adj)))
-
-#     neg_adj = nx.adjacency_matrix(nx.Graph(adj_all < -threshold)).toarray().astype(float)
-#     neg_adj = torch.FloatTensor(neg_adj - np.diag(np.diag(neg_adj)))
-    
-#     # Tel het aantal verbindingen (1'en) in beide matrices
-#     pos_connections = int(torch.sum(pos_adj).item())
-#     neg_connections = int(torch.sum(neg_adj).item())
-#     print(f"Aantal positieve verbindingen: {pos_connections}")
-#     print(f"Aantal negatieve verbindingen: {neg_connections}")
-    
-#     # Bereken min/max aantal verbindingen per lijn
-#     pos_connections_per_row = torch.sum(pos_adj, dim=1)
-#     neg_connections_per_row = torch.sum(neg_adj, dim=1)
-    
-#     print(f"Min positieve verbindingen per lijn: {int(torch.min(pos_connections_per_row).item())}")
-#     print(f"Max positieve verbindingen per lijn: {int(torch.max(pos_connections_per_row).item())}")
-#     print(f"Min negatieve verbindingen per lijn: {int(torch.min(neg_connections_per_row).item())}")  
-#     print(f"Max negatieve verbindingen per lijn: {int(torch.max(neg_connections_per_row).item())}")
-    
-#     # print('pos_adj shape: ', pos_adj.shape)
-#     # print('neg_adj shape: ', neg_adj.shape)
-
-#     return pos_adj, neg_adj
 
 def prepare_adjacencymatrix(enddt, threshold, min_neighbors):
     relation_file = os.path.join(relation_path, f"{enddt}.csv")
@@ -79,17 +44,13 @@ def prepare_adjacencymatrix(enddt, threshold, min_neighbors):
     stock_names = adj_all.index.tolist()
     adj_values = adj_all.values
     
-    # Initialiseer matrices met vaste threshold
     pos_adj = (adj_values > threshold).astype(float)
     neg_adj = (adj_values < -threshold).astype(float)
     
-    # Verwijder zelf-connecties
     np.fill_diagonal(pos_adj, 0)
     np.fill_diagonal(neg_adj, 0)
     
-    # Garandeer minimum aantal buren
     for i in range(len(stock_names)):
-        # Positieve buren
         pos_neighbors = np.sum(pos_adj[i])
         if pos_neighbors < min_neighbors:
             corrs = adj_values[i].copy()
@@ -97,7 +58,6 @@ def prepare_adjacencymatrix(enddt, threshold, min_neighbors):
             top_pos_indices = np.argsort(-corrs)[:min_neighbors]
             pos_adj[i, top_pos_indices] = 1
         
-        # Negatieve buren
         neg_neighbors = np.sum(neg_adj[i])
         if neg_neighbors < min_neighbors:
             corrs = adj_values[i].copy()
@@ -108,124 +68,6 @@ def prepare_adjacencymatrix(enddt, threshold, min_neighbors):
     return torch.FloatTensor(pos_adj), torch.FloatTensor(neg_adj)
 
 
-# def prepare_adjacencymatrix(enddt, min_neighbors=min_neighbors):
-#     relation_file = os.path.join(relation_path, f"{enddt}.csv")
-#     adj_all = pd.read_csv(relation_file, index_col=0)
-#     stock_names = adj_all.index.tolist()
-#     adj_values = adj_all.values
-    
-#     # Initialiseer matrices met vaste threshold voor sterke connecties
-#     original_pos_adj = (adj_values > threshold).astype(float)
-#     original_neg_adj = (adj_values < -threshold).astype(float)
-    
-#     # Verwijder zelf-connecties
-#     np.fill_diagonal(original_pos_adj, 0)
-#     np.fill_diagonal(original_neg_adj, 0)
-    
-#     # Maak kopieën voor aanpassing
-#     pos_adj = original_pos_adj.copy()
-#     neg_adj = original_neg_adj.copy()
-    
-#     # Threshold logging
-#     threshold_stats = {
-#         'original_pos': [],
-#         'added_pos': [],
-#         'original_neg': [],
-#         'added_neg': []
-#     }
-    
-#     # Garandeer minimum aantal buren
-#     for i in range(len(stock_names)):
-#         # Positieve buren
-#         pos_neighbors = np.sum(pos_adj[i])
-#         if pos_neighbors < min_neighbors:
-#             corrs = adj_values[i].copy()
-#             corrs[i] = 0  # verwijder zelf-connectie
-            
-#             # Sorteer correlaties (hoog naar laag)
-#             sorted_indices = np.argsort(-corrs)
-#             sorted_corrs = corrs[sorted_indices]
-            
-#             # Threshold is de correlatie van de min_neighbors-de buur
-#             new_threshold = sorted_corrs[min_neighbors-1] if len(sorted_corrs) >= min_neighbors else 0
-            
-#             # Log thresholds
-#             original_threshold = threshold
-#             threshold_stats['original_pos'].append(original_threshold)
-#             threshold_stats['added_pos'].append(new_threshold)
-            
-#             # Selecteer nieuwe buren
-#             needed = min_neighbors - pos_neighbors
-#             added = 0
-#             for idx in sorted_indices:
-#                 if added >= needed:
-#                     break
-#                 if pos_adj[i, idx] == 0 and corrs[idx] > 0:  # Nog niet geselecteerd en positief
-#                     pos_adj[i, idx] = 1
-#                     added += 1
-        
-#         # Negatieve buren
-#         neg_neighbors = np.sum(neg_adj[i])
-#         if neg_neighbors < min_neighbors:
-#             corrs = adj_values[i].copy()
-#             corrs[i] = 0  # verwijder zelf-connectie
-            
-#             # Sorteer correlaties (laag naar hoog)
-#             sorted_indices = np.argsort(corrs)
-#             sorted_corrs = corrs[sorted_indices]
-            
-#             # Threshold is de correlatie van de min_neighbors-de buur
-#             new_threshold = sorted_corrs[min_neighbors-1] if len(sorted_corrs) >= min_neighbors else 0
-            
-#             # Log thresholds
-#             original_threshold = -threshold
-#             threshold_stats['original_neg'].append(original_threshold)
-#             threshold_stats['added_neg'].append(new_threshold)
-            
-#             # Selecteer nieuwe buren
-#             needed = min_neighbors - neg_neighbors
-#             added = 0
-#             for idx in sorted_indices:
-#                 if added >= needed:
-#                     break
-#                 if neg_adj[i, idx] == 0 and corrs[idx] < 0:  # Nog niet geselecteerd en negatief
-#                     neg_adj[i, idx] = 1
-#                     added += 1
-    
-#     # Print threshold statistieken
-#     print("\nThreshold statistieken:")
-#     print(f"Originele positieve threshold: {threshold}")
-#     if threshold_stats['added_pos']:
-#         print(f"Laagste toegevoegde positieve threshold: {min(threshold_stats['added_pos']):.4f}")
-#         print(f"Gemiddelde toegevoegde positieve threshold: {np.mean(threshold_stats['added_pos']):.4f}")
-    
-#     print(f"\nOriginele negatieve threshold: {-threshold}")
-#     if threshold_stats['added_neg']:
-#         print(f"Hoogste toegevoegde negatieve threshold: {max(threshold_stats['added_neg']):.4f}")
-#         print(f"Gemiddelde toegevoegde negatieve threshold: {np.mean(threshold_stats['added_neg']):.4f}")
-    
-#     # Converteer naar tensors
-#     pos_adj = torch.FloatTensor(pos_adj)
-#     neg_adj = torch.FloatTensor(neg_adj)
-    
-#     # Tel het aantal verbindingen
-#     pos_connections = int(torch.sum(pos_adj).item())
-#     neg_connections = int(torch.sum(neg_adj).item())
-#     print(f"\nAantal positieve verbindingen: {pos_connections}")
-#     print(f"Aantal negatieve verbindingen: {neg_connections}")
-    
-#     # Bereken min/max aantal verbindingen per lijn
-#     pos_connections_per_row = torch.sum(pos_adj, dim=1)
-#     neg_connections_per_row = torch.sum(neg_adj, dim=1)
-    
-#     print(f"\nMin positieve verbindingen per lijn: {int(torch.min(pos_connections_per_row).item())}")
-#     print(f"Max positieve verbindingen per lijn: {int(torch.max(pos_connections_per_row).item())}")
-#     print(f"Min negatieve verbindingen per lijn: {int(torch.min(neg_connections_per_row).item())}")  
-#     print(f"Max negatieve verbindingen per lijn: {int(torch.max(neg_connections_per_row).item())}")
-    
-#     return pos_adj, neg_adj
-
-# Functie om de relatiegrafieken te verwerken
 def fun(iend, enddt, stock_data, pdn, tr, mn):
     istart = iend - pdn + 1
     startdt = all_dates[istart]
@@ -259,7 +101,7 @@ def fun(iend, enddt, stock_data, pdn, tr, mn):
         'neg_adj': torch.FloatTensor(neg_adj),
         'features': torch.FloatTensor(np.array(features)),
         'labels': torch.FloatTensor(labels),
-        'mask': [True] * len(labels)  # Alle samples zijn geldig
+        'mask': [True] * len(labels)
     }
 
     with open(os.path.join(data_train_predict_path, f"{enddt}.pkl"), 'wb') as f:
@@ -267,16 +109,13 @@ def fun(iend, enddt, stock_data, pdn, tr, mn):
     df = pd.DataFrame(columns=['code', 'dt'], data=day_last_code)
     df.to_csv(os.path.join(daily_stock_path, f"{enddt}.csv"), header=True, index=False, encoding='utf_8_sig')
 
-# Voorbeeld van hoe je de functie kunt aanroepen
-# fun('2022-11-30', '2022-11-01', '2022-11-30', stock_data)
-# fun('2022-12-30', '2022-12-01', '2022-12-30', stock_data)
+
 
 def CSI300():
     print(f"Start CSI300: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     start_time = time.time()
     global base_path, data_path, relation_path, raw_data_path, stock_data_path, raw_data, stock_data, all_dates, data_train_predict_path, daily_stock_path
-    # Basis pad naar de data-map
-    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     print(base_path)
     data_path = os.path.join(base_path, "data", "CSI300")
     print(data_path)
@@ -284,7 +123,7 @@ def CSI300():
     print(relation_path)
     raw_data_path = os.path.join(data_path, "stockdata")
     print(raw_data_path)
-    stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
+    stock_data_path = os.path.join(data_path, "normalisedstockdata")
     print(stock_data_path)
 
     raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)
@@ -304,8 +143,7 @@ def SP500():
     print(f"Start SP500: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     start_time = time.time()
     global base_path, data_path, relation_path, raw_data_path, stock_data_path, raw_data, stock_data, all_dates, data_train_predict_path, daily_stock_path
-    # Basis pad naar de data-map
-    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     print(base_path)
     data_path = os.path.join(base_path, "data", "S&P500")
     print(data_path)
@@ -313,7 +151,7 @@ def SP500():
     print(relation_path)
     raw_data_path = os.path.join(data_path, "stockdata")
     print(raw_data_path)
-    stock_data_path = os.path.join(data_path, "normalisedstockdata")  # Map waar de CSV-bestanden staan
+    stock_data_path = os.path.join(data_path, "normalisedstockdata")
     print(stock_data_path)
 
     raw_data, stock_data = load_stock_data(raw_data_path, stock_data_path)

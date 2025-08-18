@@ -51,13 +51,10 @@ def calculate_correlation_matrix_gpu(combined_df, date_range):
         means = torch.mean(feature_data, dim=1, keepdim=True)
         stds = torch.std(feature_data, dim=1, keepdim=True)
         normalized = (feature_data - means) / (stds + 1e-8)
-        
         corr = torch.mm(normalized, normalized.T) / (window_size - 1)
-        
         corr_matrix += corr
     
     corr_matrix /= len(feature_cols)
-    
     corr_matrix.fill_diagonal_(0.0)
     
     return pd.DataFrame(
@@ -94,17 +91,5 @@ def main(asc):
             print(f"No data available for date range {start_date} to {end_date}. Skipping...")
             
 if __name__ == "__main__":
-
-    # Path setup
-    # base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    # print(base_path)
-    # data_path = os.path.join(base_path, "data", "CSI300")
-    # print(data_path)
-    # relation_path = os.path.join(data_path, "correlations")
-    # os.makedirs(relation_path, exist_ok=True)
-    # print(relation_path)
-    # stock_data_path = os.path.join(data_path, "dailydata")
-    # print(stock_data_path)
-
     ascending = True
     main(ascending)
