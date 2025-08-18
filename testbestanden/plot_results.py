@@ -3,49 +3,26 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.stats import ttest_rel, wilcoxon
 
 # region configuratie
 
-base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Huidige scriptmap
+base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print(base_path)
-
-""" uncomment de database die je wilt gebruiken"""
 database = "CSI300"
 # database = "S&P500"
-# database = "NASDAQ_batches_5_200", "batch_1"
-# database = "NASDAQ_batches_5_200", "batch_2"
-# database = "NASDAQ_batches_5_200", "batch_3"
-# database = "NASDAQ_batches_5_200", "batch_4"
-# database = "NASDAQ_batches_5_200", "batch_5"
-# database = "testbatch1"
-# database = "testbatch2"
-# database = "testbatch_mini"
 
-if isinstance(database, str):
-    database = [database]
-
-data_path = os.path.join(base_path, "data", *database)
+data_path = os.path.join(base_path, "data", database)
 print(data_path)
 
 input_path = os.path.join(data_path, "results")
 
-"""select de metrics en modellen die je wilt vergelijken"""
-metrics = ["rmse", "mae", "r2"]                  # pas aan: "mae", "mse", "rmse", "r2", "WS-dist", "KS-d", "KS-p"
+metrics = ["rmse", "mae", "r2"]                  # pas aan: "mae", "mse", "rmse", "r2", "WS-dist", "KS-d", "KS-p"...
 
 models = ["CS", "SSA-CS", "DSC-CS", "DSE-CS"]
 # models = ["PC", "SSA-PC", "DSC-PC", "DSE-PC"]
-# models = ["corr_t2", "onlycosine_t2", "STATIC_t2", "cosineDSC_t2", "DSE_t2"]
-# models = ["corr_t2", "STATICcorr_t2", "corrDSC_t2", "DSEcorr_t2"]
-
-
-# models = ["corr", "onlycosine", "STATICcorr_t1", "corrDSC_t1", "DSEcorr_t1", "DSE_t1"]
 # models = ["PC", "CS", "DSE-PC", "DSE-CS"]
-# models = ["corr_t2", "onlycosine_t2", "DSEcorr_t2", "DSE_t2"]
 
-
-"""Plot-opties"""
-use_seaborn_theme = True                     # zet op False als je pure matplotlib wil
+use_seaborn_theme = True
 save_png = True
 output_path = os.path.join(base_path, "plots")
 os.makedirs(output_path, exist_ok=True)
@@ -55,37 +32,33 @@ os.makedirs(output_path, exist_ok=True)
 
 # region plots
 def line_plots(xtick_rotation: int = 45):
-    # Set font sizes twice as large
-    plt.rcParams.update({'font.size': 20})          # Default font size
-    SMALL_SIZE = 20*0.9                                 # Small font size
-    MEDIUM_SIZE = 24*0.9                                # Medium font size
-    BIGGER_SIZE = 28*0.9                                # Bigger font size
+    plt.rcParams.update({'font.size': 20}) 
+    SMALL_SIZE = 20*0.9 
+    MEDIUM_SIZE = 24*0.9 
+    BIGGER_SIZE = 28*0.9
 
-    plt.rc('font', size=SMALL_SIZE)                # controls default text sizes
-    plt.rc('axes', titlesize=BIGGER_SIZE)          # fontsize of the axes title
-    plt.rc('axes', labelsize=MEDIUM_SIZE)          # fontsize of the x and y labels
-    plt.rc('xtick', labelsize=SMALL_SIZE)          # fontsize of the tick labels
-    plt.rc('ytick', labelsize=SMALL_SIZE)          # fontsize of the tick labels
-    plt.rc('legend', fontsize=SMALL_SIZE)          # legend fontsize
-    plt.rc('figure', titlesize=BIGGER_SIZE)        # fontsize of the figure title
+    plt.rc('font', size=SMALL_SIZE)
+    plt.rc('axes', titlesize=BIGGER_SIZE) 
+    plt.rc('axes', labelsize=MEDIUM_SIZE)
+    plt.rc('xtick', labelsize=SMALL_SIZE)
+    plt.rc('ytick', labelsize=SMALL_SIZE)
+    plt.rc('legend', fontsize=SMALL_SIZE) 
+    plt.rc('figure', titlesize=BIGGER_SIZE)
 
     # Different markers for each model
     markers = ['o', 's', '^', 'D', 'v', '<', '>', 'p', 'h', '8']
 
-    # -- 1) X-as labels afleiden uit het eerste model --
     first = models[0]
     df0 = pd.read_csv(os.path.join(input_path, f"results_{first}.csv"))
     df0["dt"] = df0["dt"].astype(str)
 
     date_mask0 = df0["dt"].str.upper() != "OVERALL"
-    date_labels = df0.loc[date_mask0, "dt"].tolist()      # alle dagen in volgorde
-    x_overall = len(date_labels)                          # index voor OVERALL
+    date_labels = df0.loc[date_mask0, "dt"].tolist()
+    x_overall = len(date_labels)
 
-    # -- 2) Plot per metric --
     for metric in metrics:
         plt.figure(figsize=(16, 6))
 
-        # Get all values to determine y-axis limits
         all_values = []
         overall_values = []
         for mo in models:
@@ -95,38 +68,31 @@ def line_plots(xtick_rotation: int = 45):
             all_values.extend(df.loc[daily_mask, metric].tolist())
             overall_values.append(df.loc[~daily_mask, metric].iloc[0])
 
-        # First create line plots for daily values
         for i, mo in enumerate(models):
             df = pd.read_csv(os.path.join(input_path, f"results_{mo}.csv"))
             df["dt"] = df["dt"].astype(str)
             
-            # Split daily and overall values
             daily_mask = df["dt"].str.upper() != "OVERALL"
             daily_values = df.loc[daily_mask, metric].to_numpy()
             overall_value = df.loc[~daily_mask, metric].iloc[0]
             
-            # Line plot for daily values
             plt.plot(range(len(date_labels)), daily_values, 
                     marker=markers[i % len(markers)], 
                     linewidth=1.8, label=mo, markersize=5,
                     markeredgewidth=1)
             
-            # Bar plot for OVERALL value with wider bars
             bar_width = 1.2 / len(models)
             bar_pos = x_overall -0.3 + (i * bar_width)
             plt.bar(bar_pos, overall_value, width=bar_width, 
                    alpha=1, color=plt.gca().lines[-1].get_color())
 
-        # Set y-axis limits based on data, but keep 0 as minimum if data goes below 0
         min_val = min(min(all_values), min(overall_values))
         max_val = max(max(all_values), max(overall_values))
-        margin = (max_val - min_val) * 0.05  # 5% margin
+        margin = (max_val - min_val) * 0.05
         
-        # Set bottom limit to 0 if any values are negative
         y_min = 0 if min_val < 0 else min_val - margin
         plt.ylim(y_min, max_val + margin)
 
-        # Set x-ticks for both daily values and OVERALL
         plt.xticks(list(range(len(date_labels))) + [x_overall], 
                   date_labels + ["OVERALL"], 
                   rotation=xtick_rotation, ha="right")
@@ -139,23 +105,11 @@ def line_plots(xtick_rotation: int = 45):
         plt.tight_layout()
 
         if save_png:
-            # out_dir = os.path.join(input_path, "..", "plots")
-            # os.makedirs(out_dir, exist_ok=True)
             plt.savefig(os.path.join(output_path, f"{database}_{metric}_{models}.png"), dpi=160, bbox_inches=None)
             # plt.show()
             plt.close()
         else:
             plt.show()
-
-        # # Reset font sizes to default after plotting
-        # plt.rcParams.update({'font.size': 10})
-        # plt.rc('font', size=10)
-        # plt.rc('axes', titlesize=12)
-        # plt.rc('axes', labelsize=10)
-        # plt.rc('xtick', labelsize=10)
-        # plt.rc('ytick', labelsize=10)
-        # plt.rc('legend', fontsize=10)
-        # plt.rc('figure', titlesize=12)
 # endregion
 
 # region overall plot
@@ -164,7 +118,7 @@ def overall_barplots():
     fig, axes = plt.subplots(1, len(metrics), figsize=(4.5 * len(metrics), 6))
 
     if len(metrics) == 1:
-        axes = [axes]  # zorgen dat het altijd een lijst is
+        axes = [axes]
 
     for i, metric in enumerate(metrics):
         overall_values = []
@@ -178,7 +132,6 @@ def overall_barplots():
         x = range(len(models))
         bars = axes[i].bar(x, overall_values, tick_label=models)
 
-        # Kleuren consistent houden
         for bar, color in zip(bars, plt.cm.tab10.colors):
             bar.set_color(color)
 
@@ -201,241 +154,5 @@ def overall_barplots():
 
 line_plots()
 # overall_barplots()
-# df_sig = significantieverschil(test_type="wilcoxon", alpha=0.05)
-# print(df_sig)
-# plot_significance_heatmap(df_sig, metric="rmse")
-# plot_significance_heatmap(df_sig, metric="mae")
-# plot_significance_heatmap(df_sig, metric="r2")
 
-# endregion
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# region oude code
-""" oude code van grafieken maken, kan nog handig zijn ter inspiratie
-        # distribution(corrpredictions, labels, dynamipredictions)
-
-def nasdaq_batches():
-    for batchmap in os.listdir(os.path.join(data_path)):
-        if not batchmap.startswith("batch"):
-            continue
-
-        print(f"\nbatchmap: {batchmap}")
-
-        for predictionmap in (os.path.join(data_path, batchmap)):
-            if not predictionmap.startswith("prediction_"):
-                continue
-            parts = predictionmap[len("prediction_"):].split("_")
-
-            if (parts[0] == "random1") or (parts[0] == "random2") or (parts[0] == "random3"):
-                print("niet geselecteerd: ",batchmap)
-                print(parts)
-                continue
-
-            print("wel geselecteerd: ",batchmap)
-            print(parts)
-            input = ""
-            task = ""
-            times = ""
-
-            if len(parts) == 2:
-                input = parts[0]
-                task = "regression"
-                times = parts[1]
-
-            elif len(parts) == 3:
-                input = parts[0]
-                task = "classification"
-                times = parts[2]
-
-
-            print(f"Map: {batchmap} → input: {input}, time: {times}, task: {task}")
-
-            prediction_path = os.path.join(data_path, batchmap)
-            print(prediction_path)
-            labels, corrpredictions = check_labelsvsprediction(prediction_path)
-
-
-
-results_df = pd.DataFrame(results)
-results_df.to_csv(os.path.join(data_path, "results_alltimes.csv"), index=False)
-
-# CSV inlezen
-df = pd.read_csv(os.path.join(data_path, "results_alltimes.csv"))
-
-# Drop de task-kolom
-df = df.drop(columns=["task"])
-
-# Groeperen per unieke combinatie en aggregatie toepassen
-df_combined = df.groupby(["input", "time", "horizon"], as_index=False).agg({
-    "mae": "max",  # max omdat maar één van de twee rijen een waarde heeft
-    "mse": "max",
-    "rmse": "max",
-    "r2": "max",
-    "accuracy": "max",
-    "precission": "max",
-    "recall": "max",
-    "F1": "max",
-    "MCC": "max",
-    "bce": "max",
-    "WS-dist": "max"
-})
-
-time_order = [-120, -100, -80, -60, -40, -20, 0]
-input_order = ["corr", "DSE"]
-horizon_order = ["day1", "day5", "day20"]
-
-df_combined["time"] = pd.Categorical(df_combined["time"], categories=time_order, ordered=True)
-df_combined["input"] = pd.Categorical(df_combined["input"], categories=input_order, ordered=True)
-df_combined["horizon"] = pd.Categorical(df_combined["horizon"], categories=horizon_order, ordered=True)
-
-# df_combined = df_combined.sort_values(by=["time", "input", "horizon"])
-df_combined = df_combined.sort_values(by=["horizon", "input", "time"])
-# Opslaan of printen
-df_combined.to_csv(os.path.join(data_path, "results_alltimes_combined.csv"), index=False)
-
-
-
-
-# results zijn er al
-results_df = pd.read_csv(os.path.join(data_path, "results.csv"))
-print(results_df.head())
-
-# filtered_df = results_df[(results_df['threshold'] >= 0.3) & (results_df['threshold'] <= 0.8)]
-# filtered_df = filtered_df[filtered_df['horizon'].isin(['day5', 'day20'])]
-
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
-
-sns.lineplot(data=results_df, x="positive_threshold", y="rmse", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax1)
-ax1.set_title("RMSE per negative and positive")
-ax1.set_xlabel("Positive")
-ax1.set_ylabel("RMSE")
-ax1.grid(True)
-
-sns.lineplot(data=results_df, x="positive_threshold", y="r2", hue="horizon", style="negative_threshold", markers=True, dashes=False, ax=ax2)
-ax2.set_title("r2 per negative and positive")
-ax2.set_xlabel("Positive")
-ax2.set_ylabel("r2")
-ax2.grid(True)
-
-plt.tight_layout()
-plt.show()
-
-# Data inladen
-df = pd.read_csv(os.path.join(data_path, "results_combined.csv"))
-df["horizon"] = pd.Categorical(df["horizon"], categories=["day1", "day5", "day20"], ordered=True)
-# 1. Staafdiagram: Gemiddelde MAE per horizon en encoder
-plt.figure(figsize=(10, 5))
-sns.barplot(data=df, x="horizon", y="rmse", hue="input", ci=None)
-plt.title("Gemiddelde RMSE: GRU vs. TE per horizon")
-plt.ylabel("RMSE (lager = beter)")
-plt.show()
-
-# 2. Boxplot: Spreiding van R2-scores per model
-plt.figure(figsize=(10, 5))
-sns.boxplot(data=df, x="horizon", y="r2", hue="input")
-plt.title("Spreiding van R²-scores per horizon")
-plt.ylabel("R² (hoger = beter)")
-plt.show()
-
-# 3. Lijngrafiek: Trend in Accuracy over horizons
-plt.figure(figsize=(10, 5))
-sns.lineplot(data=df, x="horizon", y="accuracy", hue="input", ci=None, marker="o")
-plt.title("Accuracy over verschillende horizons")
-plt.ylabel("Accuracy (hoger = beter)")
-plt.show()
-
-# 4. Samenvattende tabel (gemiddelden per groep)
-summary_table = df.groupby(["input", "horizon"]).agg({
-    "mae": "mean",
-    "rmse": "mean",
-    "r2": "mean",
-    "accuracy": "mean",
-    "bce": "mean"
-}).round(3)
-print(summary_table)
-
-
-# Laad de data
-df = pd.read_csv(os.path.join(data_path, "results_alltimes_combined.csv"))
-df = df.sort_values(["horizon", "input", "time"])  # Belangrijk: sorteer op tijd!
-
-# time_mapping = {-120: 0, -100: 1, -80: 2, -60: 3, -40: 4, -20: 5, 0: 6}
-# df['time'] = df['time'].map(time_mapping)
-
-# Horizons en configuratie
-horizons = ['day1', 'day5', 'day20']
-fig, axes = plt.subplots(3, 2, figsize=(18, 20))
-plt.subplots_adjust(hspace=0.4, wspace=0.3)
-
-for i, horizon in enumerate(horizons):
-    subset = df[df['horizon'] == horizon]
-    
-    # --- Regressie metrics ---
-    ax1 = axes[i, 0]
-    ax1_r2 = ax1.twinx()
-    
-    for method, color in zip(['corr', 'DSE'], ['blue', 'red']):
-        data = subset[subset['input'] == method].sort_values('time')
-        print(data[['time', 'mae']])
-        # Explicitly set drawstyle en markeringen
-        ax1.plot(data['time'], data['mae'], color=color, linestyle='--', 
-                marker='o', label=f'{method} MAE')
-        ax1.plot(data['time'], data['rmse'], color=color, linestyle=':', 
-                marker='s', label=f'{method} RMSE')
-        ax1_r2.plot(data['time'], data['r2'], color=color, linestyle='-', 
-                   marker='^', label=f'{method} R2')
-    
-    # --- Classificatie metrics ---
-    ax2 = axes[i, 1]
-    ax2_acc_rec = ax2.twinx()
-    
-    for method, color in zip(['corr', 'DSE'], ['blue', 'red']):
-        data = subset[subset['input'] == method].sort_values('time')
-        
-        ax2.plot(data['time'], data['bce'], color=color, linestyle='-', 
-               marker='o', label=f'{method} BCE')
-        ax2_acc_rec.plot(data['time'], data['accuracy'], color=color, linestyle='--', 
-                        marker='s', label=f'{method} Accuracy')
-        ax2_acc_rec.plot(data['time'], data['MCC'], color=color, linestyle=':', 
-                        marker='^', label=f'{method} MCC')
-    
-    ax1.set_title(f'Regressie Metrics ({horizon})', fontsize=12)
-    ax1.set_xlabel('Time', fontsize=10)
-    ax1.set_ylabel('MAE / RMSE', fontsize=10)
-    ax1_r2.set_ylabel('R2', fontsize=10)
-    ax1.grid(False)
-    
-    # Verzamel handvatten voor de legenda
-    lines1, labels1 = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax1_r2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=8)
-
-    ax2.set_title(f'Classificatie Metrics ({horizon})', fontsize=12)
-    ax2.set_xlabel('Time', fontsize=10)
-    ax2.set_ylabel('BCE', fontsize=10)
-    ax2_acc_rec.set_ylabel('Accuracy / MCC', fontsize=10)
-    ax2.grid(False)
-    
-    # Legenda voor classificatie
-    lines1, labels1 = ax2.get_legend_handles_labels()
-    lines2, labels2 = ax2_acc_rec.get_legend_handles_labels()
-    ax2.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=8)
-
-plt.tight_layout()
-plt.show()
-
-"""
 # endregion

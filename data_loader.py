@@ -2,7 +2,6 @@ import os
 import sys
 from torch.utils import data
 import pickle
-import torch
 
 class AllGraphDataSampler(data.Dataset):
 

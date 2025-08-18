@@ -21,7 +21,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Selected device: {device}")
 
 class Args:
-    def __init__(self, gpu=0, subtask="regression"): #regression or classification_binare, also switch: trainer.py 31/32 and thgnn.py 128/129
+    def __init__(self, gpu=0, subtask="regression"):
         # device
         self.gpu = str(0)
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -59,7 +59,6 @@ class Args:
     def regression(self):
         self.save_name = self.save_name + "_reg_rank_"
         self.loss_fcn = mse_loss
-        # self.loss_fcn = mae_loss
         self.label_dir = self.label_dir + "_regression"
         self.mask_dir = self.mask_dir + "_regression"
 
@@ -189,13 +188,13 @@ if __name__ == "__main__":
     print(f"Start CSI300: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     start_time = time.time()
     global base_path, data_path, data_train_predict_path, daily_stock_path, save_path, prediction_path, data_start, data_middle, data_end, pre_data
-    base_path = os.path.dirname(os.path.abspath(__file__))  # Huidige scriptmap
+    base_path = os.path.dirname(os.path.abspath(__file__))
     print(f"base_path: {base_path}")
     data_path = os.path.join(base_path, "data", "CSI300")
     print(f"data_path: {data_path}")
-    data_train_predict_path = os.path.join(data_path, f"data_train_predict_DSE-CS") #gpu_wvt, oldway_0.6, gpu_wvt
+    data_train_predict_path = os.path.join(data_path, f"data_train_predict_DSE-CS")
     print(f"data_train_predict_path: {data_train_predict_path}")
-    daily_stock_path = os.path.join(data_path, f"daily_stock_DSE-CS") #gpu_wvt, oldway, gpu_wvt
+    daily_stock_path = os.path.join(data_path, f"daily_stock_DSE-CS")
     print(f"daily_stock_path: {daily_stock_path}")
     save_path = os.path.join(data_path, f"model_saved_rolingwindow_DSE-CS")
     os.makedirs(save_path, exist_ok=True)

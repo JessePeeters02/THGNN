@@ -1,14 +1,11 @@
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-import numpy as np
 
 
 def mse_loss(logits, targets):
     mse = nn.MSELoss()
     loss = mse(logits.squeeze(), targets)
-    # print(f"mse loss: {loss}")
     return loss
 
 def mae_loss(logits, targets):
@@ -36,56 +33,8 @@ def extract_data(data_dict, device):
     neg_adj = to_dev(data_dict['neg_adj']).squeeze()
     features = to_dev(data_dict['features']).squeeze()
     labels = to_dev(data_dict['labels']).squeeze()
-
-    # print(f'features mean: {features.mean(dim=(0,1))}, features std: {features.std(dim=(0,1))}')
-    # print(f"features std: {features.std().item()}, labels std: {labels.std().item()}")
-    # print(f"features min: {features.min().item()}, labels min: {labels.min().item()}")
-    # print(f"features max: {features.max().item()}, labels max: {labels.max().item()}")
-
-    # voor log data
-    # labels = torch.log(labels+1)/0.025
-    # labels = torch.tanh(torch.log(labels +1)/0.025)
-
-    # voor niet log data
-    # features = features/2
-    # features = torch.clip(features, -5, 5)
-    # print(f"features shape: {features.shape}")
-    # feature_norm = nn.LayerNorm(features.size()[1:]).to(device)
-    # features = feature_norm(features)
-    # labels = torch.log(labels+1)/0.025
     labels = torch.tanh(torch.log(labels +1))
-    # labels = torch.tanh(torch.log(labels +1)/0.025)
-    # print(f'features mean: {features.mean(dim=(0,1))}, features std: {features.std(dim=(0,1))}')
-    # print(f"features std: {features.std().item()}, labels std: {labels.std().item()}")
-    # print(f"features min: {features.min().item()}, labels min: {labels.min().item()}")
-    # print(f"features max: {features.max().item()}, labels max: {labels.max().item()}")
-    # labels = (labels2 - labels2.mean()) / (labels2.std() + 1e-6)  # Normalize labels
-    # labels = (data_dict['labels'].to(device).squeeze() > 0).float()
-    # labels = features.mean(dim=(1, 2))
-    # labels = torch.tanh(0.5*features.mean(dim=(1, 2)))
-    # print(f"labels shape: {labels.shape}, features shape: {features.shape}")
-    # print(f"features: min={features.min().item():.4f}, max={features.max().item():.4f}, mean={features.mean().item():.4f}, std={features.std().item():.4f}")
-    # print(f"labels: min={labels.min().item():.4f}, max={labels.max().item():.4f}, mean={labels.mean().item():.4f}, std={labels.std().item():.4f}")
-
     mask = data_dict['mask']
-    # print(mask)
-    # print(pos_adj, neg_adj)
-    # Check distribution of features and labels
-    # print("Features mean:", features.mean().item(), "std:", features.std().item())
-    # print("Labels mean:", labels.mean().item(), "std:", labels.std().item())
-    # If you want to see histograms, you could use matplotlib (optional)
-    # plt.hist(features.detach().cpu().numpy().flatten(), bins=50)
-    # plt.title("Features distribution")
-    # plt.show()
-    # plt.hist(labels1.detach().cpu().numpy().flatten(), bins=50)
-    # plt.title("Labels1 distribution")
-    # plt.show()
-    # plt.hist(labels2.detach().cpu().numpy().flatten(), bins=50)
-    # plt.title("Labels2 distribution")
-    # plt.show()
-    # plt.hist(labels.detach().cpu().numpy().flatten(), bins=50)
-    # plt.title("Labels distribution")
-    # plt.show()
 
     return pos_adj, neg_adj, features, labels, mask
 
@@ -94,8 +43,6 @@ def train_epoch(epoch, args, model, dataset_train, optimizer, scheduler, loss_fc
     model.train()
     loss_return = 0
     dag = 1
-    # loss_list = []
-    # loss_list2 = []
     aantal_keer_berekend = 0
     for batch_data in tqdm(dataset_train):
         for batch_idx, data in enumerate(batch_data):
