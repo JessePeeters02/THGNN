@@ -29,7 +29,6 @@ class GraphAttnMultiHead(Module):
         if self.bias is not None:
             self.bias.data.uniform_(-stdv, stdv)
         self.weight.data.uniform_(-stdv, stdv)
-        # self.weight.data.uniform_(-1, 1)
         stdv = 1. / math.sqrt(self.weight_u.size(-1))
         self.weight_u.data.uniform_(-stdv, stdv)
         self.weight_v.data.uniform_(-stdv, stdv)
@@ -44,7 +43,6 @@ class GraphAttnMultiHead(Module):
 
         # Kies snelste pad o.b.v. dichtheid
         with torch.no_grad():
-            # adj_mat kan [N,N] of [H,N,N] zijn; we nemen mean over laatste 2 dims
             if adj_mat.dim() == 2:
                 density = (adj_mat != 0).float().mean()
             else:
@@ -55,7 +53,6 @@ class GraphAttnMultiHead(Module):
             masked_weight = torch.mul(weight, adj_mat).to_sparse()
             attn_weights = torch.sparse.softmax(masked_weight, dim=2).to_dense()
         else:
-            # Dense: mask wegvullen met zeer negatieve waarde en softmax over dim=2
             mask = (adj_mat > 0)
             very_neg = torch.finfo(weight.dtype).min
             logits_masked = weight.masked_fill(~mask, very_neg)
@@ -139,15 +136,12 @@ class StockHeteGAT(nn.Module):
         self.mlp_pos = nn.Linear(out_features*num_heads, hidden_dim)
         self.mlp_neg = nn.Linear(out_features*num_heads, hidden_dim)
         self.pn = PairNorm(mode='PN-SI')
-        # self.pn = PairNorm(mode='PN')
-        # self.pn = PairNorm(mode='None')
         self.sem_gat = GraphAttnSemIndividual(in_features=hidden_dim,
                                               hidden_size=hidden_dim,
                                               act=nn.Tanh())
         self.predictor = nn.Sequential(
             nn.Linear(hidden_dim, 1),
             nn.Tanh()  
-            # nn.Sigmoid()
         )
 
         for m in self.modules():

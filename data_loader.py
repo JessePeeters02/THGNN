@@ -38,14 +38,9 @@ class AllGraphDataSampler(data.Dataset):
             fname = self.gnames_all[i]
             with open(os.path.join(self.data_dir, self.gnames_all[i]), "rb") as f:
                 sample = pickle.load(f)
-            # Zet alle tensors in sample op CPU
             for k, v in sample.items():
                 if isinstance(v, torch.Tensor):
                     sample[k] = v.cpu()
-            # Zet alle PyTorch tensors in sample naar het juiste device
-            # for key in sample:
-            #     if isinstance(sample[key], torch.Tensor):
-            #         sample[key] = sample[key].to(device)
             sample["date"] = fname
             data_all.append(sample)
         print('{} data loaded!'.format(self.mode))
@@ -53,7 +48,5 @@ class AllGraphDataSampler(data.Dataset):
 
 
     def __getitem__(self, idx):
-        sample = self.data_all[idx]  # Hier kan de fout zitten
-        # print("Beschikbare keys:", sample.keys())  # Check of 'features' bestaat
-        # print("Features shape:", sample['features'].shape)
+        sample = self.data_all[idx]
         return sample
